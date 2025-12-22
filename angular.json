@@ -32,9 +32,12 @@
               },
               "src/manifest.webmanifest"
             ],
-            "styles": ["src/theme/variables.scss", "src/global.scss", "node_modules/ol/ol.css"],  
+            "styles": [
+              "src/theme/variables.scss",
+              "src/global.scss",
+              "node_modules/ol/ol.css"
+            ],
             "scripts": [],
-            "aot": false,
             "vendorChunk": true,
             "extractLicenses": false,
             "buildOptimizer": false,
