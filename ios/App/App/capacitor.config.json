@@ -2,5 +2,14 @@
 	"appId": "com.leaflet.example",
 	"appName": "Flatmeta",
 	"webDir": "www",
-	"bundledWebRuntime": false
+	"bundledWebRuntime": false,
+	"packageClassList": [
+		"AppPlugin",
+		"GeolocationPlugin",
+		"HapticsPlugin",
+		"KeyboardPlugin",
+		"PreferencesPlugin",
+		"StatusBarPlugin",
+		"CDVPlugin"
+	]
 }
