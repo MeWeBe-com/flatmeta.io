@@ -3,7 +3,7 @@ import { MenuController } from '@ionic/angular';
 import { StorageService } from '../../providers/storage.service';
 import { GeneralService } from '../../providers/general.service';
 import { GlobaldataService } from '../../providers/globaldata.service';
-import { FormGroup, FormBuilder, Validators } from "@angular/forms";
+import { UntypedFormGroup, UntypedFormBuilder, Validators } from "@angular/forms";
 import { HttpService } from 'src/app/providers/http.service';
 import { EventsService } from 'src/app/providers/events.service';
 import { ModalController } from '@ionic/angular';
@@ -17,13 +17,13 @@ import { App } from '@capacitor/app';
   styleUrls: ['./login.page.scss'],
 })
 export class LoginPage implements OnInit {
-  loginForm: FormGroup;
+  loginForm: UntypedFormGroup;
   showPass: boolean = false;
   loading: boolean = false;
 
   constructor(
     public general: GeneralService,
-    public formBuilder: FormBuilder,
+    public formBuilder: UntypedFormBuilder,
     private storage: StorageService,
     public http: HttpService,
     public events: EventsService,

@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { StorageService } from 'src/app/providers/storage.service';
 import { GeneralService } from 'src/app/providers/general.service';
 import { HttpService } from 'src/app/providers/http.service';
-import { FormGroup, FormBuilder, Validators } from "@angular/forms";
+import { UntypedFormGroup, UntypedFormBuilder, Validators } from "@angular/forms";
 
 @Component({
   selector: 'app-signup',
@@ -11,13 +11,13 @@ import { FormGroup, FormBuilder, Validators } from "@angular/forms";
 })
 export class SignupPage implements OnInit {
 
-  signupForm: FormGroup;
+  signupForm: UntypedFormGroup;
   showPass: boolean = false;
 
   constructor(
     public general: GeneralService,
     public http: HttpService,
-    public formBuilder: FormBuilder,
+    public formBuilder: UntypedFormBuilder,
     private storage: StorageService
   ) { }
 

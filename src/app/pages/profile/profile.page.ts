@@ -3,7 +3,7 @@ import { EventsService } from 'src/app/providers/events.service';
 import { StorageService } from 'src/app/providers/storage.service';
 import { GeneralService } from 'src/app/providers/general.service';
 import { HttpService } from 'src/app/providers/http.service';
-import { FormGroup, FormBuilder, Validators } from "@angular/forms";
+import { UntypedFormGroup, UntypedFormBuilder, Validators } from "@angular/forms";
 import { GlobaldataService } from 'src/app/providers/globaldata.service';
 
 @Component({
@@ -14,14 +14,14 @@ import { GlobaldataService } from 'src/app/providers/globaldata.service';
 export class ProfilePage implements OnInit {
   @ViewChild('fileInput', { static: false }) fileInput: ElementRef;
 
-  profileForm: FormGroup;
+  profileForm: UntypedFormGroup;
   profileImg: string = '';
   canvas: any;
 
   constructor(
     public general: GeneralService,
     public http: HttpService,
-    public formBuilder: FormBuilder,
+    public formBuilder: UntypedFormBuilder,
     private storage: StorageService,
     public events: EventsService
   ) { }

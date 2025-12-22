@@ -2,7 +2,7 @@ import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { GeneralService } from 'src/app/providers/general.service';
 import { HttpService } from 'src/app/providers/http.service';
 import { GlobaldataService } from 'src/app/providers/globaldata.service';
-import { FormGroup, FormBuilder, Validators, Form } from "@angular/forms";
+import { UntypedFormGroup, UntypedFormBuilder, Validators, Form } from "@angular/forms";
 import { AlertController } from '@ionic/angular';
 
 @Component({
@@ -13,7 +13,7 @@ import { AlertController } from '@ionic/angular';
 export class ForgetpasswordComponent implements OnInit {
 
   showForm: boolean = false;
-  passwordForm: FormGroup;
+  passwordForm: UntypedFormGroup;
   appText: any = GlobaldataService.appText;
   showPass: boolean = false;
 
@@ -25,7 +25,7 @@ export class ForgetpasswordComponent implements OnInit {
   constructor(
     public general: GeneralService,
     public http: HttpService,
-    public formBuilder: FormBuilder,
+    public formBuilder: UntypedFormBuilder,
     public alertController: AlertController
   ) { }
 

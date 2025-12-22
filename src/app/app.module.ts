@@ -21,28 +21,28 @@ const config: SocketIoConfig = { url: 'https://orange-spiral-jobaria.glitch.me/'
 //const config: SocketIoConfig = { url: 'http://localhost:3500/', options: {} };
 
 @NgModule({
-  declarations: [AppComponent, ChatComponent, ForgetpasswordComponent],
-  entryComponents: [],
-  imports: [
-    BrowserModule,
-    IonicModule.forRoot(),
-    AppRoutingModule,
-    FormsModule,
-    HttpClientModule,
-    ReactiveFormsModule,
-    QuillModule.forRoot(),
-    SocketIoModule.forRoot(config),
-    ServiceWorkerModule.register('ngsw-worker.js', {
-      enabled: environment.production,
-      // Register the ServiceWorker as soon as the application is stable
-      // or after 30 seconds (whichever comes first).
-      registrationStrategy: 'registerWhenStable:30000'
-    })],
-  providers: [
-    InAppBrowser,
-    LocationAccuracy,
-    { provide: RouteReuseStrategy, useClass: IonicRouteStrategy }
-  ],
-  bootstrap: [AppComponent],
+    declarations: [AppComponent, ChatComponent, ForgetpasswordComponent],
+    imports: [
+        BrowserModule,
+        IonicModule.forRoot(),
+        AppRoutingModule,
+        FormsModule,
+        HttpClientModule,
+        ReactiveFormsModule,
+        QuillModule.forRoot(),
+        SocketIoModule.forRoot(config),
+        ServiceWorkerModule.register('ngsw-worker.js', {
+            enabled: environment.production,
+            // Register the ServiceWorker as soon as the application is stable
+            // or after 30 seconds (whichever comes first).
+            registrationStrategy: 'registerWhenStable:30000'
+        })
+    ],
+    providers: [
+        InAppBrowser,
+        LocationAccuracy,
+        { provide: RouteReuseStrategy, useClass: IonicRouteStrategy }
+    ],
+    bootstrap: [AppComponent]
 })
 export class AppModule { }
