@@ -1,4 +1,4 @@
-package com.leaflet.example;
+package com.flatmeta.app;
 
 import com.getcapacitor.BridgeActivity;
 

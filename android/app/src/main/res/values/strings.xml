@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Flatmeta</string>
-    <string name="title_activity_main">Flatmeta</string>
-    <string name="package_name">com.leaflet.example</string>
-    <string name="custom_url_scheme">com.leaflet.example</string>
+    <string name="app_name">FlatMeta</string>
+    <string name="title_activity_main">FlatMeta</string>
+    <string name="package_name">com.flatmeta.app</string>
+    <string name="custom_url_scheme">com.flatmeta.app</string>
 </resources>
