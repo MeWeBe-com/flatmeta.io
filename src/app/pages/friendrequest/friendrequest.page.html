@@ -1,36 +1,85 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-title>Friend Request</ion-title>
+<ion-header class="ion-no-border meta-page-header">
+  <ion-toolbar class="meta-page-toolbar">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/flatmeta/home" text="" icon="arrow-back-outline"></ion-back-button>
+    </ion-buttons>
+    <ion-title class="meta-page-title">
+      <span class="gradient-text">Friend Requests</span>
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="getReqList()" fill="clear" color="primary" title="Refresh">
+        <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-
-  <ion-card mode="ios" *ngFor="let r of requests">
-    <ion-card-content>
-      <div class="flex">
-        <div>
-          <img [src]="r?.image" class="img">
+<ion-content [fullscreen]="true" class="friends-content">
+  <div class="friends-container">
+    <!-- Hero Header -->
+    <div class="friends-hero">
+      <div class="hero-text">
+        <div class="hero-badge">
+          <span class="meta-badge badge-cyan">Social Network</span>
         </div>
-        <div class="flex msg-box">
-          <div>{{r?.message}}</div>
-          <div class="flex btns" *ngIf="r?.status == '2'">
-            <div>
-              <ion-button color="danger" size="small" expand="block" (click)="updateRequest(r?.request_id, 3)">Decline
+        <h2>Citizen <span class="gradient-text-accent">Connections</span></h2>
+        <p>Accept friend invites from roaming citizens to chat in real-time and coordinate land trades.</p>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state-wrap meta-card-glass" *ngIf="requests?.length === 0">
+      <div class="empty-icon-box">
+        <ion-icon name="people-outline"></ion-icon>
+      </div>
+      <h3>No Pending Requests</h3>
+      <p>You have no active connection invites. Double-click on citizen avatars roaming in your sector to send them a greeting!</p>
+      <ion-button [routerLink]="['/flatmeta/home']" class="meta-btn-gradient">
+        <ion-icon name="planet-outline" slot="start"></ion-icon>
+        Explore Metaverse
+      </ion-button>
+    </div>
+
+    <!-- Requests List -->
+    <div class="requests-list" *ngIf="requests?.length > 0">
+      <div class="request-card meta-card" *ngFor="let r of requests">
+        <div class="card-left-avatar">
+          <img [src]="r?.image || 'assets/user.jpeg'" class="requester-avatar" alt="Avatar" />
+          <span class="avatar-ring"></span>
+        </div>
+
+        <div class="card-body">
+          <div class="request-message-wrap">
+            <p class="request-msg">{{ r?.message || 'Wants to connect with you in FlatMeta.' }}</p>
+          </div>
+
+          <div class="request-actions-row">
+            <!-- Pending State: Accept or Decline -->
+            <div class="action-buttons-group" *ngIf="r?.status == '2'">
+              <ion-button fill="outline" class="btn-decline" (click)="updateRequest(r?.request_id, 3)">
+                <ion-icon name="close-outline" slot="start"></ion-icon>
+                Decline
+              </ion-button>
+              <ion-button class="meta-btn-gradient btn-accept" (click)="updateRequest(r?.request_id, 1)">
+                <ion-icon name="checkmark-outline" slot="start"></ion-icon>
+                Accept
               </ion-button>
             </div>
-            <div>
-              <ion-button color="primary" size="small" expand="block" (click)="updateRequest(r?.request_id, 1)">Accept
-              </ion-button>
+
+            <!-- Handled State -->
+            <div class="status-indicator-wrap" *ngIf="r?.status == '1' || r?.status == '3'">
+              <span class="meta-badge badge-emerald" *ngIf="r?.status == '1'">
+                <ion-icon name="checkmark-circle"></ion-icon>
+                Connected
+              </span>
+              <span class="meta-badge badge-amber" *ngIf="r?.status == '3'">
+                <ion-icon name="close-circle"></ion-icon>
+                Declined
+              </span>
             </div>
           </div>
-          <ion-text *ngIf="r?.status == '1' || r?.status == '3'" [color]="r?.status == '1' ? 'success' : 'danger'">
-            {{ r?.status == '1' ? 'Accepted' : 'Declined'}}
-          </ion-text>
         </div>
       </div>
-
-    </ion-card-content>
-  </ion-card>
-
+    </div>
+  </div>
 </ion-content>

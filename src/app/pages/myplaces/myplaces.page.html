@@ -1,91 +1,160 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>
-      My Places
+<ion-header class="ion-no-border meta-page-header">
+  <ion-toolbar class="meta-page-toolbar">
+    <ion-title class="meta-page-title">
+      <span class="gradient-text">My Land Portfolio</span>
     </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="getList()" fill="clear" color="primary" title="Refresh Portfolio">
+        <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-
-  <ion-card mode="ios" *ngFor="let c of tilesList; let i = index;">
-    <ion-card-content>
-      <div class="flex">
-        <div>
-          <img [src]="c?.image" class="img">
+<ion-content [fullscreen]="true" class="portfolio-content">
+  <div class="portfolio-container">
+    <!-- Portfolio Hero Banner -->
+    <div class="portfolio-hero">
+      <div class="hero-left">
+        <div class="hero-badge">
+          <span class="meta-badge badge-emerald">Land Ownership</span>
         </div>
-        <div class="flex msg-box">
-          <div>
-            <div>
-              Tiles: {{c?.no_of_tiles}}
-            </div>
-            <div>
-              Buy Price: {{c?.amount}} per tile
-            </div>
-            <div>
-              Sale Price: ${{c?.sale_price}} per tile
-            </div>
-          </div>
+        <h2>Citizen <span class="gradient-text-accent">Properties</span></h2>
+        <p>Manage, price, and customize digital land parcels under your citizen identity.</p>
+      </div>
+      <div class="hero-stats" *ngIf="tilesList?.length > 0">
+        <div class="stat-pill">
+          <span class="stat-num">{{ tilesList.length }}</span>
+          <span class="stat-lbl">Owned Plots</span>
         </div>
       </div>
-      <ion-button expand="block" fill="outline" size="small" color="dark" (click)="showPriceModal(c)">
-        Update Price
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state-wrap meta-card-glass" *ngIf="tilesList?.length === 0">
+      <div class="empty-icon-box">
+        <ion-icon name="cube-outline"></ion-icon>
+      </div>
+      <h3>No Parcels Claimed Yet</h3>
+      <p>You haven't claimed any land yet. Head to the map, zoom in to 15x, and select any grid squares to claim ownership!</p>
+      <ion-button [routerLink]="['/flatmeta/home']" class="meta-btn-gradient">
+        <ion-icon name="planet-outline" slot="start"></ion-icon>
+        Explore World & Claim Land
       </ion-button>
+    </div>
 
-    </ion-card-content>
-  </ion-card>
+    <!-- Portfolio Grid -->
+    <div class="portfolio-grid" *ngIf="tilesList?.length > 0">
+      <div class="portfolio-card meta-card" *ngFor="let c of tilesList; let i = index">
+        <!-- Thumbnail Wrap -->
+        <div class="card-thumb-wrap">
+          <img [src]="c?.image || 'assets/def.jpeg'" class="card-image" alt="Parcel" />
+          <div class="thumb-badge">
+            <span class="meta-badge badge-purple">{{ c?.no_of_tiles }} Tiles</span>
+          </div>
+          <div class="status-badge">
+            <span class="meta-badge badge-emerald" *ngIf="c?.sale_status == '1' || c?.sale_price > 0">
+              <ion-icon name="pricetag-outline"></ion-icon>
+              Listed for Sale
+            </span>
+            <span class="meta-badge badge-cyan" *ngIf="!(c?.sale_status == '1' || c?.sale_price > 0)">
+              <ion-icon name="lock-closed-outline"></ion-icon>
+              Private Holding
+            </span>
+          </div>
+        </div>
 
-  <!-- sell modal -->
+        <!-- Body -->
+        <div class="card-body">
+          <div class="card-header-row">
+            <h4 class="card-title">Parcel Plot #{{ c?.id || (i + 1) }}</h4>
+            <span class="val-pill">Total: ${{ ((c?.amount || 0) * (c?.no_of_tiles || 1)).toFixed(2) }}</span>
+          </div>
+
+          <div class="pricing-metrics">
+            <div class="metric-item">
+              <span class="m-lbl">Acquired At:</span>
+              <span class="m-val">${{ c?.amount }} / tile</span>
+            </div>
+            <div class="metric-item">
+              <span class="m-lbl">Market Asking:</span>
+              <span class="m-val highlight">${{ c?.sale_price || 0 }} / tile</span>
+            </div>
+          </div>
+
+          <ion-button expand="block" class="meta-btn-gradient btn-manage" (click)="showPriceModal(c)">
+            <ion-icon name="create-outline" slot="start"></ion-icon>
+            Manage & Update Price
+          </ion-button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modern Sell / Price Modal -->
   <ion-modal [isOpen]="showSellModal" [swipeToClose]="false" [presentingElement]="routerOutlet.nativeEl" mode="ios"
-    backdrop-dismiss="false">
+    backdrop-dismiss="false" class="meta-modal">
     <ng-template>
-      <ion-header>
-        <ion-toolbar>
-          <ion-title>Sell Your Boxes </ion-title>
+      <ion-header class="ion-no-border meta-page-header">
+        <ion-toolbar class="meta-page-toolbar">
+          <ion-title class="meta-page-title">Manage Listing</ion-title>
           <ion-buttons slot="end">
-            <ion-button (click)="showSellModal = false">
-              <ion-icon name="close-outline"></ion-icon>
+            <ion-button (click)="showSellModal = false" fill="clear" color="light">
+              <ion-icon name="close-outline" slot="icon-only"></ion-icon>
             </ion-button>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
-      <ion-content class="ion-padding">
-        <div class="ion-text-center">
-          <img [src]="selectedGroup?.image" class="sell-tile-img">
-        </div>
 
-        <div class="flex det">
-          <div>
-            Total Tiles: {{selectedGroup?.no_of_tiles}}
+      <ion-content class="modal-content-wrap ion-padding">
+        <div class="modal-card meta-card-glass">
+          <div class="preview-wrap">
+            <img [src]="selectedGroup?.image || 'assets/def.jpeg'" class="modal-preview-img" alt="Selected Parcel" />
+            <div class="preview-tag">
+              <span class="meta-badge badge-purple">{{ selectedGroup?.no_of_tiles }} Tiles</span>
+            </div>
           </div>
-          <div>
-            Current Price: {{selectedGroup?.sale_price}}
+
+          <div class="modal-stats-grid">
+            <div class="m-stat">
+              <span class="m-stat-lbl">Purchase Cost</span>
+              <span class="m-stat-val">${{ selectedGroup?.amount }} / tile</span>
+            </div>
+            <div class="m-stat">
+              <span class="m-stat-lbl">Current Sale Price</span>
+              <span class="m-stat-val text-accent">${{ selectedGroup?.sale_price || 0 }} / tile</span>
+            </div>
+          </div>
+
+          <div class="toggle-card">
+            <div class="toggle-info">
+              <span class="t-title">List on Public Marketplace</span>
+              <span class="t-sub">Allow other citizens to discover and purchase this parcel</span>
+            </div>
+            <ion-toggle [(ngModel)]="onSale" (ionChange)="putOnSale($event)" color="primary" mode="ios"></ion-toggle>
+          </div>
+
+          <div class="input-group">
+            <label class="input-label">Asking Price per Tile (USD)</label>
+            <div class="input-field-wrap">
+              <span class="currency-prefix">$</span>
+              <ion-input type="number" [(ngModel)]="tilePrice" placeholder="e.g. 5.00" min="0.1" step="0.1"></ion-input>
+            </div>
+          </div>
+
+          <div class="modal-notice">
+            <ion-icon name="information-circle-outline"></ion-icon>
+            <span>The price set will apply to each tile in this parcel group (Total: ${{ ((tilePrice || 0) * (selectedGroup?.no_of_tiles || 1)).toFixed(2) }} USD).</span>
           </div>
         </div>
-
-        <ion-item>
-          <ion-label>On Sale</ion-label>
-          <ion-toggle [(ngModel)]="onSale" (ionChange)="putOnSale($event)"></ion-toggle>
-        </ion-item>
-
-        <ion-item mode="ios">
-          <ion-label position="floating">Price per Tile:</ion-label>
-          <ion-input type="number" [(ngModel)]="tilePrice"></ion-input>
-        </ion-item>
-
-        <p>
-          <strong>
-            <ion-text class="ion-text-center" color="danger">
-              Note: Update Price to put your tiles on Sell. Entered Price will be for each tile in your selected tiles
-              group.
-            </ion-text>
-          </strong>
-        </p>
-
       </ion-content>
-      <ion-footer collapse="fade" mode="ios">
-        <ion-toolbar>
-          <ion-button expand="block" (click)="submitPrice()">Submit</ion-button>
+
+      <ion-footer class="modal-footer ion-no-border">
+        <ion-toolbar class="modal-footer-toolbar">
+          <ion-button expand="block" class="meta-btn-gradient btn-modal-submit" (click)="submitPrice()">
+            <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+            Save & Publish Listing
+          </ion-button>
         </ion-toolbar>
       </ion-footer>
     </ng-template>

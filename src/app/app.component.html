@@ -1,41 +1,95 @@
 <ion-app>
   <ion-split-pane contentId="main-content" when="false">
-    <ion-menu contentId="main-content" type="overlay" side="end">
-      <ion-content>
-        <div class="ion-text-center">
-          <h2>FlatMeta</h2>
+    <ion-menu contentId="main-content" type="overlay" side="end" class="meta-menu">
+      <ion-content class="menu-content">
+        <!-- Brand Header -->
+        <div class="menu-header">
+          <div class="brand-badge">
+            <div class="brand-logo-icon">
+              <ion-icon name="planet"></ion-icon>
+            </div>
+            <div class="brand-info">
+              <h2 class="brand-title">Flat<span>Meta</span></h2>
+              <span class="meta-badge badge-cyan">2D Metaverse</span>
+            </div>
+          </div>
         </div>
 
-        <ion-list>
-          <ion-menu-toggle autoHide="false" *ngFor="let p of pages">
-            <ion-item routerLinkActive="selected" routerDirection="root" lines="true" detail="true" (click)="goTo(p)">
-              <ion-label>{{ p.title }}</ion-label>
-            </ion-item>
-          </ion-menu-toggle>
-          
-          <ion-item lines="none" (click)="logOut()" *ngIf="profile != undefined">
-            <ion-label>Logout</ion-label>
-          </ion-item>
-
-        </ion-list>
-
-        <ng-container *ngIf="profile == undefined">
-          <div class="ion-padding ion-text-center">
-            <p>Login to Continue</p>
-            <ion-menu-toggle>
-              <ion-button expand="block" color="dark" [routerLink]="['/flatmeta/login']">Log In</ion-button>
-            </ion-menu-toggle>
+        <!-- Citizen Card (Logged In) -->
+        <div class="citizen-card" *ngIf="profile != undefined">
+          <div class="citizen-avatar-wrap">
+            <img [src]="profile?.image || 'assets/user.jpeg'" class="citizen-avatar" alt="Avatar" />
+            <span class="online-indicator"></span>
           </div>
-        </ng-container>
+          <div class="citizen-details">
+            <h4 class="citizen-name">{{ profile?.fullname || profile?.username }}</h4>
+            <span class="citizen-handle">@{{ profile?.username }}</span>
+            <div class="citizen-status">
+              <span class="meta-badge badge-emerald">Verified Citizen</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Guest Invitation Card (Logged Out) -->
+        <div class="guest-card" *ngIf="profile == undefined">
+          <div class="guest-card-content">
+            <div class="guest-icon">
+              <ion-icon name="sparkles-outline"></ion-icon>
+            </div>
+            <h4>Welcome, Explorer</h4>
+            <p>Sign in to claim land parcels, customize your 3D avatar, and trade in the metaverse.</p>
+            <div class="guest-actions">
+              <ion-menu-toggle [autoHide]="false">
+                <ion-button expand="block" class="meta-btn-gradient" [routerLink]="['/flatmeta/login']">
+                  Sign In
+                </ion-button>
+                <ion-button expand="block" fill="outline" color="light" class="btn-signup-outline" [routerLink]="['/flatmeta/signup']">
+                  Create Account
+                </ion-button>
+              </ion-menu-toggle>
+            </div>
+          </div>
+        </div>
+
+        <!-- Navigation Menu Items -->
+        <div class="menu-section-label">Navigation</div>
+        <ion-list class="menu-nav-list" lines="none">
+          <ion-menu-toggle autoHide="false" *ngFor="let p of pages">
+            <div class="nav-item-wrapper" (click)="goTo(p)">
+              <div class="nav-icon-box">
+                <ion-icon [name]="p.icon || 'chevron-forward-outline'"></ion-icon>
+              </div>
+              <div class="nav-title">{{ p.title }}</div>
+              <ion-icon name="chevron-forward-outline" class="nav-arrow"></ion-icon>
+            </div>
+          </ion-menu-toggle>
+
+          <!-- Logout Item -->
+          <div class="nav-item-wrapper nav-logout" (click)="logOut()" *ngIf="profile != undefined">
+            <div class="nav-icon-box logout-icon">
+              <ion-icon name="log-out-outline"></ion-icon>
+            </div>
+            <div class="nav-title">Disconnect / Logout</div>
+          </div>
+        </ion-list>
       </ion-content>
 
-      <ion-item>
-        <ion-label>
-          <ion-icon name="{{darkMode ? 'sunny' : 'moon'}}"></ion-icon>
-        </ion-label>
-        <ion-toggle slot="end" (ionChange)="toggleTheme($event)" color="dark" [(ngModel)]="darkMode" mode="md">
-        </ion-toggle>
-      </ion-item>
+      <!-- Menu Footer: Theme Toggle & Info -->
+      <ion-footer class="menu-footer ion-no-border">
+        <div class="theme-toggle-container">
+          <div class="theme-label-group" (click)="toggleThemeDirect()" style="cursor: pointer;">
+            <div class="theme-icon-wrap" [class.dark]="darkMode">
+              <ion-icon [name]="darkMode ? 'moon' : 'sunny'"></ion-icon>
+            </div>
+            <div class="theme-text">
+              <span class="theme-title">{{ darkMode ? 'Cyber Dark' : 'Daylight' }}</span>
+              <span class="theme-sub">Theme</span>
+            </div>
+          </div>
+          <ion-toggle (ionChange)="toggleTheme($event)" color="primary" [checked]="darkMode" mode="ios">
+          </ion-toggle>
+        </div>
+      </ion-footer>
     </ion-menu>
     <ion-router-outlet id="main-content"></ion-router-outlet>
   </ion-split-pane>

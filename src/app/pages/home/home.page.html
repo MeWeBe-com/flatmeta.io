@@ -7,75 +7,121 @@
 </ion-header> -->
 
 <ion-content [fullscreen]="true">
-  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
-    <ion-fab-button color="light" (click)="getCurrentLocation()">
-      <ion-icon name="home"></ion-icon>
-    </ion-fab-button>    
-  </ion-fab>
-
-  <div id="top-pop" *ngIf="ShowtopPop">
-    <h2>Welcome to Flatmeta! 
-      <ion-icon (click)="ShowtopPop = false" name="close"></ion-icon>
-    </h2>
-
-    <p>Flatmeta.io is an Open-source, Online virtual World. Where you can Sell / Purchase your desired places as a square boxes and sell them at your own Cost.</p>
-
-    <p>You can Chat with other Users roaming in your area by adding them as friends, You can also visit any place or neighbourhood. </p>
-
-    <div class="button-box">
-
-      <ion-button [routerLink]="['/flatmeta/opensource']" expand="block">Learn More</ion-button>
-
-      <ion-button (click)="ShowtopPop = false" expand="block">Start Mapping</ion-button>
-
-    </div>
-
-    
-
-      
-  </div>
-
+  <!-- Map Container -->
   <div id="mapId"></div>
 
-  <ng-container *ngIf="showBuyBtn">
-    <div class="buybtn" (click)="showGrid()">
-      <ion-icon name="globe-outline"></ion-icon>
-      <br />
-      Buy
+  <!-- Floating HUD Map Controls -->
+  <div class="map-floating-hud">
+    <!-- Zoom Levels HUD (Strictly 3 levels: 15, 10, 5) -->
+    <div class="hud-group">
+      <button class="hud-btn" [class.active]="currentZoomLevel === 15" (click)="setZoomLevel(15)" title="Zoom 15: Land Parcels">
+        <span class="zoom-label">15x</span>
+      </button>
+      <div class="hud-divider"></div>
+      <button class="hud-btn" [class.active]="currentZoomLevel === 10" (click)="setZoomLevel(10)" title="Zoom 10: City / Region">
+        <span class="zoom-label">10x</span>
+      </button>
+      <div class="hud-divider"></div>
+      <button class="hud-btn" [class.active]="currentZoomLevel === 5" (click)="setZoomLevel(5)" title="Zoom 5: Global World">
+        <span class="zoom-label">5x</span>
+      </button>
     </div>
-  </ng-container>
 
-  <ng-container>
-    <div class="locatebtn" (click)="toAvatarLocation()">
-      <ion-icon name="locate-outline"></ion-icon>
+    <!-- Quick Navigation & Layer Tools -->
+    <div class="hud-group">
+      <button class="hud-btn" (click)="toAvatarLocation()" title="Center on Avatar">
+        <ion-icon name="locate-outline"></ion-icon>
+      </button>
+      <div class="hud-divider"></div>
+      <button class="hud-btn" [class.active]="tiles != null" (click)="showGrid()" title="Toggle Land Grid (Level 15)">
+        <ion-icon name="grid-outline"></ion-icon>
+        <span class="active-dot" *ngIf="tiles != null"></span>
+      </button>
+      <div class="hud-divider"></div>
+      <button class="hud-btn" (click)="getCurrentLocation()" title="GPS Current Location">
+        <ion-icon name="navigate-outline"></ion-icon>
+      </button>
     </div>
-  </ng-container>
+  </div>
 
-  <ng-container *ngIf="selectedBoxs.length > 0">
-    <div class="position ion-padding">
-      <div class="icon" (click)="removeSelectedBoxes()">
+  <!-- Welcome / Guest Onboarding Card (#top-pop) -->
+  <div id="top-pop" *ngIf="ShowtopPop">
+    <div class="pop-header">
+      <div class="pop-title-area">
+        <h3 *ngIf="isGuest">Hello Guest!</h3>
+        <h3 *ngIf="!isGuest">Welcome, {{currentUser?.fullname || currentUser?.username}}!</h3>
+        <span class="badge-guest" *ngIf="isGuest">Guest Mode</span>
+        <span class="badge-citizen" *ngIf="!isGuest">Citizen</span>
+      </div>
+      <button class="btn-close" (click)="ShowtopPop = false" aria-label="Close">
         <ion-icon name="close"></ion-icon>
-      </div>
-      <div class="ion-text-center">Add to Cart {{selectedBoxs.length}} boxes</div>
-      <div>
-        <ion-button (click)="addToCart()" expand="block">Add to Cart</ion-button>
-      </div>
+      </button>
     </div>
-  </ng-container>
 
-  <ng-container *ngIf="myBoxs.length > 0">
-    <div class="position2 ion-padding">
-      <div class="icon" (click)="removeSelectedBoxes()">
-        <ion-icon name="close"></ion-icon>
+    <p class="pop-desc">
+      FlatMeta is an open-source 2D metaverse. Roam the earth, interact with online avatars in real time, and claim digital land parcels.
+    </p>
+
+    <div class="pop-features">
+      <div class="feature-item">
+        <ion-icon name="walk-outline"></ion-icon>
+        <span>Double-click or drag your avatar to travel anywhere</span>
       </div>
-      <div>
-        <ion-button (click)="imgSelection = true" expand="block">Show Image Selection</ion-button>
+      <div class="feature-item">
+        <ion-icon name="chatbubbles-outline"></ion-icon>
+        <span>Speech bubbles appear live over roaming citizens</span>
       </div>
-      <div>
-        <ion-button (click)="showEditor = true" expand="block">Show Editor</ion-button>
+      <div class="feature-item">
+        <ion-icon name="cube-outline"></ion-icon>
+        <span>Virtual parcels available at 15x zoom for $1.00 USD</span>
       </div>
     </div>
-  </ng-container>
+
+    <div class="button-box" *ngIf="isGuest">
+      <ion-button [routerLink]="['/flatmeta/login']" fill="solid" color="primary">Sign In</ion-button>
+      <ion-button [routerLink]="['/flatmeta/signup']" fill="outline" color="primary">Sign Up</ion-button>
+      <ion-button (click)="ShowtopPop = false" fill="clear" color="light">Explore</ion-button>
+    </div>
+
+    <div class="button-box" *ngIf="!isGuest">
+      <ion-button (click)="ShowtopPop = false" fill="solid" color="primary">Start Exploring</ion-button>
+      <ion-button [routerLink]="['/flatmeta/opensource']" fill="outline" color="primary">Learn More</ion-button>
+    </div>
+  </div>
+
+  <!-- Selected Parcels Floating Action Bar -->
+  <div class="parcel-action-bar" *ngIf="selectedBoxs.length > 0">
+    <div class="parcel-info">
+      <div class="parcel-count"><strong>{{selectedBoxs.length}}</strong> Parcel{{selectedBoxs.length > 1 ? 's' : ''}} Selected</div>
+      <div class="parcel-price">Total: ${{selectedBoxs.length * 1}} USD ($1.00 / tile)</div>
+    </div>
+    <div class="parcel-buttons">
+      <ion-button fill="clear" color="medium" (click)="removeSelectedBoxes()">Cancel</ion-button>
+      <ion-button fill="solid" color="primary" (click)="addToCart()">
+        <ion-icon name="cart-outline" slot="start"></ion-icon>
+        Add to Cart
+      </ion-button>
+    </div>
+  </div>
+
+  <!-- Owned Parcels Management Bar -->
+  <div class="parcel-manage-bar" *ngIf="myBoxs.length > 0">
+    <div class="parcel-info">
+      <div class="parcel-count"><strong>Owned Parcel</strong></div>
+      <div class="parcel-price">Personalize artwork & info</div>
+    </div>
+    <div class="parcel-buttons">
+      <ion-button fill="clear" color="medium" (click)="removeSelectedBoxes()">Close</ion-button>
+      <ion-button fill="outline" color="primary" (click)="imgSelection = true">
+        <ion-icon name="image-outline" slot="start"></ion-icon>
+        Artwork
+      </ion-button>
+      <ion-button fill="solid" color="primary" (click)="showEditor = true">
+        <ion-icon name="create-outline" slot="start"></ion-icon>
+        Edit Text
+      </ion-button>
+    </div>
+  </div>
 
   <!-- Image Selection Modal -->
   <ion-modal [isOpen]="imgSelection" [swipeToClose]="false" [presentingElement]="routerOutlet.nativeEl" mode="ios"
@@ -159,7 +205,7 @@
   </ion-modal>
 
   <!-- report popover -->
-  <ion-popover [isOpen]="reportPopover">
+  <ion-popover [isOpen]="reportPopover" (didDismiss)="reportPopover = false; toReportUser = undefined">
     <ng-template>
       <div class="ion-content-pop">
 

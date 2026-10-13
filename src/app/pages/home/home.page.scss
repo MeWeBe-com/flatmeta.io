@@ -1,217 +1,408 @@
 #mapId {
-    height: 100%;
-    width: 100%;
-    padding: 0px;
-    margin: 0px;
+  height: 100%;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  background: var(--flatmeta-map-bg, #0f172a);
 }
 
-.position {
-    position: absolute;
-    bottom: 60px;
-    min-width: 300px;
-    background: var(--ion-color-light);
-    z-index: 999;
-    height: 100px;
-    border-radius: 10px;
-    margin: 0 auto;
-    left: 50%;
-    transform: translate(-50%, 1%);
+/* Floating Controls HUD */
+.map-floating-hud {
+  position: absolute;
+  top: 70px;
+  left: 14px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 
-    .icon {
-        position: absolute;
-        right: 5px;
-        top: 5px;
+  .hud-group {
+    background: var(--flatmeta-hud-bg, rgba(15, 23, 42, 0.88));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--flatmeta-hud-border, rgba(255, 255, 255, 0.15));
+    border-radius: 12px;
+    box-shadow: var(--flatmeta-hud-shadow, 0 8px 24px rgba(0, 0, 0, 0.35));
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+
+  .hud-btn {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--flatmeta-hud-color, #e2e8f0);
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+
+    ion-icon {
+      font-size: 20px;
     }
+
+    &:hover {
+      background: var(--flatmeta-surface-muted, rgba(255, 255, 255, 0.1));
+      color: #38bdf8;
+    }
+
+    &:active {
+      transform: scale(0.94);
+    }
+
+    &.active {
+      background: #2563eb;
+      color: #ffffff;
+    }
+
+    .zoom-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .active-dot {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 6px;
+      height: 6px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 6px #10b981;
+    }
+  }
+
+  .hud-divider {
+    height: 1px;
+    background: var(--flatmeta-border-glass, rgba(255, 255, 255, 0.1));
+    margin: 0;
+  }
 }
 
-.position2 {
-    position: absolute;
-    bottom: 60px;
-    min-width: 300px;
-    z-index: 999;
-    height: 120px;
-    border-radius: 10px;
-    margin: 0 auto;
-    background: var(--ion-color-light);
-    left: 50%;
-    transform: translate(-50%, 0%);
+/* Onboarding Welcome / Guest Banner (#top-pop) */
+#top-pop {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  max-width: 380px;
+  width: calc(100% - 28px);
+  background: var(--flatmeta-pop-bg, rgba(15, 23, 42, 0.92));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--flatmeta-border-glass, rgba(255, 255, 255, 0.16));
+  border-radius: 16px;
+  box-shadow: var(--flatmeta-card-shadow, 0 20px 40px -10px rgba(0, 0, 0, 0.5));
+  padding: 18px;
+  z-index: 1001;
+  color: var(--flatmeta-text-primary, #f8fafc);
+  transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  animation: slideInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 
-    .icon {
-        position: absolute;
-        right: 5px;
-        top: 5px;
+  .pop-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+
+    .pop-title-area {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      h3 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--flatmeta-text-primary, #f8fafc);
+      }
+
+      .badge-guest {
+        background: rgba(59, 130, 246, 0.2);
+        color: #60a5fa;
+        border: 1px solid rgba(59, 130, 246, 0.4);
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 10px;
+        text-transform: uppercase;
+      }
+
+      .badge-citizen {
+        background: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 10px;
+        text-transform: uppercase;
+      }
     }
 
-    .my-b {
-        overflow-y: scroll;
-        align-items: center;
-        justify-content: center;
-        margin: 10px 0px;
+    .btn-close {
+      background: transparent;
+      border: none;
+      color: var(--flatmeta-text-muted, #94a3b8);
+      cursor: pointer;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      border-radius: 50%;
+      transition: all 0.2s ease;
 
-        img {
-            width: 50px;
-            border-radius: 50px;
-            margin-right: 10px;
-        }
+      &:hover {
+        background: var(--flatmeta-surface-muted, rgba(255, 255, 255, 0.1));
+        color: var(--flatmeta-text-primary, #ffffff);
+      }
     }
+  }
+
+  p.pop-desc {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--flatmeta-text-muted, #cbd5e1);
+  }
+
+  .pop-features {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--flatmeta-text-secondary, #94a3b8);
+
+      ion-icon {
+        color: #38bdf8;
+        font-size: 14px;
+      }
+    }
+  }
+
+  .button-box {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+
+    ion-button {
+      flex: 1;
+      margin: 0;
+      --border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Floating Action Bars for Selected and Owned Parcels */
+.parcel-action-bar,
+.parcel-manage-bar {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 28px);
+  max-width: 520px;
+  background: var(--flatmeta-actionbar-bg, rgba(15, 23, 42, 0.94));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--flatmeta-actionbar-border, rgba(59, 130, 246, 0.3));
+  border-radius: 18px;
+  box-shadow: var(--flatmeta-card-shadow, 0 16px 36px rgba(0, 0, 0, 0.55));
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  animation: slideUpBar 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background 0.3s ease, border-color 0.3s ease;
+
+  .parcel-info {
+    display: flex;
+    flex-direction: column;
+
+    .parcel-count {
+      color: var(--flatmeta-text-primary, #f8fafc);
+      font-size: 14px;
+      font-weight: 600;
+
+      strong {
+        color: #38bdf8;
+      }
+    }
+
+    .parcel-price {
+      color: var(--flatmeta-text-muted, #94a3b8);
+      font-size: 12px;
+    }
+  }
+
+  .parcel-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    ion-button {
+      margin: 0;
+      --border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+  }
+}
+
+@keyframes slideUpBar {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 
 .box-img {
-    width: 150px;
-    height: 100px;
-    object-fit: contain;
+  width: 100%;
+  max-width: 140px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--flatmeta-border-glass, rgba(255, 255, 255, 0.15));
+  transition: transform 0.2s ease;
 }
 
 .selectImg {
-    border: 1px solid red;
+  border: 2px solid #2563eb !important;
+  border-radius: 10px;
 }
 
-.swipe {
-    position: absolute;
-    top: 50%;
-    z-index: 999;
-    right: 4px;
-    border-radius: 10px;
-    text-align: center;
-    background-color: var(--ion-color-light);
-    padding: 5px;
+/* GeoSearch Searchbar Leaflet Controls Overrides */
+::ng-deep .leaflet-control-geosearch {
+  background: var(--flatmeta-surface, rgba(15, 23, 42, 0.9)) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--flatmeta-border-glass, rgba(255, 255, 255, 0.16)) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--flatmeta-card-shadow, 0 8px 24px rgba(0, 0, 0, 0.35)) !important;
+  overflow: hidden;
 
-    ion-icon {
-        font-size: 20px;
+  form {
+    background: transparent !important;
+    border: none !important;
+
+    input {
+      color: var(--flatmeta-text-primary, #f8fafc) !important;
+      background: transparent !important;
+      font-size: 13px !important;
+      padding: 8px 12px !important;
+
+      &::placeholder {
+        color: var(--flatmeta-text-muted, #94a3b8) !important;
+      }
     }
-}
+  }
 
-.buybtn {
-    position: absolute;
-    top: 13%;
-    z-index: 999;
-    left: 10px;
-    border-radius: 5px;
-    text-align: center;
-    background-color: var(--ion-color-light);
-    padding: 2px;
-    border: 1px solid darkgrey;
+  .results {
+    background: var(--flatmeta-surface, rgba(15, 23, 42, 0.96)) !important;
+    border-top: 1px solid var(--flatmeta-border-glass, rgba(255, 255, 255, 0.1)) !important;
 
-    ion-icon {
-        font-size: 20px;
+    div {
+      color: var(--flatmeta-text-primary, #cbd5e1) !important;
+      padding: 8px 12px !important;
+      font-size: 13px !important;
+
+      &:hover {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+      }
     }
-}
+  }
 
-.locatebtn {
-    position: absolute;
-    top: 22%;
-    z-index: 999;
-    left: 10px;
-    border-radius: 5px;
-    text-align: center;
-    background-color: var(--ion-color-light);
-    padding: 5px;
-    border: 1px solid darkgrey;
+  a.reset {
+    color: var(--flatmeta-text-muted, #94a3b8) !important;
+    background: transparent !important;
 
-    ion-icon {
-        font-size: 20px;
+    &:hover {
+      color: var(--flatmeta-text-primary, #ffffff) !important;
     }
+  }
 }
 
-.popImgClass {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    margin-right: 10px;
-}
-
-.mdiv {
-    align-items: center;
-
-    p {
-        font-weight: bold;
-    }
-}
-
+/* Report Popover Styling */
 .ion-content-pop {
-    padding: 5px 10px;
+  background: var(--flatmeta-surface, rgba(15, 23, 42, 0.96));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--flatmeta-border-glass, rgba(255, 255, 255, 0.12));
+  border-radius: 16px;
+  padding: 16px;
+  color: var(--flatmeta-text-primary, #f8fafc);
+  min-width: 260px;
 
-    .icon {
-        position: absolute;
-        right: 0;
+  .icon {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 4px;
+
+    ion-button {
+      --color: var(--flatmeta-text-muted, #94a3b8);
+      height: 28px;
     }
+  }
 
-    .content {
-        text-align: center;
-
-        .head {
-            font-weight: bold;
-            font-size: 20px;
-         
-        }
+  .content {
+    .head {
+      font-family: var(--flatmeta-heading-font);
+      font-size: 16px;
+      font-weight: 700;
+      color: #fb7185;
+      margin: 0 0 12px 0;
     }
+  }
 
-}
+  div[click] {
+    cursor: pointer;
+  }
 
-::ng-deep .leaflet-control-geosearch{
-    background-color: var(--ion-color-light);
-    border-radius: 10px;
-    form {
-        background-color: var(--ion-color-light);
+  p {
+    font-size: 13px;
+    color: var(--flatmeta-text-secondary, #cbd5e1);
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin: 4px 0;
+    background: var(--flatmeta-surface-muted, rgba(30, 41, 59, 0.4));
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(244, 63, 94, 0.2);
+      color: #ffffff;
+      transform: translateX(3px);
     }
-    .glass{
-        background: var(--ion-color-light)!important;
-    }
-    .reset{
-        background-color: var(--ion-color-light)!important;
-        color: var(--ion-color-medium)!important;
-    }
-    .results{
-        background: var(--ion-color-light);
-        div{
-            &:hover{
-                background-color: var(--ion-color-medium);
-                color: var(--ion-color-light);
-            }
-        }
-    }
-}
-
-::ng-deep .leaflet-top {
-    .leaflet-control-zoom{
-        .leaflet-control-zoom-in{
-            background-color: var(--ion-color-light);
-            color: var(--ion-color-dark);
-        }
-
-        .leaflet-control-zoom-out{
-            background-color: var(--ion-color-light);
-            color: var(--ion-color-dark);
-        }
-    }
-}
-
-
-#top-pop {
-    width: 350px;
-    background: var(--ion-color-light);
-    position: absolute;
-    z-index: 999999;
-    right: 10px;
-    top: 10px;
-    padding: 10px;
-    border-radius:5px;
-
-    h2 {
-        margin-top:0px;
-        display: flex;
-        justify-content: space-between;
-
-        ion-icon{
-            font: size 24px;
-            vertical-align: middle;
-        }
-    }
-}
-
-.button-box{
-    display:flex;
-    ion-button{
-        width:50%;
-    }
+  }
 }

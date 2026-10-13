@@ -1,72 +1,76 @@
-<ion-content [fullscreen]="true" class="ion-padding">
-  <div id="container">
-    <p class="capitalize">Log into <br> Your Account</p>
-    <form [formGroup]="loginForm" (ngSubmit)="onSubmitLogin()" (keyup.enter)="onSubmitLogin()" novalidate>
+<ion-content [fullscreen]="true" class="login-content">
+  <div class="auth-wrapper">
+    <!-- Cyber Background Glow Effects -->
+    <div class="glow-orb glow-orb-1"></div>
+    <div class="glow-orb glow-orb-2"></div>
 
-      <div>
-        <ion-item mode="md">
-          <ion-label position="floating">
-            <ion-icon slot="start" name="person"></ion-icon>
-            Email Address
-            <ng-container *ngIf="getLoginControl.email.touched">
-              <span class="text-danger" *ngIf="getLoginControl.email.errors?.required">Email is required*</span>
-              <span class="text-danger"
-                *ngIf="(getLoginControl.email.invalid && !getLoginControl.email.errors?.required)">Invialid
-                Email*</span>
-            </ng-container>
-          </ion-label>
-          <ion-input type="email" placeholder="Email address" formControlName="email" enterkeyhint="next"
-            (keydown)="onKeydown($event)">
-          </ion-input>
-        </ion-item>
-
-        <ion-item mode="md">
-          <ion-label position="floating">
-            <ion-icon slot="start" name="lock-open"></ion-icon>
-            Password
-            <ng-container *ngIf="getLoginControl.password.touched">
-              <span class="text-danger" *ngIf="getLoginControl.password.errors?.required">Password is required *</span>
-            </ng-container>
-
-          </ion-label>
-          <ion-input type="{{showPass ? 'text' : 'password'}}" placeholder="Password" formControlName="password"
-            enterkeyhint="next">
-          </ion-input>
-          <ion-icon name="eye-outline" class="ion-align-self-center" slot="end" *ngIf="!showPass"
-            (click)="showPass = !showPass"></ion-icon>
-          <ion-icon name="eye-off-outline" class="ion-align-self-center" slot="end" *ngIf="showPass"
-            (click)="showPass = !showPass"></ion-icon>
-        </ion-item>
+    <div class="auth-card meta-card-glass">
+      <!-- Brand & Welcome -->
+      <div class="auth-header">
+        <div class="auth-logo-badge">
+          <ion-icon name="planet"></ion-icon>
+        </div>
+        <h2 class="auth-title">Welcome <span class="gradient-text">Back</span></h2>
+        <p class="auth-subtitle">Sign in to roam FlatMeta, trade land, and interact with online citizens.</p>
       </div>
 
-      <ion-button expand="block" shape="round" color="dark" [disabled]="loginForm.invalid" type="submit"
-        *ngIf="!loading">
-        Login &nbsp;
-        <ion-icon name="log-in-outline"></ion-icon>
-      </ion-button>
+      <!-- Form -->
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmitLogin()" (keyup.enter)="onSubmitLogin()" novalidate class="auth-form">
+        <!-- Email Input -->
+        <div class="input-group">
+          <label class="input-label">Email or Username</label>
+          <div class="input-field-wrap" [class.field-error]="getLoginControl.email.touched && getLoginControl.email.invalid">
+            <ion-icon name="mail-outline" class="field-icon"></ion-icon>
+            <ion-input type="email" placeholder="citizen@flatmeta.io" formControlName="email" enterkeyhint="next"
+              (keydown)="onKeydown($event)">
+            </ion-input>
+          </div>
+          <div class="field-error-msg" *ngIf="getLoginControl.email.touched && getLoginControl.email.errors?.required">
+            Email or username is required
+          </div>
+        </div>
 
-      <ion-button expand="block" shape="round" color="dark" mode="ios" *ngIf="loading">
-        <ion-spinner name="crescent" color="primary"></ion-spinner>
-      </ion-button>
+        <!-- Password Input -->
+        <div class="input-group">
+          <div class="label-row">
+            <label class="input-label">Password</label>
+            <button type="button" class="btn-forgot-link" (click)="presentAlertPrompt()">
+              Forgot?
+            </button>
+          </div>
+          <div class="input-field-wrap" [class.field-error]="getLoginControl.password.touched && getLoginControl.password.invalid">
+            <ion-icon name="lock-closed-outline" class="field-icon"></ion-icon>
+            <ion-input [type]="showPass ? 'text' : 'password'" placeholder="Enter your password" formControlName="password"
+              enterkeyhint="done">
+            </ion-input>
+            <button type="button" class="btn-toggle-pass" (click)="showPass = !showPass" aria-label="Toggle password">
+              <ion-icon [name]="showPass ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+            </button>
+          </div>
+          <div class="field-error-msg" *ngIf="getLoginControl.password.touched && getLoginControl.password.errors?.required">
+            Password is required
+          </div>
+        </div>
 
-    </form>
+        <!-- Submit Button -->
+        <div class="form-actions">
+          <ion-button expand="block" class="meta-btn-gradient auth-btn-submit" [disabled]="loginForm.invalid" type="submit"
+            *ngIf="!loading">
+            Sign In to FlatMeta
+            <ion-icon name="arrow-forward-outline" slot="end"></ion-icon>
+          </ion-button>
 
-    <p class="ion-text-center facebookLogin">
-      <ion-button fill="clear" color="dark" mode="ios" (click)="presentAlertPrompt()" expland="block" size="small">
-        Forget Password?
-      </ion-button>
+          <ion-button expand="block" class="meta-btn-gradient auth-btn-submit" disabled *ngIf="loading">
+            <ion-spinner name="crescent" color="light"></ion-spinner>
+          </ion-button>
+        </div>
+      </form>
 
-    </p>
-
+      <!-- Bottom Alternative -->
+      <div class="auth-footer-note">
+        <span>New to the metaverse?</span>
+        <a [routerLink]="['/flatmeta/signup']" class="signup-link">Create Citizen Account</a>
+      </div>
+    </div>
   </div>
 </ion-content>
-
-<ion-footer collapse="fade" class="ion-no-border">
-  <ion-toolbar [routerLink]="['/flatmeta/signup']" mode="ios">
-    <ion-title>
-      <ion-button fill="clear" color="dark" size="small">
-        Dont have an account?
-      </ion-button>
-    </ion-title>
-  </ion-toolbar>
-</ion-footer>

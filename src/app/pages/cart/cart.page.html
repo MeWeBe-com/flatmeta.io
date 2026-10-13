@@ -1,82 +1,121 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>
-      My Cart
+<ion-header class="ion-no-border meta-page-header">
+  <ion-toolbar class="meta-page-toolbar">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/flatmeta/home" text="" icon="arrow-back-outline"></ion-back-button>
+    </ion-buttons>
+    <ion-title class="meta-page-title">
+      <span class="gradient-text">Cart & Checkout</span>
     </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="getCart()" fill="clear" color="primary" title="Refresh Cart">
+        <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true" class="ion-padding">
+<ion-content [fullscreen]="true" class="cart-content">
+  <div class="cart-container">
+    <!-- Empty Cart State -->
+    <div class="empty-state-wrap meta-card-glass" *ngIf="cartData?.length === 0">
+      <div class="empty-icon-box">
+        <ion-icon name="cart-outline"></ion-icon>
+      </div>
+      <h3>Your Cart is Empty</h3>
+      <p>You haven't added any land parcels yet. Explore the metaverse map at 15x zoom and select tiles to purchase!</p>
+      <ion-button [routerLink]="['/flatmeta/home']" class="meta-btn-gradient">
+        <ion-icon name="planet-outline" slot="start"></ion-icon>
+        Explore World Map
+      </ion-button>
+    </div>
 
-  <ion-card mode="ios">
-    <ion-card-content>
-
-      <div class="cards">
-
-
-        <div class="flex check">
-          <div>
-            Total Selected Titles:
-          </div>
-          <div>
-            <b>{{cartData?.length}}</b>
-          </div>
+    <!-- Active Cart View -->
+    <div class="cart-layout" *ngIf="cartData?.length > 0">
+      <!-- Left: Selected Coordinates List -->
+      <div class="cart-items-section">
+        <div class="section-header">
+          <h3>Selected Parcels</h3>
+          <span class="meta-badge badge-purple">{{ cartData.length }} Tiles</span>
         </div>
 
-        <div>
-          Box Details:
-        </div>
-
-        <ion-item *ngFor="let ll of cartData" line="none" button>
-          <ion-icon name="location" slot="start"></ion-icon>
-          <div>
-            <div>
-              <div>
-                {{ll?.lat}}
+        <div class="coords-list">
+          <div class="coord-card meta-card" *ngFor="let item of cartData; let idx = index">
+            <div class="coord-index">{{ idx + 1 }}</div>
+            <div class="coord-icon">
+              <ion-icon name="navigate-circle-outline"></ion-icon>
+            </div>
+            <div class="coord-info">
+              <div class="coord-line">
+                <span class="lbl">LAT:</span>
+                <span class="val">{{ item?.lat | number:'1.4-4' }}</span>
               </div>
-              <div>
-                {{ll?.lng}}
+              <div class="coord-line">
+                <span class="lbl">LNG:</span>
+                <span class="val">{{ item?.lng | number:'1.4-4' }}</span>
               </div>
             </div>
+            <div class="coord-status">
+              <span class="meta-badge badge-cyan">Ready</span>
+            </div>
           </div>
-        </ion-item>
-      </div>
-
-      <hr />
-      <div class="flex check">
-        <div>
-          Base Price:
-        </div>
-        <div>
-          <b>$0.1</b>
         </div>
       </div>
 
-      <div class="flex check">
-        <div>
-          Total:
-        </div>
-        <div>
-          <b>${{(cartData?.length * 0.1).toFixed(1)}}</b>
+      <!-- Right: Order Summary Card -->
+      <div class="cart-summary-section">
+        <div class="summary-card meta-card-glass">
+          <h3 class="summary-title">Order Breakdown</h3>
+
+          <div class="breakdown-table">
+            <div class="breakdown-row">
+              <span class="b-lbl">Parcels Selected</span>
+              <span class="b-val">{{ cartData.length }}</span>
+            </div>
+            <div class="breakdown-row">
+              <span class="b-lbl">Rate per Tile</span>
+              <span class="b-val">$0.10 USD</span>
+            </div>
+            <div class="breakdown-row">
+              <span class="b-lbl">Land Deed Registration</span>
+              <span class="b-val text-free">FREE</span>
+            </div>
+
+            <!-- Voucher Row -->
+            <div class="voucher-box">
+              <div class="voucher-input-wrap">
+                <ion-icon name="pricetag-outline"></ion-icon>
+                <ion-input placeholder="Enter Promo Code"></ion-input>
+              </div>
+              <ion-button fill="outline" size="small" class="btn-voucher">Apply</ion-button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="breakdown-row total-row">
+              <span class="t-lbl">Total Due</span>
+              <span class="t-val gradient-text">${{ (cartData.length * 0.1).toFixed(2) }} USD</span>
+            </div>
+          </div>
+
+          <!-- Checkout Actions -->
+          <div class="checkout-actions">
+            <ion-button expand="block" class="meta-btn-gradient btn-checkout" (click)="makeBuy()">
+              <ion-icon name="card-outline" slot="start"></ion-icon>
+              Proceed to PayPal Checkout
+            </ion-button>
+
+            <ion-button expand="block" fill="outline" class="btn-clear-cart" (click)="removeFromCart()">
+              <ion-icon name="trash-outline" slot="start"></ion-icon>
+              Clear Cart
+            </ion-button>
+          </div>
+
+          <div class="security-guarantee">
+            <ion-icon name="shield-checkmark"></ion-icon>
+            <span>Verified ownership registered instantly in FlatMeta database.</span>
+          </div>
         </div>
       </div>
-
-      <ion-item>
-        <ion-label position="flaoting">Enter Voucher:</ion-label>
-        <ion-input></ion-input>
-      </ion-item>
-
-    </ion-card-content>
-
-
-    <ion-button color="dark" expand="block" (click)="makeBuy()">
-      Confirm Checkout
-    </ion-button>
-
-    <ion-button color="dark" expand="block" (click)="removeFromCart()" fill="outline" *ngIf="cartData.length > 0">
-      Clear Cart
-    </ion-button>
-
-  </ion-card>
-
+    </div>
+  </div>
 </ion-content>

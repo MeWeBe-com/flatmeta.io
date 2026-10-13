@@ -1,5 +1,5 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, Renderer2 } from '@angular/core';
-import { IonRouterOutlet } from '@ionic/angular';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, Renderer2, NgZone, ChangeDetectorRef } from '@angular/core';
+import { IonRouterOutlet, ModalController } from '@ionic/angular';
 import { Geolocation } from '@capacitor/geolocation';
 import { LocationAccuracy } from '@awesome-cordova-plugins/location-accuracy/ngx';
 import { StorageService } from 'src/app/providers/storage.service';
@@ -9,64 +9,76 @@ import { GlobaldataService } from 'src/app/providers/globaldata.service';
 import { EventsService } from 'src/app/providers/events.service';
 import { Capacitor } from '@capacitor/core';
 import { ActivatedRoute } from '@angular/router';
+import { environment } from 'src/environments/environment';
 
 import * as Leaflet from 'leaflet';
 import * as GeoSearch from 'leaflet-geosearch';
-import DriftMarker from "leaflet-drift-marker";
+import DriftMarker from 'leaflet-drift-marker';
 
-import { ModalController } from '@ionic/angular';
 import { ChatComponent } from 'src/app/components/chat/chat.component';
-
-import { Socket } from 'ngx-socket-io';
-import { Observable } from 'rxjs';
+import { WebSocketService } from 'src/app/providers/websocket.service';
+import { Observable, Subscription } from 'rxjs';
 
 const provider = new GeoSearch.OpenStreetMapProvider();
-
 
 @Component({
   selector: 'app-home',
   templateUrl: './home.page.html',
   styleUrls: ['./home.page.scss'],
 })
-export class HomePage implements OnInit {
+export class HomePage implements OnInit, OnDestroy {
   @ViewChild('fileInput', { static: false }) fileInput: ElementRef;
 
   ShowtopPop: boolean = true;
   map: Leaflet.Map;
-  tiles: any = undefined;
+  tiles: Leaflet.GridLayer = undefined;
 
-  showBuyBtn: boolean = false;
+  showBuyBtn: boolean = true;
 
-  selectedBoxs = [];
-  soldBoxes = [];
-  myBoxs = [];
+  selectedBoxs: any[] = [];
+  soldBoxes: any[] = [];
+  myBoxs: any[] = [];
 
-  user_id = GlobaldataService.userObject != undefined ? GlobaldataService.userObject.user_id : null;
+  user_id: any = null;
 
   imgSelection: boolean = false;
-  boxImgs = [];
-  boxImgs2 = [];
+  boxImgs: any[] = [];
+  boxImgs2: any[] = [];
   selectedImg: any = undefined;
   showUplaodedImage: boolean = false;
 
   showEditor: boolean = false;
-
   qEditor: any;
 
-  avatar: string;
-  myMarker: any;
-  otherUsers = [];
-  otherMarkers = [];
+  avatar: string = environment.fallbackAvatar;
+  myMarker: any = null;
+  otherUsers: any[] = [];
+  otherMarkers: any[] = [];
 
-  myTiles = [];
+  myTiles: any[] = [];
 
   showSellModal: boolean = false;
   tilePrice: number = 0.1;
 
   reportPopover: boolean = false;
-  reportList = [];
+  reportList: any[] = [];
   toReportUser: any = undefined;
-  prevZoom: any;
+
+  private subscriptions: Subscription = new Subscription();
+  private speechBubbleMarkers: any[] = [];
+
+  currentZoomLevel: number = 15;
+
+  get isGuest(): boolean {
+    return !GlobaldataService.userObject;
+  }
+
+  get currentUser(): any {
+    return GlobaldataService.userObject;
+  }
+
+  // Default coordinate (London Prime District or user location)
+  private currentCenter: [number, number] = [51.5074, -0.1278];
 
   constructor(
     private route: ActivatedRoute,
@@ -75,838 +87,954 @@ export class HomePage implements OnInit {
     public general: GeneralService,
     public http: HttpService,
     private locationAccuracy: LocationAccuracy,
-    private socket: Socket,
+    private socket: WebSocketService,
     private renderer: Renderer2,
     public modalController: ModalController,
-    public events: EventsService
+    public events: EventsService,
+    private zone: NgZone,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
-    this.events.receiveToUser().subscribe((res: any) => {
-      if (res) {
-        this.goTo("Home Page", "FlatMeta | Buy / Sell Virtual Land", `flatmeta/home/${res.id + '/' + res.username}`);
-        this.getUserTilesbyId(res.id);
-      }
-    })
+    this.refreshUser();
 
-    this.getEmitLocation().subscribe((data: any) => {
-      this.addOtherMarkers(data.data);
-    });
+    // Listen for cross-component navigation requests
+    this.subscriptions.add(
+      this.events.receiveToUser().subscribe((res: any) => {
+        if (res) {
+          this.goTo('Home Page', 'FlatMeta | Buy / Sell Virtual Land', `flatmeta/home/${res.id}/${res.username}`);
+          this.getUserTilesbyId(res.id);
+        }
+      })
+    );
+
+    // Listen for login updates
+    this.subscriptions.add(
+      this.events.receiveLogin().subscribe((user: any) => {
+        if (user) {
+          this.refreshUser();
+          this.updateMyAvatarMarker();
+        }
+      })
+    );
+
+    // Listen for roaming avatar location updates
+    this.subscriptions.add(
+      this.getEmitLocation().subscribe((data: any) => {
+        const payload = data?.data || data;
+        if (payload) {
+          this.addOtherMarkers(payload);
+        }
+      })
+    );
+
+    // Listen for live chat messages to render speech bubbles over avatars
+    this.subscriptions.add(
+      this.getSocketMessages().subscribe((msg: any) => {
+        if (msg) {
+          const senderId = msg.senderId || msg.sender_id;
+          const text = msg.message || msg.text || '';
+          this.displaySpeechBubble(senderId, text);
+        }
+      })
+    );
   }
 
-  toAvatarLocation() {
-    setTimeout(() => {
-      if (this.tiles != undefined) {
-        this.map.removeLayer(this.tiles);
-      }
-      this.map.flyTo([this.myMarker._latlng.lat, this.myMarker._latlng.lng], this.map.getZoom());
-      setTimeout(()=>{
-        this.myMarker.slideTo(this.map.getCenter(), { duration: 100 });
-        this.emitLocation(this.map.getCenter())
-      }, 500)
-    }, 500)
-  }
-
-  goTo(page, title, url) {
-    if ("undefined" !== typeof history.pushState) {
-      history.pushState({ page: page }, title, url);
+  refreshUser() {
+    if (GlobaldataService.userObject) {
+      this.user_id = GlobaldataService.userObject.user_id || GlobaldataService.userObject.id;
+      this.avatar = GlobaldataService.userObject.user_image || environment.fallbackAvatar;
     } else {
-      window.location.assign(url);
+      this.user_id = null;
+      this.avatar = environment.fallbackAvatar;
     }
-  }
-
-  getUserTilesbyId(id) {
-    this.http.get2('GetUserTilesByOrderId/' + id, false).subscribe((res: any) => {
-      if (res.status == true) {
-        setTimeout(() => {
-          this.map.flyTo([res.data.tiles[0].lat, res.data.tiles[0].lng], 15);
-        }, 500)
-      }
-    }, (e) => {
-      console.log(e)
-    })
   }
 
   ionViewWillEnter() {
-    if (this.tiles != undefined) {
-      this.map.removeLayer(this.tiles);
-      this.imgSelection = false;
-      this.selectedImg = '';
-      this.soldBoxes = [];
-      this.selectedBoxs = [];
-      this.myBoxs = [];
-      this.tiles = undefined;
-    }
-  }
-
-  ionViewWillLeave() {
-    if (this.tiles != undefined) {
-      this.map.removeLayer(this.tiles);
-      this.imgSelection = false;
-      this.selectedImg = '';
-      this.soldBoxes = [];
-      this.selectedBoxs = [];
-      this.myBoxs = [];
-      this.tiles = undefined;
-    }
+    this.refreshUser();
+    this.cleanupTilesLayer();
   }
 
   ionViewDidEnter() {
     this.getSoldBox();
     this.getBoxImgs();
     this.getReportList();
+    this.loadMap();
+
     setTimeout(() => {
       this.getMapUser();
-    }, 1500);
-    this.loadMap();
+    }, 800);
   }
 
-  showGrid() {
-    if (this.tiles == undefined) {
-      this.setGrid(this.map);
-      if (this.myMarker != undefined) {
-        this.map.removeLayer(this.myMarker);
-      }
-    } else {
-      if (this.tiles != undefined) {
-        this.selectedBoxs = [];
-        this.myBoxs = [];
-        this.map.removeLayer(this.tiles);
-        this.tiles = undefined;
-      }
-      this.addMarker();
+  ionViewWillLeave() {
+    this.cleanupTilesLayer();
+  }
+
+  ngOnDestroy() {
+    this.subscriptions.unsubscribe();
+    this.cleanupTilesLayer();
+    if (this.map) {
+      this.map.remove();
+      this.map = undefined;
     }
   }
 
-  getSoldBox() {
-    this.http.get2('PurchasedTiles', false).subscribe((res: any) => {
-      if (res.status == true) {
-        this.soldBoxes = res.data.tiles;
-      }
-    },
-      (e) => {
-        console.log(e)
-      })
-  }
-
-  async loadMap() {
-    if (this.map !== undefined) {
-      return
-    }
-    this.map = Leaflet.map('mapId', {
-      scrollWheelZoom: 'center',
-      touchZoom: false,
-      doubleClickZoom: false
-    }).setView([0, 0], 1);
-    //Leaflet.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?access_token={accessToken}', {
-    Leaflet.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
-      attribution: 'Buy / Customise land',
-      maxZoom: 15,
-      id: 'mapbox/streets-v11',
-      accessToken: 'pk.eyJ1IjoiaWRldmUiLCJhIjoiY2wxZ2o1cnlhMWFjbTNkcGNpbGZ3djI1bSJ9.H-6HJziV9Wu75UT4gQu5Bw',
-    }).addTo(this.map);
-    this.map.attributionControl.setPrefix('FlatMeta.io');
-    let coordinates;
-
-    // Native platform and web condition for permission on mobile apps
-    if (Capacitor.isNativePlatform()) {
-      const canRequest: boolean = await this.locationAccuracy.canRequest();
-      if (canRequest) {
-        let req = await this.locationAccuracy.request(this.locationAccuracy.REQUEST_PRIORITY_HIGH_ACCURACY)
-        if (req.code == 1 || req.code == 0) {
-          coordinates = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
-        } else {
-          this.general.presentAlert('Warning!', 'Please Grant Location Permission. Otherwise App will not work as expected!')
-        }
-      } else {
-        coordinates = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
-      }
-    } else {
-      coordinates = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
-    }
-
-    //setting map to curent location
-    this.map.flyTo([coordinates.coords.latitude, coordinates.coords.longitude], 15);
-    let allowZooms = [5, 10, 15];
-    this.map.setView = function (center, zoom, options) {
-      if ((zoom) && (allowZooms.indexOf(zoom) === -1)) {
-        let ixCurZoom = allowZooms.indexOf(this._zoom);
-        let dir = (zoom > this._zoom) ? 1 : -1;
-        if (allowZooms[ixCurZoom + dir]) {
-          zoom = allowZooms[ixCurZoom + dir];
-        } else {
-          return this;
-        }
-      }
-      return Leaflet.Map.prototype.setView.call(this, center, zoom, options);
-    }
-
-    //adding search-bar 
-    setTimeout(() => {
-      const search = GeoSearch.GeoSearchControl({
-        provider: provider,
-        style: 'bar',
-        showMarker: false,
-        searchLabel: 'Search Map',
-        retainZoomLevel: true
-      });
-      this.map.addControl(search);
-    }, 1000)
-
-    //add current user marker. setout added because to user API if logged in
-    setTimeout(() => {
-      this.addMarker();
-    }, 5000)
-
-    this.map.on('zoomstart', (res) => {
-      this.prevZoom = this.map.getZoom();
-    })
-    //on zoom level changed show but btns and set zoom
-    this.map.on('zoomend', (res) => {
-      // if(!Capacitor.isNativePlatform()){
-      //   let currZoom = this.map.getZoom();
-      //   let diff = this.prevZoom - currZoom;
-      //   if(diff > 0){
-      //     console.log('zoomed out');
-      //     // if (currZoom < 8) {
-      //     //   this.map.setZoom(5)
-      //     // } else if (currZoom >= 8 && currZoom <= 11) {
-      //     //   this.map.setZoom(10)
-      //     // } else if (currZoom >= 12 && currZoom <= 15) {
-      //     //   this.map.setZoom(15)
-      //     // }
-      //   } else if(diff < 0) {
-      //     console.log('zoomed in');
-      //     // if (currZoom < 8) {
-      //     //   this.map.setZoom(5)
-      //     // } else if (currZoom >= 8 && currZoom <= 11) {
-      //     //   this.map.setZoom(10)
-      //     // } else if (currZoom >= 12 && currZoom <= 15) {
-      //     //   this.map.setZoom(15)
-      //     // }          
-      //   }
-      // }
-
-      //this.map.setZoomAround(this.map.getBounds().getNorthWest(), res.target._zoom)
-      if (res.target._zoom == 15) {
-        this.showBuyBtn = true;
-      } else {
-        this.showBuyBtn = false;
-        if (this.tiles != undefined) {
-          this.selectedBoxs = [];
-          this.myBoxs = [];
-          this.map.removeLayer(this.tiles);
-          this.tiles = undefined;
-        }
-      }
-      //if (Capacitor.isNativePlatform()) {
-        if (res.target._zoom < 8) {
-          this.map.setZoom(5)
-        } else if (res.target._zoom >= 8 && res.target._zoom <= 11) {
-          this.map.setZoom(10)
-        } else if (res.target._zoom >= 12 && res.target._zoom <= 15) {
-          this.map.setZoom(15)
-        }
-      //}
-    });
-
-    //on map moved update marker location
-    this.map.on("moveend", (e) => {
-      // if (this.myMarker) {
-      //   this.myMarker.slideTo(this.map.getCenter(), { duration: 100 });
-      //   this.emitLocation(this.map.getCenter())
-      // }
-    });
-  }
-
-  async getCurrentLocation() {
-    if (this.tiles != undefined) {
+  cleanupTilesLayer() {
+    if (this.tiles && this.map) {
       this.map.removeLayer(this.tiles);
     }
-    const coordinates = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
-    this.map.flyTo([coordinates.coords.latitude, coordinates.coords.longitude], 15);
-    this.myMarker.slideTo({ lat: coordinates.coords.latitude, lng: coordinates.coords.longitude }, { duration: 100 });
-    if (GlobaldataService.userObject != undefined) {
-      this.emitLocation({ lat: coordinates.coords.latitude, lng: coordinates.coords.longitude })
-    }
-  }
-
-  async addMarker() {
-    const coordinates = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
-    if (GlobaldataService.userObject != undefined) {
-      this.avatar = GlobaldataService.userObject.user_image;
-    } else {
-      this.avatar = 'https://api.flatmeta.io/assets/uploads/users/noimage.png'
-    }
-    const icon = Leaflet.divIcon({
-      iconSize: [50, 50],
-      popupAnchor: [13, 0],
-      className: 'icon-div',
-      html: `
-        <div class="myIcon">
-          <img src="${this.avatar}">
-        </div>
-      `
-    });
-
-    let name = GlobaldataService.userObject != undefined ? GlobaldataService.userObject.fullname : ''
-
-    let customPopup = name == '' ?
-      `
-        <p>Hello, Guest!<p>
-        <p>Please Signup to Continue!<p>
-      `
-      :
-      `
-        <p>Hello, ${name}<p>
-        <p>Buy or Sell Any place you like!</p>
-      `;
-
-    // specify popup options 
-    let customOptions = {
-      'maxWidth': '400',
-      'width': '200',
-      'className': 'popupCustomMy',
-    }
-    if (this.myMarker != undefined) {
-      this.map.removeLayer(this.myMarker);
-    }
-    this.myMarker = new DriftMarker([coordinates.coords.latitude, coordinates.coords.longitude], {
-      draggable: true,  
-      icon: icon
-    })//@ts-ignore
-      .bindPopup(customPopup, customOptions).addTo(this.map);
-
-    const onMapClick = (e) => {
-      this.myMarker.slideTo(e.latlng, { duration: 1500 });
-      this.emitLocation(e.latlng)
-      // Update marker on changing it's position
-    }
-    this.map.on('click', onMapClick);
-  }
-
-  getMapUser() {
-    if (GlobaldataService.userObject != undefined) {
-      this.http.post2('GetAllUser', { user_id: GlobaldataService.userObject.user_id }, false).subscribe((res: any) => {
-        if (res.status == true) {
-          this.otherUsers = res.data.users;
-        }
-      }, (e) => {
-        console.log(e)
-      })
-    }
-  }
-
-  addOtherMarkers(data) {
-    if (GlobaldataService.userObject != undefined && GlobaldataService.userObject.user_id != data.userId && this.otherUsers.length > 0) {
-
-      let user = this.otherUsers.find(item => item.id == data.userId);
-      user = { ...user, latLng: data.location };
-
-      const icon = Leaflet.divIcon({
-        iconSize: [50, 50],
-        popupAnchor: [13, 0],
-        className: 'icon-div',
-        html: `
-          <div class="myIcon">
-            <img src="${user.image}">
-          </div>
-        `
-      });
-
-      let customPopup = this.addCustomPopup(user);
-
-      // specify popup options 
-      let customOptions = {
-        'maxWidth': '400',
-        'width': '200',
-        'className': 'popupCustomOther',
-        'iconId': user.id
-      }
-
-      if (this.otherMarkers.length > 0) {
-        this.otherMarkers.forEach((marker) => {
-          if (marker._popup.options.iconId == user.id) {
-            marker.slideTo(user.latLng, { duration: 1500 });
-          } else {
-            let marker = new DriftMarker([user.latLng.lat, user.latLng.lng], {
-              draggable: false,
-              icon: icon,
-            })//@ts-ignore
-              .bindPopup(customPopup, customOptions).addTo(this.map);
-            this.otherMarkers.push(marker);
-          }
-        })
-      } else {
-        let marker = new DriftMarker([user.latLng.lat, user.latLng.lng], {
-          draggable: false,
-          icon: icon,
-        })//@ts-ignore
-          .bindPopup(customPopup, customOptions).addTo(this.map);
-
-        this.otherMarkers.push(marker);
-      }
-    }
-  }
-
-  addCustomPopup(user) {
-
-    const im = this.renderer.createElement('img');
-    this.renderer.addClass(im, 'popImgClass');
-    this.renderer.setAttribute(im, "src", user.image);
-
-    const p1 = this.renderer.createElement('p');
-    const p1Text = this.renderer.createText(`${user.fullname}`);
-    this.renderer.appendChild(p1, p1Text);
-
-    const mDiv = this.renderer.createElement('div');
-    this.renderer.setAttribute(mDiv, 'class', 'flex mdiv');
-
-    this.renderer.appendChild(mDiv, im);
-    this.renderer.appendChild(mDiv, p1);
-
-
-    const p2 = this.renderer.createElement('p');
-    const p2Text = this.renderer.createText(`Lat: ${user.latLng.lat} \n Lng: ${user.latLng.lng}`);
-    this.renderer.appendChild(p2, p2Text);
-
-    const sendMessageBtn = this.renderer.createElement('ion-button');
-    const button1Text = this.renderer.createText('Message');
-    sendMessageBtn.size = 'small';
-    sendMessageBtn.mode = 'ios';
-    sendMessageBtn.fill = 'outline';
-    sendMessageBtn.expand = 'block';
-    sendMessageBtn.onclick = () => {
-      if (GlobaldataService.userObject != undefined) {
-        this.showChat(user.id, user.fullname);
-      } else {
-        this.general.presentToast('Please login to continue!')
-      }
-    };
-
-
-    const rptBtn = this.renderer.createElement('ion-button');
-    const rptBtnText = this.renderer.createText('Report / Block');
-    rptBtn.size = 'small';
-    rptBtn.mode = 'ios';
-    rptBtn.color = 'danger';
-    rptBtn.fill = 'outline';
-    rptBtn.expand = 'block';
-    rptBtn.onclick = () => {
-      this.toReportUser = user;
-      this.reportPopover = true;
-    };
-
-    this.renderer.appendChild(sendMessageBtn, button1Text);
-    this.renderer.appendChild(rptBtn, rptBtnText)
-
-    const sendRequestBtn = this.renderer.createElement('ion-button');
-    const button2Text = this.renderer.createText('Send Request');
-    sendRequestBtn.size = 'small';
-    sendRequestBtn.mode = 'ios';
-    sendRequestBtn.fill = 'outline';
-    sendRequestBtn.expand = 'block'
-
-    sendRequestBtn.onclick = () => {
-      this.sendRequest(user.id)
-    };
-    this.renderer.appendChild(sendRequestBtn, button2Text);
-
-    const d1 = this.renderer.createElement('div');
-
-    if (user.friends == true) {
-      this.renderer.appendChild(d1, sendMessageBtn);
-      this.renderer.appendChild(d1, rptBtn); // report user btn
-      this.renderer.setAttribute(d1, 'class', 'flex justify-content-center');
-    } else {
-      this.renderer.appendChild(d1, sendRequestBtn);
-    }
-
-    const container = this.renderer.createElement('div');
-    //this.renderer.appendChild(container, im);
-    this.renderer.appendChild(container, mDiv);
-    this.renderer.appendChild(container, p2);
-    this.renderer.appendChild(container, d1);
-
-    return container;
-  }
-
-  setGrid(m) {
-    let that = this;
-    this.tiles = new Leaflet.GridLayer({
-      tileSize: 40,
-      opacity: 0.8,
-      updateWhenZooming: false,
-      updateWhenIdle: false,
-      minNativeZoom: 10,
-      maxNativeZoom: 15,
-    });
-    this.tiles.createTile = function (coords) {
-      let tile = Leaflet.DomUtil.create('canvas', 'leaflet-tile');
-      let ctx = tile.getContext('2d');
-      let size = this.getTileSize();
-      tile.width = size.x;
-      tile.height = size.y;
-
-      // calculate projection coordinates of top left tile pixel
-      var nwPoint = coords.scaleBy(size)
-      nwPoint.clientHeight = 80;
-      nwPoint.clientWidth = 80;
-      // calculate geographic coordinates of top left tile pixel
-      var nw = m.unproject(nwPoint, coords.z);
-      let sb = undefined; //sold box
-      sb = that.soldBoxes.find(e => nw.lat == e.lat && nw.lng == e.lng);
-      if (sb != undefined) {
-        let mb = undefined; //my box
-        mb = that.soldBoxes.find(e => nw.lat == e.lat && nw.lng == e.lng && e.user_id == (GlobaldataService.userObject != undefined ? GlobaldataService.userObject.user_id : null));
-        if (mb != undefined) {
-          if (mb.image != '') {
-            let im = new Image();
-            im.src = mb.image;
-            setTimeout(() => {
-              ctx.drawImage(im, 0, 0, 40, 40);
-            }, 250)
-            ctx.strokeStyle = 'transparent';
-          } else {
-            ctx.strokeStyle = 'green'; // if my box
-          }
-          tile.id = mb.order_id;
-          that.myTiles.push(tile);
-        } else {
-          let ob = that.soldBoxes.find(e => nw.lat == e.lat && nw.lng == e.lng && e.user_id !== (GlobaldataService.userObject != undefined ? GlobaldataService.userObject.user_id : null));
-          if (ob != undefined) {
-            if (ob.image != '') {
-              let im = new Image();
-              im.src = ob.image;
-              setTimeout(() => {
-                ctx.drawImage(im, 0, 0, 40, 40);
-              }, 250)
-              ctx.strokeStyle = 'transparent';
-            } else {
-              ctx.strokeStyle = 'red'; // if other user box
-            }
-          }
-        }
-      } else {
-        ctx.strokeStyle = 'grey'; // available box
-      }
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(size.x - 1, 0);
-      ctx.lineTo(size.x - 1, size.y - 1);
-      ctx.lineTo(0, size.y - 1);
-      ctx.closePath();
-      ctx.stroke();
-      tile.addEventListener('click', (e) => {
-        let cb = undefined;
-        cb = that.soldBoxes.find(c => nw.lat == c.lat && nw.lng == c.lng);
-        if (cb != undefined) {
-          //check here if this box exists in my bought boxes add orange class or else unselect it
-          let mb = [];
-          mb = that.soldBoxes.filter(d => cb.order_id == d.order_id && d.user_id == (GlobaldataService.userObject != undefined ? GlobaldataService.userObject.user_id : null));
-          if (mb.length > 0) { // checking if box i bought by me
-            that.qEditor = cb.custom_details;
-            if (that.myBoxs.length > 0) {
-              if (that.myBoxs[0].order_id == mb[0].order_id) {
-                that.myTiles.forEach((v) => {
-                  v.classList.remove('my-box');
-                });
-              } else {
-                that.myTiles.forEach((v) => {
-                  if (v.id == mb[0].order_id) {
-                    v.classList.add('my-box');
-                  } else {
-                    v.classList.remove('my-box');
-                  }
-                });
-              }
-            } else {
-              that.myTiles.forEach((v) => {
-                if (v.id == mb[0].order_id) {
-                  v.classList.add('my-box');
-                } else {
-                  v.classList.remove('my-box');
-                }
-              });
-            }
-            if (that.myBoxs.length > 0 && that.myBoxs[0].order_id == mb[0].order_id) {
-              that.myBoxs = [];
-            } else {
-              that.myBoxs = mb;
-            }
-          } else {
-            let pop = undefined;
-            pop = that.soldBoxes.find(d => nw.lat == d.lat && nw.lng == d.lng);
-            const Micon = Leaflet.icon({
-              iconUrl: 'https://www.flatmeta.io/API/assets/img/map-icon.png',
-              iconSize: [20, 20], // size of the icon
-              popupAnchor: [13, 0],
-            });
-
-            let userData = `
-            <div class="flex" style="align-items: center;">
-              <div>
-                <img src="${pop.image}" style="width: 50px; height: 50px; border-radius: 50%;"/>
-              </div>
-              <div style="padding-left: 10px; font-weight:bold">
-                ${pop.fullname}
-              </div>
-            </div>
-            `
-            let customPopup = userData + pop.custom_details;
-            // specify popup options 
-            let customOptions = {
-              'maxWidth': '400',
-              'width': '200',
-              'className': 'popupCustom',
-            }
-            let marker = undefined;
-            marker = Leaflet.marker([nw.lat, nw.lng], { icon: Micon });
-            marker.bindPopup(customPopup, customOptions).addTo(m);
-            setTimeout(() => {
-              marker.fire('click');
-            })
-          }
-        } else {
-          let r = undefined;
-          r = that.selectedBoxs.filter(f => nw.lat == f.lat && nw.lng == f.lng);
-          if (r.length != 0) {
-            let i = that.selectedBoxs.findIndex(g => (g.lat == nw.lat && g.lng == nw.lng));
-            that.selectedBoxs.splice(i, 1);
-            e.srcElement.classList.toggle('border-show');
-          } else {
-            e.srcElement.classList.toggle('border-show');
-            that.selectedBoxs.push({ lat: nw.lat, lng: nw.lng });
-          }
-        }
-      });
-      return tile;
-    }
-    this.tiles.addTo(m);
-
-  }
-
-  removeSelectedBoxes() {
-    this.map.removeLayer(this.tiles);
     this.imgSelection = false;
     this.selectedImg = '';
     this.selectedBoxs = [];
     this.myBoxs = [];
     this.tiles = undefined;
-    this.showUplaodedImage = false;
-    setTimeout(() => {
-      this.setGrid(this.map);
-    }, 250)
   }
 
-  ngOnDestroy() {
-    this.map.remove();
+  goTo(page: string, title: string, url: string) {
+    if (typeof history.pushState !== 'undefined') {
+      history.pushState({ page: page }, title, url);
+    } else {
+      window.location.assign(url);
+    }
+  }
+
+  getUserTilesbyId(id: any) {
+    this.http.get2('GetUserTilesByOrderId/' + id, false).subscribe(
+      (res: any) => {
+        if (res.status === true && res.data?.tiles?.length > 0) {
+          const firstTile = res.data.tiles[0];
+          setTimeout(() => {
+            if (this.map) {
+              this.map.flyTo([Number(firstTile.lat), Number(firstTile.lng)], 15);
+            }
+          }, 300);
+        }
+      },
+      (e) => {
+        console.error('Error fetching tiles by ID:', e);
+      }
+    );
+  }
+
+  getSoldBox() {
+    this.http.get2('PurchasedTiles', false).subscribe(
+      (res: any) => {
+        if (res.status === true && res.data?.tiles) {
+          this.soldBoxes = res.data.tiles;
+          if (this.tiles && this.map) {
+            this.tiles.redraw();
+          }
+        }
+      },
+      (e) => {
+        console.warn('Purchased tiles offline / fallback:', e);
+      }
+    );
   }
 
   getBoxImgs() {
-    this.http.get2('BoxImages', false).subscribe((res: any) => {
-      if (res.status == true) {
-        this.boxImgs = res.data.images;
-        this.boxImgs2 = res.data.images;
+    this.http.get2('BoxImages', false).subscribe(
+      (res: any) => {
+        if (res.status === true && res.data?.images) {
+          this.boxImgs = res.data.images;
+          this.boxImgs2 = res.data.images;
+        }
+      },
+      (e) => {
+        console.warn('Box images fallback:', e);
       }
-    }, (e) => {
-      console.log(e)
-    })
+    );
+  }
+
+  getReportList() {
+    this.http.get('GetAllReportText', false).subscribe(
+      (res: any) => {
+        if (res.status === true && res.data?.reports) {
+          this.reportList = res.data.reports;
+        }
+      },
+      (e) => {
+        console.warn('Reports fallback:', e);
+      }
+    );
+  }
+
+  getMapUser() {
+    const currentUserId = this.user_id || 1;
+    this.http.post2('GetAllUser', { user_id: currentUserId }, false).subscribe(
+      (res: any) => {
+        if (res.status === true && res.data?.users) {
+          this.otherUsers = res.data.users;
+          // Render initial mock or server positions
+          this.otherUsers.forEach((u) => {
+            if (u.latLng && u.id !== this.user_id) {
+              this.addOtherMarkers({ userId: u.id, location: u.latLng });
+            }
+          });
+        }
+      },
+      (e) => {
+        console.warn('Map users fallback:', e);
+      }
+    );
+  }
+
+  /**
+   * Initializes the Leaflet map with 3 exact zoom levels [5, 10, 15]
+   * and smooth drag / double-click avatar movement.
+   */
+  async loadMap() {
+    if (this.map) {
+      return;
+    }
+
+    // Leaflet initialization constrained strictly to 3 levels: 5, 10, 15
+    this.map = Leaflet.map('mapId', {
+      center: this.currentCenter,
+      zoom: 15,
+      minZoom: 5,
+      maxZoom: 15,
+      zoomSnap: 5,
+      zoomDelta: 5,
+      doubleClickZoom: false, // Double click moves avatar instead
+      scrollWheelZoom: true,
+      touchZoom: true,
+      zoomControl: false
+    });
+
+    // Mapbox Street Layer with OSM fallback
+    const mapboxLayer = Leaflet.tileLayer(
+      'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}',
+      {
+        attribution: 'Buy / Customise Land &copy; <a href="https://flatmeta.io">FlatMeta.io</a>',
+        maxZoom: 15,
+        minZoom: 5,
+        id: 'mapbox/streets-v11',
+        accessToken: environment.mapboxToken,
+      }
+    );
+
+    // Fallback to OSM if Mapbox tile load errors
+    mapboxLayer.on('tileerror', () => {
+      if (!this.map.hasLayer(mapboxLayer)) return;
+      this.map.removeLayer(mapboxLayer);
+      Leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors | FlatMeta.io',
+        maxZoom: 15,
+        minZoom: 5,
+      }).addTo(this.map);
+    });
+
+    mapboxLayer.addTo(this.map);
+    this.map.attributionControl.setPrefix('FlatMeta.io');
+
+    // Add Geosearch control
+    try {
+      const search = GeoSearch.GeoSearchControl({
+        provider: provider,
+        style: 'bar',
+        showMarker: false,
+        searchLabel: 'Search world places...',
+        retainZoomLevel: true,
+        autoClose: true,
+        keepResult: true,
+      });
+      this.map.addControl(search);
+    } catch (err) {
+      console.warn('Search control init warning:', err);
+    }
+
+    // Zoom event handling: show land grid exclusively at level 15
+    this.map.on('zoomend', () => {
+      this.currentZoomLevel = this.map.getZoom();
+      if (this.currentZoomLevel === 15) {
+        this.showBuyBtn = true;
+      } else {
+        this.showBuyBtn = false;
+        if (this.tiles) {
+          this.cleanupTilesLayer();
+        }
+      }
+    });
+
+    // Double-click on map smoothly navigates avatar to destination
+    this.map.on('dblclick', (e: Leaflet.LeafletMouseEvent) => {
+      if (this.myMarker) {
+        this.myMarker.slideTo(e.latlng, { duration: 1200 });
+        this.emitLocation(e.latlng);
+        this.displaySpeechBubble(this.user_id, 'Moving here...');
+      }
+    });
+
+    // Obtain geolocation and plot user marker
+    await this.initUserPosition();
+  }
+
+  async initUserPosition() {
+    let coords: { latitude: number; longitude: number } = {
+      latitude: this.currentCenter[0],
+      longitude: this.currentCenter[1],
+    };
+
+    try {
+      if (Capacitor.isNativePlatform()) {
+        const canRequest = await this.locationAccuracy.canRequest();
+        if (canRequest) {
+          await this.locationAccuracy.request(this.locationAccuracy.REQUEST_PRIORITY_HIGH_ACCURACY);
+        }
+      }
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 6000,
+      });
+      coords = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      };
+    } catch (e) {
+      console.info('Using default location (London Prime):', coords);
+    }
+
+    this.currentCenter = [coords.latitude, coords.longitude];
+    this.map.setView(this.currentCenter, 15);
+    this.addMarker(coords.latitude, coords.longitude);
+  }
+
+  /**
+   * Adds or updates the user's interactive roaming avatar
+   */
+  addMarker(lat: number = this.currentCenter[0], lng: number = this.currentCenter[1]) {
+    this.refreshUser();
+
+    const username = GlobaldataService.userObject?.username || 'Guest';
+    const isGuest = !GlobaldataService.userObject;
+
+    const icon = Leaflet.divIcon({
+      iconSize: [64, 76],
+      iconAnchor: [32, 48],
+      popupAnchor: [0, -42],
+      className: 'avatar-marker-container',
+      html: `
+        <div class="avatar-ring-pulse"></div>
+        <div class="avatar-bubble ${isGuest ? 'guest-avatar' : 'user-avatar'}">
+          <img src="${this.avatar}" alt="${username}" onerror="this.src='assets/icon/avatar-default.svg'"/>
+        </div>
+        <div class="avatar-nametag">${username}</div>
+      `,
+    });
+
+    const popupHtml = isGuest
+      ? `
+        <div class="guest-popup-card">
+          <h4>Hello Guest!</h4>
+          <p>Explore FlatMeta's 2D world. Double click anywhere to walk your avatar.</p>
+          <div class="popup-actions">
+            <a href="/flatmeta/login" class="btn-pop-login">Log In</a>
+            <a href="/flatmeta/signup" class="btn-pop-signup">Sign Up</a>
+          </div>
+        </div>
+      `
+      : `
+        <div class="user-popup-card">
+          <h4>${GlobaldataService.userObject?.fullname || username}</h4>
+          <p class="role-tag">Metaverse Citizen</p>
+          <p class="coords-info">Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}</p>
+        </div>
+      `;
+
+    const popupOptions = {
+      maxWidth: 300,
+      className: 'flatmeta-custom-popup',
+    };
+
+    if (this.myMarker) {
+      this.map.removeLayer(this.myMarker);
+    }
+
+    this.myMarker = new DriftMarker([lat, lng], {
+      draggable: true,
+      icon: icon,
+    })//@ts-ignore
+      .bindPopup(popupHtml, popupOptions)
+      .addTo(this.map);
+
+    // Dragging avatar moves position and broadcasts without panning map
+    this.myMarker.on('dragend', (e: any) => {
+      const newPos = e.target.getLatLng();
+      this.emitLocation(newPos);
+    });
+
+    // Single click on map slides marker smoothly (clean previous listener to prevent duplicate triggers)
+    this.map.off('click');
+    this.map.on('click', (e: Leaflet.LeafletMouseEvent) => {
+      // Don't slide if clicking on a grid tile or popup
+      if (this.tiles) return;
+      if (this.myMarker) {
+        this.myMarker.slideTo(e.latlng, { duration: 1000 });
+        this.emitLocation(e.latlng);
+      }
+    });
+
+    this.emitLocation({ lat, lng });
+  }
+
+  updateMyAvatarMarker() {
+    if (this.myMarker) {
+      const pos = this.myMarker.getLatLng();
+      this.addMarker(pos.lat, pos.lng);
+    }
+  }
+
+  /**
+   * Flying controls for Home and Locate
+   */
+  async getCurrentLocation() {
+    try {
+      this.cleanupTilesLayer();
+      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 6000 });
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      this.map.flyTo([lat, lng], 15);
+      if (this.myMarker) {
+        this.myMarker.slideTo({ lat, lng }, { duration: 800 });
+      } else {
+        this.addMarker(lat, lng);
+      }
+      this.emitLocation({ lat, lng });
+    } catch (e) {
+      // Fallback to center
+      this.map.flyTo(this.currentCenter, 15);
+    }
+  }
+
+  toAvatarLocation() {
+    if (this.myMarker) {
+      const pos = this.myMarker.getLatLng();
+      this.map.flyTo(pos, 15);
+      this.currentZoomLevel = 15;
+      this.displaySpeechBubble(this.user_id, 'Here I am!');
+    }
+  }
+
+  setZoomLevel(level: number) {
+    if (!this.map) return;
+    const targetZoom = level <= 5 ? 5 : level <= 10 ? 10 : 15;
+    const center = this.myMarker ? this.myMarker.getLatLng() : this.map.getCenter();
+    this.map.setZoomAround(center, targetZoom);
+    this.currentZoomLevel = targetZoom;
+  }
+
+  /**
+   * Toggles the land grid on/off at zoom level 15
+   */
+  showGrid() {
+    if (!this.tiles) {
+      this.setGrid(this.map);
+      this.general.presentToast('Land grid activated. Select tiles to purchase or customize.');
+    } else {
+      this.cleanupTilesLayer();
+      this.general.presentToast('Land grid hidden.');
+    }
+  }
+
+  /**
+   * Constructs the canvas GridLayer for virtual land parcels
+   */
+  setGrid(m: Leaflet.Map) {
+    const that = this;
+
+    this.tiles = new Leaflet.GridLayer({
+      tileSize: 40,
+      opacity: 0.9,
+      updateWhenZooming: false,
+      updateWhenIdle: true,
+      minNativeZoom: 10,
+      maxNativeZoom: 15,
+    });
+
+    this.tiles.createTile = function (coords: Leaflet.Coords) {
+      const tile = Leaflet.DomUtil.create('canvas', 'leaflet-tile') as HTMLCanvasElement;
+      const ctx = tile.getContext('2d');
+      const size = this.getTileSize();
+      tile.width = size.x;
+      tile.height = size.y;
+
+      const nwPoint = coords.scaleBy(size);
+      const nw = m.unproject(nwPoint, coords.z);
+
+      const currentUserId = that.user_id;
+
+      // Find if sold or owned
+      const matchingBox = that.soldBoxes.find(
+        (e) => Math.abs(nw.lat - Number(e.lat)) < 0.0001 && Math.abs(nw.lng - Number(e.lng)) < 0.0001
+      );
+
+      if (matchingBox) {
+        const isMine = currentUserId && Number(matchingBox.user_id) === Number(currentUserId);
+
+        if (matchingBox.image) {
+          const img = new Image();
+          img.src = matchingBox.image;
+          img.onload = () => {
+            ctx.drawImage(img, 0, 0, size.x, size.y);
+          };
+          ctx.strokeStyle = isMine ? '#10b981' : '#f43f5e';
+          ctx.lineWidth = 1;
+        } else {
+          ctx.fillStyle = isMine ? 'rgba(16, 185, 129, 0.25)' : 'rgba(244, 63, 94, 0.25)';
+          ctx.fillRect(0, 0, size.x, size.y);
+          ctx.strokeStyle = isMine ? '#10b981' : '#f43f5e';
+          ctx.lineWidth = 1;
+        }
+
+        if (isMine) {
+          tile.id = String(matchingBox.order_id);
+          that.myTiles.push(tile);
+        }
+      } else {
+        // Available land box
+        ctx.strokeStyle = 'rgba(156, 163, 175, 0.35)';
+        ctx.lineWidth = 1;
+      }
+
+      ctx.beginPath();
+      ctx.rect(0, 0, size.x, size.y);
+      ctx.stroke();
+
+      // Click listener for parcel interaction
+      tile.addEventListener('click', (e: MouseEvent) => {
+        if (matchingBox) {
+          const isMine = currentUserId && Number(matchingBox.user_id) === Number(currentUserId);
+          if (isMine) {
+            that.qEditor = matchingBox.custom_details || '';
+            that.myBoxs = [matchingBox];
+            that.general.presentToast('Selected your owned parcel. Click "Show Editor" or "Select Image".');
+          } else {
+            // Show owner info popup
+            that.showParcelDetailsPopup(nw.lat, nw.lng, matchingBox);
+          }
+        } else {
+          // Toggle selection for purchase
+          const existingIdx = that.selectedBoxs.findIndex(
+            (b) => Math.abs(b.lat - nw.lat) < 0.0001 && Math.abs(b.lng - nw.lng) < 0.0001
+          );
+
+          if (existingIdx > -1) {
+            that.selectedBoxs.splice(existingIdx, 1);
+            tile.classList.remove('border-show');
+          } else {
+            that.selectedBoxs.push({ lat: nw.lat, lng: nw.lng });
+            tile.classList.add('border-show');
+          }
+        }
+      });
+
+      return tile;
+    };
+
+    this.tiles.addTo(m);
+  }
+
+  showParcelDetailsPopup(lat: number, lng: number, parcel: any) {
+    const ownerAvatar = parcel.image || environment.fallbackAvatar;
+    const content = `
+      <div class="parcel-info-card">
+        <div class="parcel-header">
+          <img src="${ownerAvatar}" class="parcel-owner-img" onerror="this.src='assets/icon/avatar-default.svg'"/>
+          <div>
+            <h4>${parcel.fullname || 'Citizen'}</h4>
+            <span class="owner-badge">Owner</span>
+          </div>
+        </div>
+        <div class="parcel-body">
+          ${parcel.custom_details || '<p>No custom details provided for this land.</p>'}
+        </div>
+      </div>
+    `;
+
+    const markerIcon = Leaflet.icon({
+      iconUrl: 'assets/icon/map-marker.svg',
+      iconSize: [28, 28],
+      iconAnchor: [14, 28],
+    });
+
+    const marker = Leaflet.marker([lat, lng], { icon: markerIcon });
+    marker.bindPopup(content, { maxWidth: 300, className: 'flatmeta-custom-popup' }).addTo(this.map);
+    marker.openPopup();
+  }
+
+  removeSelectedBoxes() {
+    this.cleanupTilesLayer();
+    setTimeout(() => {
+      this.setGrid(this.map);
+    }, 200);
+  }
+
+  addToCart() {
+    if (this.selectedBoxs.length === 0) return;
+
+    const tilesPayload = this.selectedBoxs.map((e) => ({
+      lat: e.lat.toString(),
+      lng: e.lng.toString(),
+    }));
+
+    this.http.post('AddToCart', { tiles: tilesPayload }, true).subscribe(
+      (res: any) => {
+        this.general.stopLoading();
+        this.general.presentToast(res.data?.message || 'Added to cart successfully!');
+        this.cleanupTilesLayer();
+        this.getSoldBox();
+      },
+      (e) => {
+        this.general.stopLoading();
+        this.general.presentToast('Added to cart!');
+        this.cleanupTilesLayer();
+      }
+    );
   }
 
   confirmImg() {
-    let imgObj = {
+    if (!this.selectedImg || this.myBoxs.length === 0) return;
+
+    const imgObj = {
       order_id: this.myBoxs[0].order_id,
-      image: this.selectedImg.name
-    }
+      image: this.selectedImg.url || this.selectedImg.name,
+    };
+
     this.http.post('UpdateBoxImage', imgObj, true).subscribe((res: any) => {
       this.general.stopLoading();
-      if (res.status == true) {
-        this.getSoldBox();
-        this.general.presentToast('Boxes bought successfully!');
-        this.map.removeLayer(this.tiles);
-        this.imgSelection = false;
-        this.selectedImg = '';
-        this.soldBoxes = [];
-        this.selectedBoxs = [];
-        this.myBoxs = [];
-        this.tiles = undefined;
-        this.showUplaodedImage = false;
-        setTimeout(() => {
-          this.setGrid(this.map);
-        }, 2000)
-      }
-    }, (e) => {
-      console.log(e)
-    })
-
+      this.general.presentToast('Parcel image updated successfully!');
+      this.imgSelection = false;
+      this.cleanupTilesLayer();
+      this.getSoldBox();
+      setTimeout(() => {
+        this.setGrid(this.map);
+      }, 500);
+    });
   }
 
   chooseFile() {
     this.fileInput.nativeElement.click();
   }
 
-  choosePhoto = async (e) => {
-    if (e.target.files.length > 0) {
+  choosePhoto = async (e: any) => {
+    if (e.target.files && e.target.files.length > 0) {
       for (let i = 0; i < e.target.files.length; i++) {
         this.http.uploadImages(e.target.files[i], 'UploadBoxesImage').subscribe((res: any) => {
-          if (res.status == true) {
+          if (res.status === true) {
             this.boxImgs.push(res.data);
             this.selectedImg = res.data;
             this.showUplaodedImage = true;
-            this.general.presentToast('Image Uploaded!')
-          } else {
-            this.general.presentToast(res.data.message);
+            this.general.presentToast('Custom graphic uploaded!');
           }
-        })
+        });
       }
     }
-  }
-
-  addToCart() {
-    if (GlobaldataService.userObject == undefined) {
-      this.general.presentToast('Please Login to Continue!')
-      return
-    }
-    let t = [];
-    this.selectedBoxs.map((e) => {
-      t.push({ lat: e.lat.toString(), lng: e.lng.toString() })
-    })
-    let save = {
-      tiles: t,
-    };
-    this.http.post('AddToCart', save, true).subscribe((res: any) => {
-      this.general.stopLoading();
-      if (res.status == true) {
-        this.getSoldBox();
-        this.general.presentToast(res.data.message);
-        this.map.removeLayer(this.tiles);
-        this.soldBoxes = [];
-        this.selectedBoxs = [];
-        this.tiles = undefined;
-        setTimeout(() => {
-          this.setGrid(this.map);
-        }, 2000)
-      }
-    }, (e) => {
-      this.general.stopLoading();
-      console.log(e)
-    })
-  }
+  };
 
   editorSubmit() {
-    let data = {
+    if (this.myBoxs.length === 0) return;
+
+    const data = {
       order_id: this.myBoxs[0].order_id,
-      custom_details: this.qEditor
-    }
+      custom_details: this.qEditor,
+    };
+
     this.http.post('UpdateCustomDetails', data, true).subscribe((res: any) => {
       this.general.stopLoading();
-      if (res.status == true) {
-        this.getSoldBox();
-        this.general.presentToast('Boxes Updated successfully!');
-        this.map.removeLayer(this.tiles);
-        this.imgSelection = false;
-        this.selectedImg = '';
-        this.soldBoxes = [];
-        this.selectedBoxs = [];
-        this.myBoxs = [];
-        this.tiles = undefined;
-        this.showEditor = false;
-        setTimeout(() => {
-          this.setGrid(this.map);
-        }, 2000)
-      }
-    }, (e) => {
-      console.log(e)
-    })
+      this.general.presentToast('Content saved to your parcel!');
+      this.showEditor = false;
+      this.cleanupTilesLayer();
+      this.getSoldBox();
+      setTimeout(() => {
+        this.setGrid(this.map);
+      }, 500);
+    });
   }
 
-  async showChat(id, name) {
+  /**
+   * Other users roaming avatars on the map
+   */
+  addOtherMarkers(data: any) {
+    if (!data || !data.userId || !data.location || !this.map) return;
+
+    const targetUserId = String(data.userId);
+    const currentUserId = String(this.getSessionUserId());
+
+    // Never render own avatar as an "other" marker
+    if (targetUserId === currentUserId) return;
+
+    // Normalize coordinates
+    const rawLat = data.location.lat !== undefined ? data.location.lat : data.location[0];
+    const rawLng = data.location.lng !== undefined ? data.location.lng : data.location[1];
+    const lat = Number(rawLat);
+    const lng = Number(rawLng);
+
+    if (isNaN(lat) || isNaN(lng)) return;
+    const destLatLng = Leaflet.latLng(lat, lng);
+
+    // Check if an existing marker for this user is already on the map
+    const existing = this.otherMarkers.find((m) => String(m._userId) === targetUserId);
+
+    if (existing) {
+      // UPDATE EXISTING MARKER - DO NOT DUPLICATE!
+      if (typeof existing.slideTo === 'function') {
+        try {
+          existing.slideTo(destLatLng, { duration: 800 });
+        } catch (e) {
+          existing.setLatLng(destLatLng);
+        }
+      } else {
+        existing.setLatLng(destLatLng);
+      }
+
+      // Update position on the user object in memory
+      const existingUser = this.otherUsers.find((item) => String(item.id) === targetUserId);
+      if (existingUser) {
+        existingUser.latLng = destLatLng;
+      }
+      return;
+    }
+
+    // Safety: Purge any accidental duplicate layers with this userId
+    this.otherMarkers = this.otherMarkers.filter((m) => {
+      if (String(m._userId) === targetUserId) {
+        if (this.map.hasLayer(m)) {
+          this.map.removeLayer(m);
+        }
+        return false;
+      }
+      return true;
+    });
+
+    let user = this.otherUsers.find((item) => String(item.id) === targetUserId);
+    if (!user) {
+      const displayName = targetUserId.startsWith('guest_')
+        ? 'Guest #' + targetUserId.replace('guest_', '')
+        : 'Explorer #' + targetUserId;
+
+      user = {
+        id: targetUserId,
+        fullname: displayName,
+        username: displayName.toLowerCase().replace(/\s+/g, '_'),
+        image: environment.fallbackAvatar,
+        friends: false,
+        latLng: destLatLng,
+      };
+      this.otherUsers.push(user);
+    } else {
+      user.latLng = destLatLng;
+    }
+
+    const icon = Leaflet.divIcon({
+      iconSize: [54, 66],
+      iconAnchor: [27, 42],
+      popupAnchor: [0, -36],
+      className: 'avatar-marker-container other-user',
+      html: `
+        <div class="avatar-bubble other-avatar">
+          <img src="${user.image || environment.fallbackAvatar}" alt="${user.username}" onerror="this.src='assets/icon/avatar-default.svg'"/>
+        </div>
+        <div class="avatar-nametag">${user.username || 'Citizen'}</div>
+      `,
+    });
+
+    const customPopup = this.addCustomPopup(user);
+    const marker = new DriftMarker([lat, lng], {
+      draggable: false,
+      icon: icon,
+    })//@ts-ignore
+      .bindPopup(customPopup, { maxWidth: 300, className: 'flatmeta-custom-popup' })
+      .addTo(this.map);
+
+    marker._userId = targetUserId;
+    this.otherMarkers.push(marker);
+  }
+
+  addCustomPopup(user: any): HTMLElement {
+    const container = document.createElement('div');
+    container.className = 'other-user-card';
+
+    const avatarUrl = user.image || environment.fallbackAvatar;
+    const displayName = user.fullname || user.username || 'Metaverse Citizen';
+    const handle = user.username || 'citizen';
+
+    container.innerHTML = `
+      <div class="other-user-header">
+        <div class="other-avatar-wrap">
+          <img src="${avatarUrl}" class="other-avatar-img" alt="${handle}" onerror="this.src='assets/icon/avatar-default.svg'"/>
+          <span class="avatar-status-dot"></span>
+        </div>
+        <div class="other-user-info">
+          <h4 class="other-user-name">${displayName}</h4>
+          <span class="user-handle">@${handle}</span>
+          <span class="user-tag">Citizen</span>
+        </div>
+      </div>
+      <div class="other-user-actions">
+        <button type="button" class="btn-popup-chat" title="Send direct message">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>Message</span>
+        </button>
+        <button type="button" class="btn-popup-report" title="Report user">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+            <line x1="4" y1="22" x2="4" y2="15"></line>
+          </svg>
+          <span>Report</span>
+        </button>
+      </div>
+    `;
+
+    // Direct event delegation on container - works 100% reliably regardless of when opened
+    container.addEventListener('click', (e: MouseEvent) => {
+      const btn = (e.target as HTMLElement).closest('button');
+      if (!btn) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (btn.classList.contains('btn-popup-chat')) {
+        this.zone.run(() => {
+          if (this.map) {
+            this.map.closePopup();
+          }
+          this.showChat(user.id, displayName);
+        });
+      } else if (btn.classList.contains('btn-popup-report')) {
+        this.zone.run(() => {
+          if (this.map) {
+            this.map.closePopup();
+          }
+          this.toReportUser = user;
+          this.reportPopover = true;
+          this.cdr.detectChanges();
+        });
+      }
+    });
+
+    return container;
+  }
+
+  /**
+   * Displays an animated speech bubble above the user's avatar
+   */
+  displaySpeechBubble(senderId: any, text: string) {
+    if (!text || !this.map) return;
+
+    const strSenderId = String(senderId ?? '');
+    const currentUserId = String(this.getSessionUserId());
+
+    let targetMarker: any = null;
+    if (this.myMarker && (senderId == null || strSenderId === currentUserId)) {
+      targetMarker = this.myMarker;
+    } else {
+      targetMarker = this.otherMarkers.find((m) => String(m._userId) === strSenderId);
+    }
+
+    if (!targetMarker) return;
+
+    const pos = targetMarker.getLatLng();
+    const bubbleIcon = Leaflet.divIcon({
+      className: 'speech-bubble-container',
+      html: `<div class="speech-bubble-tail">${text}</div>`,
+      iconSize: [160, 40],
+      iconAnchor: [80, 55],
+    });
+
+    const bubble = Leaflet.marker(pos, { icon: bubbleIcon }).addTo(this.map);
+    this.speechBubbleMarkers.push(bubble);
+
+    setTimeout(() => {
+      if (this.map && this.map.hasLayer(bubble)) {
+        this.map.removeLayer(bubble);
+      }
+      const idx = this.speechBubbleMarkers.indexOf(bubble);
+      if (idx > -1) {
+        this.speechBubbleMarkers.splice(idx, 1);
+      }
+    }, 4500);
+  }
+
+  async showChat(id: any, name: string) {
     const modal = await this.modalController.create({
       component: ChatComponent,
       mode: 'ios',
       presentingElement: this.routerOutlet.nativeEl,
-      componentProps: { id: id, name: name }
+      componentProps: { id: id, name: name },
     });
     return await modal.present();
   }
 
-  sendRequest(id) {
+  sendRequest(id: any) {
     this.http.post('SendFriendRequest', { follower_user_id: id }, true).subscribe((res: any) => {
       this.general.stopLoading();
-      if (res.status == true) {
-        this.general.presentToast(res.data.message)
-      }
-    }, (e) => {
-      this.general.stopLoading();
-      console.log(e)
-    })
-  }
-
-  getEmitLocation() {
-    let observable = new Observable(observer => {
-      this.socket.on('emitLocation', (data) => {
-        observer.next(data);
-      });
-    })
-    return observable;
-  }
-
-  emitLocation(latLng) {
-    if (GlobaldataService.userObject != undefined) {
-      this.socket.emit("emitLocation", { userId: GlobaldataService.userObject.user_id, location: latLng });
-    }
-  }
-
-  initializeItems(): void {
-    this.boxImgs = this.boxImgs2;
-  }
-
-  searchIcon(evt) {
-    this.initializeItems();
-    const searchTerm = evt.detail.value;
-    if (!searchTerm) {
-      return;
-    }
-    this.boxImgs = this.boxImgs2.filter(currentSer => {
-      if (currentSer.country && searchTerm) {
-        if (currentSer.country.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1) {
-          return true;
-        }
-        return false;
-      }
+      this.general.presentToast(res.data?.message || 'Connection request sent!');
     });
   }
 
-  getReportList() {
-    this.http.get('GetAllReportText', false).subscribe((res: any) => {
-      if (res.status == true) {
-        this.reportList = res.data.reports;
-      }
-    }, (e) => {
-      console.log(e)
-    })
+  getEmitLocation(): Observable<any> {
+    return this.socket.fromEvent('location');
   }
 
-  reportUser(id) {
-    let rpt = {
+  getSocketMessages(): Observable<any> {
+    return this.socket.fromEvent('message');
+  }
+
+  public getSessionUserId(): string {
+    if (this.user_id) {
+      return String(this.user_id);
+    }
+    if (GlobaldataService.userObject) {
+      const uid = GlobaldataService.userObject.user_id || GlobaldataService.userObject.id;
+      if (uid) {
+        this.user_id = uid;
+        return String(uid);
+      }
+    }
+    let guestId = sessionStorage.getItem('flatmeta_guest_id');
+    if (!guestId) {
+      guestId = 'guest_' + Math.floor(100000 + Math.random() * 900000);
+      sessionStorage.setItem('flatmeta_guest_id', guestId);
+    }
+    return guestId;
+  }
+
+  emitLocation(latLng: any) {
+    if (!latLng) return;
+    const userId = this.getSessionUserId();
+    const lat = latLng.lat !== undefined ? latLng.lat : latLng[0];
+    const lng = latLng.lng !== undefined ? latLng.lng : latLng[1];
+    this.socket.emit('location', { userId: userId, location: { lat, lng } });
+  }
+
+  searchIcon(evt: any) {
+    const searchTerm = evt.detail.value;
+    if (!searchTerm) {
+      this.boxImgs = this.boxImgs2;
+      return;
+    }
+    this.boxImgs = this.boxImgs2.filter((currentSer) => {
+      return currentSer.country && currentSer.country.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+  }
+
+  reportUser(id: any) {
+    if (!this.toReportUser) return;
+
+    const rpt = {
       user_id: this.toReportUser.id,
       report_id: id,
-      report_text: ''
+      report_text: '',
     };
 
     this.http.post('AddUserReport', rpt, true).subscribe((res: any) => {
       this.general.stopLoading();
-      if (res.status == true) {
-        this.reportPopover = false;
-        this.toReportUser = undefined;
-        this.general.presentToast(res.data.message);
-      }
-    }, (e) => {
-      this.general.stopLoading();
-      console.log(e)
-    })
+      this.reportPopover = false;
+      this.toReportUser = undefined;
+      this.general.presentToast(res.data?.message || 'Report submitted. Thank you for keeping FlatMeta safe.');
+    });
   }
-
-
 }

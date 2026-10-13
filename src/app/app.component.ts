@@ -21,31 +21,37 @@ export class AppComponent {
     {
       title: "My Cart",
       url: 'flatmeta/cart',
+      icon: 'cart-outline',
       goWithoutLogin: false,
     },
     {
       title: "My Places",
       url: 'flatmeta/myplaces',
+      icon: 'cube-outline',
       goWithoutLogin: false,
     },
     {
-      title: 'Recent Purchased Places',
+      title: 'Recent Purchases',
       url: 'flatmeta/recentpurchases',
+      icon: 'receipt-outline',
       goWithoutLogin: true,
     },
     {
       title: "Friend Requests",
       url: 'flatmeta/friendrequest',
+      icon: 'people-outline',
       goWithoutLogin: false,
     },
     {
-      title: "Profile",
+      title: "Citizen Profile",
       url: 'flatmeta/profile',
+      icon: 'person-circle-outline',
       goWithoutLogin: false,
     },
     {
-      title: 'Open Source Contribution',
+      title: 'Open Source & Docs',
       url: 'flatmeta/opensource',
+      icon: 'code-slash-outline',
       goWithoutLogin: true,
     }
   ];
@@ -120,35 +126,45 @@ export class AppComponent {
 
   checkdarkMode() {
     this.storage.getObject('darkMode').then((res) => {
-      if (res != null) {
-        let a: any = res;
-        if (a == true) {
-          this.darkMode = true;
-          GlobaldataService.darkMode = true;
-          this.storage.setObject('darkMode', a)
-          document.body.classList.toggle('dark', a);
-        } else {
-          this.darkMode = false;
-          GlobaldataService.darkMode = false;
-          this.storage.setObject('darkMode', a)
-          document.body.classList.toggle('dark', a);
-        }
+      let isDark = true; // Default to dark for Cyber metaverse aesthetic
+      if (res !== null && res !== undefined) {
+        isDark = !!res;
+      } else if (window.matchMedia) {
+        isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       }
-    })
+      this.applyTheme(isDark);
+    }).catch(() => {
+      this.applyTheme(true);
+    });
   }
 
-  toggleTheme(e) {
-    if (e.detail.checked) {
-      this.darkMode = true;
-      GlobaldataService.darkMode = true;
-      this.storage.setObject('darkMode', true)
-      document.body.classList.toggle('dark', e.detail.checked);
-    } else {
-      this.darkMode = false;
-      GlobaldataService.darkMode = false;
-      this.storage.setObject('darkMode', false)
-      document.body.classList.toggle('dark', e.detail.checked);
+  applyTheme(isDark: boolean) {
+    this.zone.run(() => {
+      this.darkMode = isDark;
+      GlobaldataService.darkMode = isDark;
+      this.storage.setObject('darkMode', isDark);
+      document.body.classList.toggle('dark', isDark);
+      document.documentElement.classList.toggle('dark', isDark);
+      if (isDark) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.body.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        document.body.setAttribute('data-theme', 'light');
+      }
+    });
+  }
+
+  toggleTheme(e: any) {
+    if (e && e.detail && e.detail.checked !== undefined) {
+      if (this.darkMode !== !!e.detail.checked) {
+        this.applyTheme(!!e.detail.checked);
+      }
     }
+  }
+
+  toggleThemeDirect() {
+    this.applyTheme(!this.darkMode);
   }
 
   async logOut() {

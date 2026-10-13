@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" fill="#1e1b4b"/>
+  <path d="M0 60 Q 25 40, 50 60 T 100 60 L 100 100 L 0 100 Z" fill="#4338ca" opacity="0.7"/>
+  <path d="M0 75 Q 35 60, 70 75 T 100 80 L 100 100 L 0 100 Z" fill="#06b6d4" opacity="0.6"/>
+  <circle cx="75" cy="30" r="12" fill="#facc15" opacity="0.9"/>
+  <text x="50" y="55" font-family="system-ui, sans-serif" font-size="10" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="1">FLATMETA</text>
+</svg>

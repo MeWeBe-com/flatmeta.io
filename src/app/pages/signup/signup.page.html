@@ -1,109 +1,112 @@
-<ion-header>
-  <ion-toolbar>
+<ion-header class="ion-no-border meta-header">
+  <ion-toolbar class="meta-toolbar">
     <ion-buttons slot="start">
-      <ion-back-button></ion-back-button>
+      <ion-back-button defaultHref="/flatmeta/login" text="" icon="arrow-back-outline"></ion-back-button>
     </ion-buttons>
+    <ion-title class="meta-title">Citizen Registration</ion-title>
   </ion-toolbar>
 </ion-header>
-<ion-content [fullscreen]="true" class="ion-padding">
-  <div id="container">
-    <p class="capitalize">Create <br> Your Account</p>
-    <form [formGroup]="signupForm" (ngSubmit)="onSubmit()" (keyup.enter)="onSubmit()" novalidate>
-      <div>
-        <ion-item mode="md">
-          <ion-label position="floating">
-            <ion-icon slot="start" name="person-outline"></ion-icon>
-            Full Name
-            <ng-container *ngIf="getControl.fullname.touched">
-              <span class="text-danger"
-                *ngIf="getControl.fullname.errors?.required">Full Name is Required*</span>
-            </ng-container>
-          </ion-label>
-          <ion-input placeholder="Enter Full Name" type="text" formControlName="fullname"></ion-input>
-        </ion-item>
 
-        <ion-item mode="md">
-          <ion-label position="floating">
-            <ion-icon slot="start" name="person-add-outline"></ion-icon>
-            Username
-            <ng-container *ngIf="getControl.username.touched">
-              <span class="text-danger"
-                *ngIf="getControl.username.errors?.required">Username is Required*</span>
-            </ng-container>
-          </ion-label>
-          <ion-input placeholder="Enter Username" type="text" formControlName="username"></ion-input>
-        </ion-item>
+<ion-content [fullscreen]="true" class="signup-content">
+  <div class="auth-wrapper">
+    <!-- Ambient Cyber Glows -->
+    <div class="glow-orb glow-orb-1"></div>
+    <div class="glow-orb glow-orb-2"></div>
 
-        <ion-item mode="md">
-          <ion-label position="floating">
-            <ion-icon slot="start" name="mail-outline"></ion-icon>
-            Email Address
-            <ng-container *ngIf="getControl.email.touched">
-              <span class="text-danger" *ngIf="getControl.email.errors?.required">Email is Required*</span>
-              <span class="text-danger"
-                *ngIf="(getControl.email.invalid && !getControl.email.errors?.required)">Invalid Email*</span>
-            </ng-container>
-          </ion-label>
-          <ion-input placeholder="Enter Email" type="email" formControlName="email"></ion-input>
-        </ion-item>
-
-        <ion-item mode="md">
-          <ion-label position="floating">
-            <ion-icon slot="start" name="lock-closed-outline"></ion-icon>
-            Password
-            <ng-container *ngIf="getControl.password.touched">
-              <span class="text-danger"
-                *ngIf="getControl.password.errors?.required">Password is Required*</span>
-            </ng-container>
-          </ion-label>
-          <ion-input placeholder="Enter Password" type="{{showPass ? 'text': 'password'}}" formControlName="password">
-          </ion-input>
-          <ion-icon name="eye-outline" slot="end" *ngIf="!showPass" (click)="showPass = !showPass"
-            class="ion-align-self-center"></ion-icon>
-          <ion-icon name="eye-off-outline" slot="end" *ngIf="showPass" (click)="showPass = !showPass"
-            class="ion-align-self-center"></ion-icon>
-        </ion-item>
-
-        <ion-item mode="md">
-          <ion-label position="floating">
-            <ion-icon slot="start" name="lock-closed-outline"></ion-icon>
-            Confirm Password
-            <ng-container *ngIf="getControl.confirm_password.touched">
-              <span class="text-danger"
-                *ngIf="getControl.confirm_password.errors?.required">Confirm Password is Required*</span>
-            </ng-container>
-          </ion-label>
-          <ion-input placeholder="Enter Confirm Password" type="{{showPass ? 'text': 'password'}}"
-            formControlName="confirm_password">
-          </ion-input>
-          <ion-icon name="eye-outline" slot="end" *ngIf="!showPass" (click)="showPass = !showPass"
-            class="ion-align-self-center"></ion-icon>
-          <ion-icon name="eye-off-outline" slot="end" *ngIf="showPass" (click)="showPass = !showPass"
-            class="ion-align-self-center"></ion-icon>
-        </ion-item>
+    <div class="auth-card meta-card-glass">
+      <div class="auth-header">
+        <div class="auth-logo-badge">
+          <ion-icon name="person-add"></ion-icon>
+        </div>
+        <h2 class="auth-title">Join <span class="gradient-text">FlatMeta</span></h2>
+        <p class="auth-subtitle">Mint your citizen identity to buy land, explore virtual worlds, and connect with people.</p>
       </div>
 
-      <div style="font-size: 12px;" class="text-danger"
-        *ngIf="(getControl.password.errors && !getControl.password.errors?.required) || (getControl.confirm_password.errors && !getControl.confirm_password.errors?.required)">
-        Password must contain more than 8 characters, 1 numeric, 1 upper case letter, and 1 special character($@$!%*?&).
+      <form [formGroup]="signupForm" (ngSubmit)="onSubmit()" (keyup.enter)="onSubmit()" novalidate class="auth-form">
+        <!-- Full Name -->
+        <div class="input-group">
+          <label class="input-label">Full Name</label>
+          <div class="input-field-wrap" [class.field-error]="getControl.fullname.touched && getControl.fullname.invalid">
+            <ion-icon name="person-outline" class="field-icon"></ion-icon>
+            <ion-input placeholder="Satoshi Nakamoto" type="text" formControlName="fullname"></ion-input>
+          </div>
+          <div class="field-error-msg" *ngIf="getControl.fullname.touched && getControl.fullname.errors?.required">
+            Full name is required
+          </div>
+        </div>
+
+        <!-- Username -->
+        <div class="input-group">
+          <label class="input-label">Citizen Username</label>
+          <div class="input-field-wrap" [class.field-error]="getControl.username.touched && getControl.username.invalid">
+            <ion-icon name="at-outline" class="field-icon"></ion-icon>
+            <ion-input placeholder="satoshi" type="text" formControlName="username"></ion-input>
+          </div>
+          <div class="field-error-msg" *ngIf="getControl.username.touched && getControl.username.errors?.required">
+            Username is required
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div class="input-group">
+          <label class="input-label">Email Address</label>
+          <div class="input-field-wrap" [class.field-error]="getControl.email.touched && getControl.email.invalid">
+            <ion-icon name="mail-outline" class="field-icon"></ion-icon>
+            <ion-input placeholder="satoshi@flatmeta.io" type="email" formControlName="email"></ion-input>
+          </div>
+          <div class="field-error-msg" *ngIf="getControl.email.touched && getControl.email.errors?.required">
+            Valid email is required
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="input-group">
+          <label class="input-label">Password</label>
+          <div class="input-field-wrap" [class.field-error]="getControl.password.touched && getControl.password.invalid">
+            <ion-icon name="lock-closed-outline" class="field-icon"></ion-icon>
+            <ion-input placeholder="Create secure password" [type]="showPass ? 'text' : 'password'" formControlName="password">
+            </ion-input>
+            <button type="button" class="btn-toggle-pass" (click)="showPass = !showPass" aria-label="Toggle password">
+              <ion-icon [name]="showPass ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- Confirm Password -->
+        <div class="input-group">
+          <label class="input-label">Confirm Password</label>
+          <div class="input-field-wrap" [class.field-error]="getControl.confirm_password.touched && (getControl.confirm_password.invalid || signupForm.value.password != signupForm.value.confirm_password)">
+            <ion-icon name="shield-checkmark-outline" class="field-icon"></ion-icon>
+            <ion-input placeholder="Confirm password" [type]="showPass ? 'text' : 'password'" formControlName="confirm_password">
+            </ion-input>
+          </div>
+          <div class="field-error-msg" *ngIf="getControl.confirm_password.touched && signupForm.value.password != signupForm.value.confirm_password">
+            Passwords do not match
+          </div>
+        </div>
+
+        <!-- Password Requirements Notice -->
+        <div class="password-notice-pill">
+          <ion-icon name="information-circle-outline"></ion-icon>
+          <span>Min 8 chars, 1 uppercase, 1 number, and 1 special symbol</span>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="form-actions">
+          <ion-button expand="block" class="meta-btn-gradient auth-btn-submit"
+            [disabled]="signupForm.invalid || (signupForm.value.password != signupForm.value.confirm_password)"
+            type="submit">
+            Create Citizen ID
+            <ion-icon name="sparkles-outline" slot="end"></ion-icon>
+          </ion-button>
+        </div>
+      </form>
+
+      <!-- Bottom Alternative -->
+      <div class="auth-footer-note">
+        <span>Already have an account?</span>
+        <a [routerLink]="['/flatmeta/login']" class="signup-link">Sign In</a>
       </div>
-
-      <ion-button expand="block" shape="round" color="dark"
-        [disabled]="signupForm.invalid || (signupForm.value.password != signupForm.value.confirm_password) "
-        type="submit">
-        Sign Up
-      </ion-button>
-
-    </form>
+    </div>
   </div>
 </ion-content>
-
-<ion-footer collapse="fade" class="ion-no-border">
-  <ion-toolbar [routerLink]="['/flatmeta/login']" mode="ios">
-    <ion-title>
-      <ion-button fill="clear" color="dark" size="small">
-        Already have an account?
-      </ion-button>
-    </ion-title>
-  </ion-toolbar>
-</ion-footer>

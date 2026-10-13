@@ -61,18 +61,20 @@ export class LoginPage implements OnInit {
     };
     this.loading = true;
     this.http.post2('login', this.loginForm.value, false).subscribe((res: any) => {
-      if (res.status == true) {
+      if (res && res.status == true && res.access_token) {
         this.loading = false;
         GlobaldataService.loginToken = res.access_token;
         this.storage.setObject('login_token', res.access_token);
         this.getUserDetails();
       } else {
         this.loading = false;
-        this.general.presentToast(res.data.message);
+        const msg = res?.data?.message || res?.message || 'Wrong Email or Password';
+        this.general.presentToast(msg);
       }
     }, (e) => {
       this.loading = false;
-      console.log(e)
+      const msg = e?.error?.data?.message || e?.error?.message || 'Login failed. Please check your credentials.';
+      this.general.presentToast(msg);
     })
   }
 

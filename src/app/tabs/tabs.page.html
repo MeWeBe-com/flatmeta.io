@@ -1,20 +1,27 @@
 <ion-tabs>
 
-  <ion-tab-bar slot="bottom">
-    <ion-tab-button tab="home">
-      <ion-icon name="map"></ion-icon>
-      <ion-label>FlatMeta</ion-label>
+  <ion-tab-bar slot="bottom" class="meta-dock-tab-bar">
+    <ion-tab-button tab="home" class="meta-dock-btn">
+      <div class="dock-icon-wrap">
+        <ion-icon name="planet"></ion-icon>
+      </div>
+      <ion-label>Metaverse</ion-label>
     </ion-tab-button>
 
-    <ion-tab-button tab="salelist">
-      <ion-icon name="location"></ion-icon>
-      <ion-label>On Sale</ion-label>
+    <ion-tab-button tab="salelist" class="meta-dock-btn">
+      <div class="dock-icon-wrap">
+        <ion-icon name="storefront"></ion-icon>
+      </div>
+      <ion-label>Marketplace</ion-label>
     </ion-tab-button>
 
-    <ion-tab-button (click)="general.toggleMenu()">
-      <ion-icon name="menu"></ion-icon>
-      <ion-label>Menu</ion-label>
+    <ion-tab-button (click)="general.toggleMenu()" class="meta-dock-btn">
+      <div class="dock-icon-wrap">
+        <ion-icon name="apps"></ion-icon>
+      </div>
+      <ion-label>Hub</ion-label>
     </ion-tab-button>
   </ion-tab-bar>
 
 </ion-tabs>
+

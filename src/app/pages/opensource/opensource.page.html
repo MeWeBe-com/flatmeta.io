@@ -1,34 +1,111 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-title>Open Source</ion-title>
+<ion-header class="ion-no-border meta-page-header">
+  <ion-toolbar class="meta-page-toolbar">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/flatmeta/home" text="" icon="arrow-back-outline"></ion-back-button>
+    </ion-buttons>
+    <ion-title class="meta-page-title">
+      <span class="gradient-text">Open Source</span>
+    </ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content [fullscreen]="true" class="opensource-content">
+  <div class="opensource-container">
+    <!-- Hero Banner -->
+    <div class="opensource-hero meta-card-glass">
+      <div class="hero-logo-box">
+        <ion-icon name="code-slash"></ion-icon>
+      </div>
+      <h2>FlatMeta <span class="gradient-text">Protocol</span></h2>
+      <p class="hero-desc">
+        FlatMeta is an open-source, community-driven 2D virtual earth. Claim virtual parcels, trade real estate, roam with customized avatars, and communicate in real time.
+      </p>
+      <div class="hero-badges">
+        <span class="meta-badge badge-cyan">Open Source</span>
+        <span class="meta-badge badge-purple">MIT License</span>
+        <span class="meta-badge badge-emerald">Web3 Ready</span>
+      </div>
+    </div>
 
-  <div class="ion-padding">
-    <h2>FlatMeta.io</h2>
-    <p>
-      <a href="https://flatmeta.io">Flatmeta.io</a> is an Open-source, Online virtual World. Where you can Sell / Purchase your desired places as a square
-      boxes and sell them at your own Cost. You can Chat with other Users roaming in your area by adding them as friends,
-      You can also visit any place or neighbourhood.
-    </p>
+    <!-- Core Pillars Grid -->
+    <div class="pillars-grid">
+      <div class="pillar-card meta-card">
+        <div class="pillar-icon icon-cyan">
+          <ion-icon name="cube-outline"></ion-icon>
+        </div>
+        <h4>Digital Land Ownership</h4>
+        <p>Buy, sell, and personalize digital square parcels across the globe with custom artwork and text entries.</p>
+      </div>
 
-    <p>
-      It is an Open-Source Project so Like minded people can Contribute in this project by Create New Issues, Bug Repots, and Pull Requests via our github repository. 
-      <a href="https://github.com/ffaady/flatmeta.io"><ion-icon name="logo-github"></ion-icon> Github Repository</a>
-    </p>
+      <div class="pillar-card meta-card">
+        <div class="pillar-icon icon-purple">
+          <ion-icon name="people-outline"></ion-icon>
+        </div>
+        <h4>Real-Time Roaming</h4>
+        <p>Citizens roam across sectors, broadcast live speech bubbles, and send instant friend connection requests.</p>
+      </div>
 
-    <h3>Contributing</h3>
-    <p>
-      We Appreciate your time and energy to for your contributions to help us improve this project.
-      Read up on our guidelines for <a href="https://github.com/ffaady/flatmeta.io/blob/main/.github/CONTRIBUTING.md">contributing</a> and then look through our issues with a help wanted label.
-    </p>
+      <div class="pillar-card meta-card">
+        <div class="pillar-icon icon-emerald">
+          <ion-icon name="git-branch-outline"></ion-icon>
+        </div>
+        <h4>100% Community Driven</h4>
+        <p>All core code, smart schemas, and frontend UI are open for public audit, contribution, and expansion.</p>
+      </div>
+    </div>
 
+    <!-- Developer & Community Links -->
+    <div class="resources-card meta-card-glass">
+      <h3 class="section-title">Developer Resources</h3>
+      <div class="resource-links-list">
+        <a href="https://github.com/ffaady/flatmeta.io" target="_blank" rel="noopener noreferrer" class="resource-link-item">
+          <div class="r-icon github-icon">
+            <ion-icon name="logo-github"></ion-icon>
+          </div>
+          <div class="r-info">
+            <span class="r-title">GitHub Repository</span>
+            <span class="r-desc">Source code, releases, and architectural documentation</span>
+          </div>
+          <ion-icon name="open-outline" class="r-external"></ion-icon>
+        </a>
 
-    <h3>Issues</h3>
-    <p>
-      List of <a href="https://github.com/ffaady/flatmeta.io/issues">Github Issues </a> reported by user.
-    </p>
+        <a href="https://github.com/ffaady/flatmeta.io/issues" target="_blank" rel="noopener noreferrer" class="resource-link-item">
+          <div class="r-icon issue-icon">
+            <ion-icon name="bug-outline"></ion-icon>
+          </div>
+          <div class="r-info">
+            <span class="r-title">Issue Tracker & Bug Reports</span>
+            <span class="r-desc">Submit feature requests, report bugs, or track milestones</span>
+          </div>
+          <ion-icon name="open-outline" class="r-external"></ion-icon>
+        </a>
+
+        <a href="https://github.com/ffaady/flatmeta.io/blob/main/.github/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" class="resource-link-item">
+          <div class="r-icon contrib-icon">
+            <ion-icon name="git-pull-request-outline"></ion-icon>
+          </div>
+          <div class="r-info">
+            <span class="r-title">Contribution Guidelines</span>
+            <span class="r-desc">Read how to write tests, format commits, and submit PRs</span>
+          </div>
+          <ion-icon name="open-outline" class="r-external"></ion-icon>
+        </a>
+      </div>
+    </div>
+
+    <!-- Technical Architecture Specs -->
+    <div class="specs-card meta-card">
+      <h4 class="specs-heading">Technology Architecture</h4>
+      <div class="specs-tags-wrap">
+        <span class="spec-tag">Ionic 6</span>
+        <span class="spec-tag">Angular 15</span>
+        <span class="spec-tag">Capacitor 7</span>
+        <span class="spec-tag">Laravel 8.75</span>
+        <span class="spec-tag">Laravel Passport</span>
+        <span class="spec-tag">Leaflet 2D GIS</span>
+        <span class="spec-tag">Native WebSockets</span>
+        <span class="spec-tag">MySQL Realtime</span>
+      </div>
+    </div>
   </div>
 </ion-content>

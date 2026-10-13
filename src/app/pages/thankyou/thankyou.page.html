@@ -1,29 +1,48 @@
-<ion-header>
-  <ion-toolbar>
+<ion-header class="ion-no-border meta-page-header">
+  <ion-toolbar class="meta-page-toolbar">
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="t/h/n/n"></ion-back-button>
+      <ion-back-button defaultHref="/flatmeta/home" text="" icon="arrow-back-outline"></ion-back-button>
     </ion-buttons>
-    <ion-title>
-      Thank You!
+    <ion-title class="meta-page-title">
+      <span class="gradient-text">Transaction Complete</span>
     </ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <div>
-
-    <div class="rating-main">
-      <div class="job-done">
-        <ion-icon name="thumbs-up-outline" class="done"></ion-icon>
+<ion-content [fullscreen]="true" class="thankyou-content">
+  <div class="thankyou-wrapper">
+    <div class="thankyou-card meta-card-glass">
+      <div class="celebration-icon-box">
+        <ion-icon name="checkmark-done-circle"></ion-icon>
+        <span class="pulse-ring"></span>
       </div>
 
-      <p class="large">Thanks You</p>
-      <p>We hope that the make some Profit out of this transaction. </p>
+      <h2 class="thankyou-title">Deed <span class="gradient-text">Acquired!</span></h2>
+      <p class="thankyou-subtitle">
+        Your payment was processed successfully. The virtual land parcels have been transferred to your citizen profile and registered in the FlatMeta database.
+      </p>
 
-    </div>
+      <div class="deed-status-card">
+        <div class="status-row">
+          <span class="s-lbl">Transaction Status:</span>
+          <span class="meta-badge badge-emerald">Settled & Confirmed</span>
+        </div>
+        <div class="status-row">
+          <span class="s-lbl">Access Privileges:</span>
+          <span class="s-val">Custom Artwork & Text Entry</span>
+        </div>
+      </div>
 
-    <div class="ion-text-center">
-      <ion-button shape="round" color="dark" [routerLink]="['/t/h/n/n']">Home</ion-button>
+      <div class="thankyou-actions">
+        <ion-button expand="block" class="meta-btn-gradient btn-return-world" [routerLink]="['/flatmeta/home']">
+          <ion-icon name="planet-outline" slot="start"></ion-icon>
+          Return to Metaverse
+        </ion-button>
+        <ion-button expand="block" fill="outline" class="btn-view-portfolio" [routerLink]="['/flatmeta/myplaces']">
+          <ion-icon name="cube-outline" slot="start"></ion-icon>
+          View in My Places
+        </ion-button>
+      </div>
     </div>
   </div>
 </ion-content>

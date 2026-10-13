@@ -3,6 +3,7 @@ import { AlertController, LoadingController, ToastController, PopoverController,
 import { Router } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import { Location } from '@angular/common';
+import { environment } from 'src/environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -10,8 +11,7 @@ import { Location } from '@angular/common';
 export class GeneralService {
   loading: any;
 
-  //globalUrl: string = 'https://leafletdemo.mewebe.net/API/index.php?action=';
-  globalUrl: string = 'https://api.flatmeta.io/api/';
+  globalUrl: string = environment.apiUrl;
 
   constructor(
     public alertController: AlertController,
@@ -47,29 +47,39 @@ export class GeneralService {
   async presentToast(m, d = 3000) {
     const toast = await this.toastController.create({
       message: m,
-      duration: d
+      duration: d,
+      position: 'bottom'
     });
     toast.present();
   }
 
   async presentLoading(m = 'Please Wait') {
+    this.stopLoading();
     this.loading = await this.loadingController.create({
       message: m,
-      showBackdrop: true
+      showBackdrop: true,
+      duration: 5000
     });
     await this.loading.present();
   }
 
   async presentLoading2(m = 'Please Wait') {
+    this.stopLoading();
     this.loading = await this.loadingController.create({
       message: m,
-      showBackdrop: true
+      showBackdrop: true,
+      duration: 5000
     });
     await this.loading.present();
   }
 
   stopLoading() {
-    this.loading.dismiss();
+    if (this.loading) {
+      try {
+        this.loading.dismiss();
+      } catch (e) {}
+      this.loading = null;
+    }
   }
 
   closeModal() {

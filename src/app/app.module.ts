@@ -16,10 +16,6 @@ import { LocationAccuracy } from '@awesome-cordova-plugins/location-accuracy/ngx
 import { ChatComponent } from './components/chat/chat.component';
 import { ForgetpasswordComponent } from './components/forgetpassword/forgetpassword.component';
 
-import { SocketIoModule, SocketIoConfig } from 'ngx-socket-io';
-const config: SocketIoConfig = { url: 'https://orange-spiral-jobaria.glitch.me/', options: {} }
-//const config: SocketIoConfig = { url: 'http://localhost:3500/', options: {} };
-
 @NgModule({
     declarations: [AppComponent, ChatComponent, ForgetpasswordComponent],
     imports: [
@@ -30,7 +26,6 @@ const config: SocketIoConfig = { url: 'https://orange-spiral-jobaria.glitch.me/'
         HttpClientModule,
         ReactiveFormsModule,
         QuillModule.forRoot(),
-        SocketIoModule.forRoot(config),
         ServiceWorkerModule.register('ngsw-worker.js', {
             enabled: environment.production,
             // Register the ServiceWorker as soon as the application is stable

@@ -1,111 +1,107 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-title>Profile</ion-title>
+<ion-header class="ion-no-border meta-page-header">
+  <ion-toolbar class="meta-page-toolbar">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/flatmeta/home" text="" icon="arrow-back-outline"></ion-back-button>
+    </ion-buttons>
+    <ion-title class="meta-page-title">
+      <span class="gradient-text">Citizen Profile</span>
+    </ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <div id="container">
+<ion-content [fullscreen]="true" class="profile-content">
+  <div class="profile-container">
+    <!-- Citizen Hologram Avatar Card -->
+    <div class="avatar-hero-card meta-card-glass">
+      <div class="avatar-display-wrap">
+        <div class="avatar-ring-glow"></div>
+        <img [src]="profileImg || 'assets/user.jpeg'" class="avatar-image-large" alt="Citizen Avatar" />
+        <div class="avatar-badge-status">
+          <span class="pulse-dot"></span>
+          <span>Online Citizen</span>
+        </div>
+      </div>
 
-    <div class="gett">
-      <img [src]="profileImg" *ngIf="profileImg" id="proImg"/>
-    </div>
+      <div class="avatar-identity-info">
+        <h2 class="profile-fullname">{{ profileForm.value.fullname || 'Metaverse Citizen' }}</h2>
+        <span class="profile-username">@{{ profileForm.value.username }}</span>
+        <div class="profile-role-tag">
+          <span class="meta-badge badge-emerald">Verified Resident</span>
+          <span class="meta-badge badge-cyan">Level 1 Owner</span>
+        </div>
+      </div>
 
-    <div class="flex justify-content-evenly ion-margin-bottom">
-      <div>
-        <ion-button expanded="block" fill="outline" color="dark" mode="ios" size="small" (click)="chooseFile()">
+      <!-- Avatar Action Buttons -->
+      <div class="avatar-actions-bar">
+        <ion-button fill="outline" class="btn-avatar-action" (click)="chooseFile()">
           <ion-icon name="cloud-upload-outline" slot="start"></ion-icon>
-          Upload Avatar
+          Upload Photo
         </ion-button>
-      </div>
-      <div>
-        <ion-button expanded="block" fill="outline" color="dark" mode="ios" size="small" (click)="generateAvatar()">
+        <ion-button fill="outline" class="btn-avatar-action btn-dice" (click)="generateAvatar()">
           <ion-icon name="shuffle-outline" slot="start"></ion-icon>
-          Generate Avatar
+          Dice Avatar
         </ion-button>
       </div>
+
+      <input type="file" #fileInput (change)="choosePhoto($event)" hidden="true" accept="image/*"
+        style="visibility: hidden; display: none;" />
     </div>
 
-    <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" (keyup.enter)="onSubmit()" novalidate>
-      <div>
-        <ion-item mode="md">
-          <ion-label position="floating">
-            <ion-icon slot="start" name="person-outline"></ion-icon>
-            Full Name
-            <ng-container *ngIf="getControl.fullname.touched">
-              <span class="text-danger" *ngIf="getControl.fullname.errors?.required">Full Name is Required*</span>
-            </ng-container>
-          </ion-label>
-          <ion-input placeholder="Enter Full Name" type="text" formControlName="fullname"></ion-input>
-        </ion-item>
-
-        <ion-item mode="md">
-          <ion-label position="floating">
-            <ion-icon slot="start" name="person-add-outline"></ion-icon>
-            Username
-            <ng-container *ngIf="getControl.username.touched">
-              <span class="text-danger" *ngIf="getControl.username.errors?.required">Username is Required*</span>
-            </ng-container>
-          </ion-label>
-          <ion-input placeholder="Enter Username" type="text" formControlName="username" readonly></ion-input>
-        </ion-item>
-
-        <ion-item mode="md">
-          <ion-label position="floating">
-            <ion-icon slot="start" name="mail-outline"></ion-icon>
-            Email Address
-            <ng-container *ngIf="getControl.email.touched">
-              <span class="text-danger" *ngIf="getControl.email.errors?.required">Email is Required*</span>
-              <span class="text-danger" *ngIf="(getControl.email.invalid && !getControl.email.errors?.required)">Invalid
-                Email*</span>
-            </ng-container>
-          </ion-label>
-          <ion-input placeholder="Enter Email" type="email" formControlName="email" readonly></ion-input>
-        </ion-item>
-
-        <!-- <ion-item mode="md">
-          <ion-label position="floating">
-            <ion-icon slot="start" name="call-outline"></ion-icon>
-            Phone Number
-            <ng-container *ngIf="getControl.phone_number.touched">
-              <span class="text-danger" *ngIf="getControl.phone_number.errors?.required">Phone Number is
-                Required*</span>
-            </ng-container>
-          </ion-label>
-          <ion-input placeholder="Enter phone_number" type="tel" formControlName="phone_number">
-          </ion-input>
-        </ion-item> -->
-
-        <!-- <ion-item mode="md">
-          <ion-label position="floating">
-            <ion-icon slot="start" name="lock-closed-outline"></ion-icon>
-            Date of Birth
-            <ng-container *ngIf="getControl.password.touched">
-              <span class="text-danger"
-                *ngIf="getControl.confirm_password.errors?.required">Confirm Password is Required*</span>
-            </ng-container>
-          </ion-label>
-          <ion-input placeholder="Enter Confirm Password" type="{{showPass ? 'text': 'password'}}"
-            formControlName="confirm_password">
-          </ion-input>
-          <ion-icon name="eye-outline" slot="end" *ngIf="!showPass" (click)="showPass = !showPass"
-            class="ion-align-self-center"></ion-icon>
-          <ion-icon name="eye-off-outline" slot="end" *ngIf="showPass" (click)="showPass = !showPass"
-            class="ion-align-self-center"></ion-icon>
-        </ion-item> -->
+    <!-- Citizen Form Card -->
+    <div class="profile-form-card meta-card-glass">
+      <div class="card-section-head">
+        <ion-icon name="id-card-outline"></ion-icon>
+        <h3>Citizen Records</h3>
       </div>
 
+      <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" (keyup.enter)="onSubmit()" novalidate class="auth-form">
+        <!-- Full Name -->
+        <div class="input-group">
+          <label class="input-label">Full Name</label>
+          <div class="input-field-wrap" [class.field-error]="getControl.fullname.touched && getControl.fullname.invalid">
+            <ion-icon name="person-outline" class="field-icon"></ion-icon>
+            <ion-input placeholder="Enter Full Name" type="text" formControlName="fullname"></ion-input>
+          </div>
+          <div class="field-error-msg" *ngIf="getControl.fullname.touched && getControl.fullname.errors?.required">
+            Full name is required
+          </div>
+        </div>
 
+        <!-- Username (Readonly) -->
+        <div class="input-group">
+          <div class="label-row">
+            <label class="input-label">Citizen Username</label>
+            <span class="immutable-pill">Permanent Tag</span>
+          </div>
+          <div class="input-field-wrap field-readonly">
+            <ion-icon name="at-outline" class="field-icon"></ion-icon>
+            <ion-input placeholder="Username" type="text" formControlName="username" readonly></ion-input>
+          </div>
+        </div>
 
-      <ion-button expand="block" shape="round" color="dark" type="submit">
-        Update
-      </ion-button>
+        <!-- Email Address (Readonly) -->
+        <div class="input-group">
+          <div class="label-row">
+            <label class="input-label">Registered Email</label>
+            <span class="immutable-pill">Verified</span>
+          </div>
+          <div class="input-field-wrap field-readonly">
+            <ion-icon name="mail-outline" class="field-icon"></ion-icon>
+            <ion-input placeholder="Email" type="email" formControlName="email" readonly></ion-input>
+          </div>
+        </div>
 
-    </form>
+        <!-- Submit Button -->
+        <div class="form-actions">
+          <ion-button expand="block" class="meta-btn-gradient btn-update-profile" type="submit" [disabled]="profileForm.invalid">
+            <ion-icon name="checkmark-done-outline" slot="start"></ion-icon>
+            Update Citizen Records
+          </ion-button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Hidden 3D Avatar Render Canvas Container -->
+    <div id="canvasRen" style="width: 1px; height: 1px; opacity: 0; pointer-events: none; overflow: hidden;"></div>
   </div>
-  <input type="file" #fileInput (change)="choosePhoto($event)" hidden="true" accept="image/*"
-    style="visibility: hidden;" />
-
-
-  <div id="canvasRen" style="width: 200px;height: 200px;"></div>
 </ion-content>

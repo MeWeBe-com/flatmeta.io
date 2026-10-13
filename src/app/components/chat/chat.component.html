@@ -1,45 +1,54 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-title>{{name}}</ion-title>
+<ion-header class="ion-no-border meta-page-header">
+  <ion-toolbar class="meta-page-toolbar">
+    <div class="chat-header-user">
+      <div class="header-avatar-wrap">
+        <ion-icon name="person-circle-outline"></ion-icon>
+        <span class="online-indicator"></span>
+      </div>
+      <div class="header-user-info">
+        <h4 class="chat-contact-name">{{ name }}</h4>
+        <span class="chat-status-sub">Citizen Connection</span>
+      </div>
+    </div>
     <ion-buttons slot="end">
-      <ion-button (click)="general.closeModal()">
-        <ion-icon name="close-outline"></ion-icon>
+      <ion-button (click)="general.closeModal()" fill="clear" color="light" class="btn-close-chat">
+        <ion-icon name="close-outline" slot="icon-only"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
-<ion-content class="ion-padding chat-content">
 
-  <ion-grid>
-    <ion-row *ngFor="let m of chats">
+<ion-content class="chat-content">
+  <div class="chat-messages-container">
+    <div class="chat-intro-note">
+      <ion-icon name="lock-closed-outline"></ion-icon>
+      <span>Encrypted peer chat in FlatMeta metaverse</span>
+    </div>
 
-      <ion-col size="9" class="col-1" *ngIf="m?.senderId != senderId">
-        <span>{{m?.message}}</span>
+    <!-- Empty messages state -->
+    <div class="chat-empty-hint" *ngIf="chats?.length === 0">
+      <ion-icon name="chatbubbles-outline"></ion-icon>
+      <p>Say hello to <strong>{{ name }}</strong>!</p>
+    </div>
 
-        <div class="time">{{m?.created_at | date: 'hh:mm a'}}</div>
-      </ion-col>
-
-      <ion-col offset="3" size="9" class="col-2" *ngIf="m?.senderId == senderId">
-
-        <span>{{m?.message}}</span>
-
-        <div class="time">{{m?.created_at | date: 'hh:mm a'}}</div>
-      </ion-col>
-
-    </ion-row>
-  </ion-grid>
-
+    <div class="chat-bubble-row" *ngFor="let m of chats" [class.outgoing]="(m?.senderId || m?.sender_id) == senderId" [class.incoming]="(m?.senderId || m?.sender_id) != senderId">
+      <div class="chat-bubble">
+        <div class="bubble-text">{{ m?.message }}</div>
+        <div class="bubble-time">{{ (m?.created_at || m?.createdAt) | date: 'hh:mm a' }}</div>
+      </div>
+    </div>
+  </div>
 </ion-content>
-<ion-footer>
-  <ion-toolbar>
 
-    <ion-item lines="none">
-      <ion-input type="text" placeholder="Message" [(ngModel)]="newMessage" autocomplete="on" autocorrect="on" (keyup.enter)="sendMessage(newMessage); $event.preventDefault()">
+<ion-footer class="chat-footer ion-no-border">
+  <ion-toolbar class="chat-footer-toolbar">
+    <div class="chat-input-bar">
+      <ion-input type="text" placeholder="Type a message..." [(ngModel)]="newMessage" autocomplete="off" autocorrect="on"
+        (keyup.enter)="sendMessage(newMessage); $event.preventDefault()" class="meta-chat-input">
       </ion-input>
-      <ion-button (mousedown)="sendMessage(newMessage); $event.preventDefault()"  fill="clear" slot="end">
-        <ion-icon icononly name="send-outline"></ion-icon>
-      </ion-button>
-    </ion-item>
-
+      <button class="btn-send-message" (mousedown)="sendMessage(newMessage); $event.preventDefault()" [disabled]="!newMessage || !newMessage.trim()" aria-label="Send Message">
+        <ion-icon name="paper-plane"></ion-icon>
+      </button>
+    </div>
   </ion-toolbar>
 </ion-footer>

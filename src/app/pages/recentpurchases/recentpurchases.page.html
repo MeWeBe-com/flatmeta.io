@@ -1,35 +1,87 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>
-      Recent Purchases
+<ion-header class="ion-no-border meta-page-header">
+  <ion-toolbar class="meta-page-toolbar">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/flatmeta/home" text="" icon="arrow-back-outline"></ion-back-button>
+    </ion-buttons>
+    <ion-title class="meta-page-title">
+      <span class="gradient-text">Recent Purchases</span>
     </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="getList()" fill="clear" color="primary" title="Refresh Activity">
+        <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
+<ion-content [fullscreen]="true" class="activity-content">
+  <div class="activity-container">
+    <!-- Hero Header -->
+    <div class="activity-hero">
+      <div class="hero-text">
+        <div class="hero-badge">
+          <span class="meta-badge badge-purple">Public Ledger</span>
+        </div>
+        <h2>Transaction <span class="gradient-text-accent">Activity</span></h2>
+        <p>Real-time land acquisitions and verified ownership transfers across the 2D earth.</p>
+      </div>
+      <div class="activity-stats" *ngIf="tilesList?.length > 0">
+        <div class="stat-pill">
+          <span class="stat-num">{{ tilesList.length }}</span>
+          <span class="stat-lbl">Recent Deeds</span>
+        </div>
+      </div>
+    </div>
 
-  <ion-grid>
-    <ion-row>
-      <ion-col size="6" *ngFor="let c of tilesList; let i = index;">
-        <div class="flex box">
-          <div>
-            <img [src]="c?.image" class="tile-img">
+    <!-- Empty State -->
+    <div class="empty-state-wrap meta-card-glass" *ngIf="tilesList?.length === 0">
+      <div class="empty-icon-box">
+        <ion-icon name="receipt-outline"></ion-icon>
+      </div>
+      <h3>No Recent Activity</h3>
+      <p>No new transactions recorded recently. Explore the map at 15x zoom and make the first move!</p>
+      <ion-button [routerLink]="['/flatmeta/home']" class="meta-btn-gradient">
+        <ion-icon name="planet-outline" slot="start"></ion-icon>
+        Explore World Map
+      </ion-button>
+    </div>
+
+    <!-- Cards Grid -->
+    <div class="parcels-grid" *ngIf="tilesList?.length > 0">
+      <div class="parcel-card meta-card" *ngFor="let c of tilesList; let i = index">
+        <div class="parcel-thumb-wrap">
+          <img [src]="c?.image || 'assets/def.jpeg'" class="parcel-image" alt="Purchased Land" />
+          <div class="thumb-badge">
+            <span class="meta-badge badge-cyan">{{ c?.no_of_tiles }} Tiles</span>
           </div>
-          <div>
-            <div>
-              Tiles: {{c?.no_of_tiles}}
-            </div>
-            <div>
-              Per Tile: ${{c?.amount}}
-            </div>
-          </div>
-          <div>
-            <ion-button expand="block" fill="outline" size="small" color="dark" [routerLink]="['/flatmeta/home']"
-              (click)="toUserPlace(c)">View</ion-button>
+          <div class="thumb-overlay">
+            <span class="verified-tag">
+              <ion-icon name="checkmark-done-circle"></ion-icon>
+              Settled
+            </span>
           </div>
         </div>
-      </ion-col>
-    </ion-row>
-  </ion-grid>
 
+        <div class="parcel-card-body">
+          <div class="parcel-header">
+            <h4 class="parcel-title">Deed Parcel #{{ c?.id || (i + 1) }}</h4>
+            <span class="price-chip">${{ c?.amount }} <small>/ tile</small></span>
+          </div>
+
+          <div class="parcel-meta-info">
+            <div class="info-row">
+              <span class="info-lbl">Acquisition Value:</span>
+              <span class="info-val">${{ ((c?.amount || 0) * (c?.no_of_tiles || 1)).toFixed(2) }} USD</span>
+            </div>
+          </div>
+
+          <ion-button expand="block" class="meta-btn-gradient btn-teleport" [routerLink]="['/flatmeta/home']"
+            (click)="toUserPlace(c)">
+            <ion-icon name="locate-outline" slot="start"></ion-icon>
+            Teleport to Parcel
+          </ion-button>
+        </div>
+      </div>
+    </div>
+  </div>
 </ion-content>

@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { GeneralService } from './general.service';
 import { GlobaldataService } from './globaldata.service';
 import { StorageService } from './storage.service';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -13,60 +14,64 @@ export class HttpService {
     private http: HttpClient,
     public general: GeneralService,
     public storage: StorageService
-  ) {
+  ) {}
 
-  }
-
-  //New APi Setup
-  post(link, data, loader){
-    if (loader == true) {
+  post(link: string, data: any, loader: boolean): Observable<any> {
+    if (loader) {
       this.general.presentLoading();
     }
-    let headers = {
+    const headers = {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + GlobaldataService.loginToken,
+      'Authorization': 'Bearer ' + (GlobaldataService.loginToken || ''),
       'Accept': 'application/json'
     };
 
-    return this.http.post(this.general.globalUrl + link, JSON.stringify(data), { headers: headers })
+    return this.http.post(this.general.globalUrl + link, JSON.stringify(data), { headers: headers });
   }
 
-  post2(link, data, loader){
-    if (loader == true) {
+  post2(link: string, data: any, loader: boolean): Observable<any> {
+    if (loader) {
       this.general.presentLoading();
     }
-    let headers = { 'Content-Type': 'application/json' };
-
-    return this.http.post(this.general.globalUrl + link, JSON.stringify(data), { headers: headers })
-  }
-
-  get(link, loader){
-    if (loader == true) {
-      this.general.presentLoading();
-    }
-    let headers = {
+    const headers = { 
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + GlobaldataService.loginToken,
       'Accept': 'application/json'
     };
-    
-    return this.http.get(this.general.globalUrl + link, { headers: headers })
+
+    return this.http.post(this.general.globalUrl + link, JSON.stringify(data), { headers: headers });
   }
 
-  get2(link, loader){
-    if (loader == true) {
+  get(link: string, loader: boolean): Observable<any> {
+    if (loader) {
       this.general.presentLoading();
     }
-    let headers = { 'Content-Type': 'application/json' };
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + (GlobaldataService.loginToken || ''),
+      'Accept': 'application/json'
+    };
 
-    return this.http.get(this.general.globalUrl + link, { headers: headers })
+    return this.http.get(this.general.globalUrl + link, { headers: headers });
   }
 
-  uploadImages(fileToUpload: File, url) {
+  get2(link: string, loader: boolean): Observable<any> {
+    if (loader) {
+      this.general.presentLoading();
+    }
+    const headers = { 
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+
+    return this.http.get(this.general.globalUrl + link, { headers: headers });
+  }
+
+  uploadImages(fileToUpload: File, url: string): Observable<any> {
     const formData = new FormData();
     formData.append('images', fileToUpload);
-    let headers = {
-      'Authorization': 'Bearer ' + GlobaldataService.loginToken,
+    const headers = {
+      'Authorization': 'Bearer ' + (GlobaldataService.loginToken || ''),
+      'Accept': 'application/json'
     };
     return this.http.post(this.general.globalUrl + url, formData, { headers: headers });
   }

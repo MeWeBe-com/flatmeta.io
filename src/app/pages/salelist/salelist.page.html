@@ -1,39 +1,92 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>
-      On Sale
+<ion-header class="ion-no-border meta-page-header">
+  <ion-toolbar class="meta-page-toolbar">
+    <ion-title class="meta-page-title">
+      <span class="gradient-text">Marketplace</span>
     </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="getList()" fill="clear" color="primary" title="Refresh Listings">
+        <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
+<ion-content [fullscreen]="true" class="marketplace-content">
+  <div class="marketplace-container">
+    <!-- Marketplace Hero Header -->
+    <div class="market-hero">
+      <div class="hero-text">
+        <div class="hero-badge">
+          <span class="meta-badge badge-cyan">Virtual Real Estate</span>
+        </div>
+        <h2>Prime Land <span class="gradient-text-accent">Parcels</span></h2>
+        <p>Acquire virtual coordinates, customize parcel artwork, and trade on the 2D metaverse.</p>
+      </div>
+      <div class="market-stats" *ngIf="tilesList?.length > 0">
+        <div class="stat-pill">
+          <span class="stat-num">{{ tilesList.length }}</span>
+          <span class="stat-lbl">Active Listings</span>
+        </div>
+      </div>
+    </div>
 
-  <ion-grid>
-    <ion-row>
-      <ion-col size="6" *ngFor="let c of tilesList; let i = index;">
-        <div class="flex box">
-          <div>
-            <img [src]="c?.image" class="tile-img">
+    <!-- Empty State -->
+    <div class="empty-state-wrap meta-card-glass" *ngIf="tilesList?.length === 0">
+      <div class="empty-icon-box">
+        <ion-icon name="storefront-outline"></ion-icon>
+      </div>
+      <h3>No Active Listings</h3>
+      <p>All currently available land is being explored or held. Roam the earth at 15x zoom to select and mint brand new tiles!</p>
+      <ion-button [routerLink]="['/flatmeta/home']" class="meta-btn-gradient">
+        <ion-icon name="planet-outline" slot="start"></ion-icon>
+        Explore World Map
+      </ion-button>
+    </div>
+
+    <!-- Cards Grid -->
+    <div class="parcels-grid" *ngIf="tilesList?.length > 0">
+      <div class="parcel-card meta-card" *ngFor="let c of tilesList; let i = index">
+        <!-- Thumbnail Wrap -->
+        <div class="parcel-thumb-wrap">
+          <img [src]="c?.image || 'assets/def.jpeg'" class="parcel-image" alt="Parcel Image" />
+          <div class="thumb-badge">
+            <span class="meta-badge badge-purple">{{ c?.no_of_tiles }} Tiles</span>
           </div>
-          <div>
-            <div>
-              Tiles: {{c?.no_of_tiles}}
-            </div>
-            <div>
-              Per Tile: ${{c?.amount}}
-            </div>
-          </div>
-          <div class="flex">
-            <div>
-              <ion-button expand="block" fill="outline" size="small" color="dark" [routerLink]="['/flatmeta/home']" (click)="toUserPlace(c)">View</ion-button>
-            </div>
-            <div>
-              <ion-button expand="block" fill="outline" size="small" color="dark" (click)="makePayment(c?.buy_link)">Buy</ion-button>
-            </div>
+          <div class="thumb-overlay">
+            <span class="verified-tag">
+              <ion-icon name="shield-checkmark"></ion-icon>
+              Deed Verified
+            </span>
           </div>
         </div>
-      </ion-col>
-    </ion-row>
-  </ion-grid>
 
+        <!-- Parcel Details -->
+        <div class="parcel-card-body">
+          <div class="parcel-header">
+            <h4 class="parcel-title">Metaverse Plot #{{ c?.id || (i + 1) }}</h4>
+            <span class="price-chip">${{ c?.amount }} <small>/ tile</small></span>
+          </div>
+
+          <div class="parcel-meta-info">
+            <div class="info-row">
+              <span class="info-lbl">Total Investment:</span>
+              <span class="info-val">${{ ((c?.amount || 0) * (c?.no_of_tiles || 1)).toFixed(2) }} USD</span>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="parcel-actions">
+            <ion-button fill="outline" class="btn-action-view" [routerLink]="['/flatmeta/home']" (click)="toUserPlace(c)">
+              <ion-icon name="locate-outline" slot="start"></ion-icon>
+              View
+            </ion-button>
+            <ion-button class="meta-btn-gradient btn-action-buy" (click)="makePayment(c?.buy_link)">
+              <ion-icon name="card-outline" slot="start"></ion-icon>
+              Buy
+            </ion-button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </ion-content>
