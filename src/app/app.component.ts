@@ -179,6 +179,35 @@ export class AppComponent {
     this.events.publishLogin(userObj);
     this.showAuthModal = false;
     this.general.presentToast('Email verified! Your land, avatar, and pins are permanently saved.');
+
+    // Sync with Laravel backend /api/VerifyEmail when online
+    this.http
+      .post2(
+        'VerifyEmail',
+        {
+          email: userObj.email,
+          username: userObj.username,
+          fullname: userObj.fullname,
+          user_image: userObj.user_image,
+        },
+        false
+      )
+      .subscribe({
+        next: (res: any) => {
+          if (res && res.status === true && res.access_token) {
+            GlobaldataService.loginToken = res.access_token;
+            this.storage.setObject('login_token', res.access_token);
+            if (res.data) {
+              const merged = { ...userObj, ...res.data, user_image: userObj.user_image || res.data.user_image };
+              GlobaldataService.userObject = merged;
+              this.profile = merged;
+              this.storage.setObject('userObject', merged);
+              this.events.publishLogin(merged);
+            }
+          }
+        },
+        error: () => {},
+      });
   }
 
   submitPasswordLogin() {
