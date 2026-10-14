@@ -84,6 +84,35 @@
   }
 }
 
+/* Portfolio Stats Strip */
+.portfolio-stats-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+
+  .p-stat-card {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .p-stat-lbl {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--flatmeta-text-muted);
+    }
+
+    .p-stat-val {
+      font-size: 19px;
+      font-weight: 800;
+      color: var(--flatmeta-text-primary);
+    }
+  }
+}
+
 /* Empty State */
 .empty-state-wrap {
   text-align: center;

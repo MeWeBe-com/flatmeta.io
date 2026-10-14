@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlatMeta.io: Project Checklist and Daily Log</title>
+<meta name="description" content="Full, ordered task checklist for FlatMeta.io, the 2D metaverse land ownership and personalisation platform. Shows progress, monthly activity and a daily log built from git history.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b1020; --bg2:#111832; --card:rgba(255,255,255,.04); --card2:rgba(255,255,255,.07);
+  --line:rgba(255,255,255,.09); --text:#e7ecf7; --muted:#93a0bd; --dim:#64708c;
+  --done:#22c58b; --doing:#f5b544; --todo:#7b8bb0; --blocked:#f2667a; --later:#a78bfa;
+  --accent:#5b8cff; --accent2:#22d3ee;
+  --radius:16px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--text);
+  background:radial-gradient(1200px 600px at 10% -10%,rgba(91,140,255,.18),transparent 60%),
+             radial-gradient(900px 500px at 100% 0%,rgba(34,211,238,.12),transparent 60%),var(--bg);
+  min-height:100vh;line-height:1.5}
+h1,h2,h3{font-family:"Space Grotesk",Inter,sans-serif;letter-spacing:-.01em;margin:0}
+a{color:var(--accent2)}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 80px}
+header.top{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;justify-content:space-between;margin-bottom:22px}
+.brand{display:flex;gap:14px;align-items:center}
+.logo{width:48px;height:48px;border-radius:14px;background:conic-gradient(from 200deg,var(--accent),var(--accent2),#22c58b,var(--accent));
+  display:grid;place-items:center;box-shadow:0 10px 30px rgba(91,140,255,.35)}
+.logo svg{width:26px;height:26px}
+h1{font-size:28px}
+.sub{color:var(--muted);font-size:14px;margin-top:2px}
+.meta{color:var(--dim);font-size:12.5px;text-align:right}
+.meta b{color:var(--muted);font-weight:600}
+
+.grid-top{display:grid;grid-template-columns:300px 1fr;gap:16px;margin-bottom:16px}
+@media (max-width:860px){.grid-top{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;backdrop-filter:blur(8px)}
+.card h2{font-size:15px;color:var(--muted);font-weight:600;margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em}
+
+.ring-wrap{display:flex;gap:18px;align-items:center}
+.ring{position:relative;width:120px;height:120px;flex:none}
+.ring svg{transform:rotate(-90deg)}
+.ring .pct{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.ring .pct b{font-family:"Space Grotesk";font-size:28px;display:block;line-height:1}
+.ring .pct span{font-size:11px;color:var(--muted)}
+.counts{display:grid;gap:6px;font-size:13.5px;flex:1}
+.counts div{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:7px}
+.stack{height:10px;border-radius:99px;overflow:hidden;display:flex;background:var(--card2);margin-top:14px}
+.stack i{display:block;height:100%}
+
+.chart-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.chart-head h2{margin:0}
+.legend{display:flex;gap:12px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center}
+.legend i{width:10px;height:10px;border-radius:3px;margin-right:6px;display:inline-block}
+#chart{width:100%;height:170px;display:block}
+#chart .bar{transition:opacity .15s}
+#chart .bar:hover{opacity:.75}
+.chart-foot{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-top:4px}
+#tip{position:fixed;pointer-events:none;background:#0f1730;border:1px solid var(--line);color:var(--text);font-size:12px;padding:7px 10px;border-radius:10px;opacity:0;transition:opacity .12s;z-index:50;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+
+.toolbar{position:sticky;top:0;z-index:20;display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:12px 0;margin-bottom:6px;
+  background:linear-gradient(var(--bg) 70%,transparent)}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:99px;padding:7px 13px;font-size:13px;cursor:pointer;font-family:inherit;transition:.15s}
+.chip:hover{background:var(--card2)}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip .n{opacity:.7;margin-left:4px}
+.search{flex:1;min-width:200px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:99px;padding:8px 14px;font-size:13.5px;font-family:inherit;outline:none}
+.search:focus{border-color:var(--accent)}
+.btn-sm{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:inherit}
+.btn-sm:hover{color:var(--text);background:var(--card2)}
+
+.phase{margin-bottom:12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);overflow:hidden}
+.phase-head{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:14px 16px;cursor:pointer;user-select:none}
+.phase-head:hover{background:rgba(255,255,255,.025)}
+.pnum{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-family:"Space Grotesk";font-weight:700;background:var(--card2);font-size:14px}
+.phase.complete .pnum{background:rgba(34,197,139,.18);color:var(--done)}
+.phase-title h3{font-size:16.5px}
+.phase-title p{margin:2px 0 0;color:var(--muted);font-size:12.5px}
+.pprog{display:flex;align-items:center;gap:10px;min-width:150px;justify-content:flex-end}
+.pbar{width:110px;height:7px;border-radius:99px;background:var(--card2);overflow:hidden}
+.pbar i{display:block;height:100%;background:linear-gradient(90deg,var(--done),#4ade80)}
+.pprog small{color:var(--muted);font-size:12px;min-width:52px;text-align:right}
+.chev{transition:transform .2s;color:var(--dim)}
+.phase.open .chev{transform:rotate(90deg)}
+.tasks{display:none;border-top:1px solid var(--line)}
+.phase.open .tasks{display:block}
+.task{display:grid;grid-template-columns:28px 64px 1fr auto;gap:12px;padding:11px 16px;border-bottom:1px solid rgba(255,255,255,.045);align-items:start}
+.task:last-child{border-bottom:none}
+.task:hover{background:rgba(255,255,255,.02)}
+@media (max-width:640px){.task{grid-template-columns:28px 1fr}.task .tid{display:none}.task .right{grid-column:2}}
+.cb{width:22px;height:22px;border-radius:7px;border:2px solid var(--todo);display:grid;place-items:center;cursor:pointer;margin-top:1px;transition:.15s;background:transparent;padding:0}
+.cb svg{width:13px;height:13px;opacity:0}
+.task[data-s="done"] .cb{background:var(--done);border-color:var(--done)}
+.task[data-s="done"] .cb svg{opacity:1}
+.task[data-s="doing"] .cb{border-color:var(--doing);background:conic-gradient(var(--doing) 0 50%,transparent 50% 100%)}
+.task[data-s="blocked"] .cb{border-color:var(--blocked)}
+.task[data-s="later"] .cb{border-color:var(--later);border-style:dashed}
+.tid{font-family:"Space Grotesk";font-size:12.5px;color:var(--dim);padding-top:2px}
+.ttl{font-size:14.2px;font-weight:600}
+.task[data-s="done"] .ttl{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(255,255,255,.25)}
+.det{font-size:12.8px;color:var(--muted);margin-top:3px}
+.ref{font-size:11.5px;color:var(--dim);margin-top:4px}
+.right{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;white-space:nowrap;border:1px solid transparent}
+.b-done{color:var(--done);background:rgba(34,197,139,.12);border-color:rgba(34,197,139,.25)}
+.b-doing{color:var(--doing);background:rgba(245,181,68,.12);border-color:rgba(245,181,68,.25)}
+.b-todo{color:#b5c0dc;background:rgba(123,139,176,.12);border-color:rgba(123,139,176,.25)}
+.b-blocked{color:var(--blocked);background:rgba(242,102,122,.12);border-color:rgba(242,102,122,.25)}
+.b-later{color:var(--later);background:rgba(167,139,250,.12);border-color:rgba(167,139,250,.25)}
+.date{font-size:11.5px;color:var(--dim)}
+.tag{display:inline-block;font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:6px;margin-left:6px;vertical-align:2px}
+.t-crit{background:rgba(242,102,122,.15);color:var(--blocked)}
+.t-legacy{background:rgba(91,140,255,.15);color:#93b4ff}
+.t-client{background:rgba(34,211,238,.13);color:var(--accent2)}
+.hidden{display:none!important}
+
+section.log{margin-top:34px}
+section.log h2.big{font-size:22px;margin-bottom:4px}
+.log-sub{color:var(--muted);font-size:13.5px;margin-bottom:14px}
+.log-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.month{margin:18px 0 8px;font-family:"Space Grotesk";color:var(--muted);font-size:14px;display:flex;align-items:center;gap:10px}
+.month::after{content:"";flex:1;height:1px;background:var(--line)}
+.day{display:grid;grid-template-columns:110px 1fr;gap:14px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--card);margin-bottom:8px}
+@media (max-width:640px){.day{grid-template-columns:1fr}}
+.day .d{font-family:"Space Grotesk";font-weight:600}
+.day .d small{display:block;color:var(--dim);font-weight:500;font-family:Inter;font-size:11.5px}
+.entry{display:flex;gap:10px;align-items:flex-start;margin-bottom:6px}
+.entry:last-child{margin-bottom:0}
+.repo{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px;flex:none;margin-top:2px}
+.r-FE{background:rgba(91,140,255,.16);color:#9db8ff}
+.r-BE{background:rgba(34,197,139,.15);color:#5fe0ad}
+.r-PM{background:rgba(245,181,68,.15);color:#f7c96d}
+.entry .who{color:var(--dim);font-size:12px}
+.entry ul{margin:3px 0 0;padding-left:18px;color:var(--muted);font-size:12.8px}
+.entry .tasksdone{font-size:11.5px;color:var(--done);margin-top:3px}
+footer{margin-top:40px;color:var(--dim);font-size:12px;text-align:center}
+.note{font-size:12.5px;color:var(--muted);background:rgba(91,140,255,.08);border:1px solid rgba(91,140,255,.2);border-radius:12px;padding:10px 12px;margin-bottom:14px}
+@media print{
+  body{background:#fff;color:#111}
+  .toolbar,#tip,.btn-sm{display:none!important}
+  .card,.phase,.day{background:#fff;border-color:#ddd}
+  .tasks{display:block!important}
+  .det,.muted,.sub,.ref,.date{color:#555}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><circle cx="17.5" cy="17.5" r="3.5"/></svg>
+    </div>
+    <div>
+      <h1>FlatMeta.io: Project Checklist</h1>
+      <div class="sub">2D metaverse · land ownership · interactive · personalisation. All tasks in order of completion.</div>
+    </div>
+  </div>
+  <div class="meta">
+    Last updated: <b id="updated"></b><br>
+    Repos: <a href="https://github.com/flatmeta/flatmeta.io" target="_blank" rel="noopener">flatmeta.io</a> ·
+    <a href="https://github.com/flatmeta/flatmetaAPI" target="_blank" rel="noopener">flatmetaAPI</a>
+  </div>
+</header>
+
+<div class="grid-top">
+  <div class="card" id="progressCard">
+    <h2>Overall progress</h2>
+    <div class="ring-wrap">
+      <div class="ring">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" stroke="rgba(255,255,255,.08)" stroke-width="12" fill="none"/>
+          <circle id="ringDoing" cx="60" cy="60" r="50" stroke="var(--doing)" stroke-width="12" fill="none" stroke-linecap="round" stroke-dasharray="0 999"/>
+          <circle id="ringDone" cx="60" cy="60" r="50" stroke="var(--done)" stroke-width="12" fill="none" stroke-linecap="round" stroke-dasharray="0 999"/>
+        </svg>
+        <div class="pct"><div><b id="pct">0%</b><span>complete</span></div></div>
+      </div>
+      <div class="counts" id="counts"></div>
+    </div>
+    <div class="stack" id="stack"></div>
+  </div>
+
+  <div class="card">
+    <div class="chart-head">
+      <h2>Monthly activity</h2>
+      <div class="legend">
+        <span><i style="background:var(--accent)"></i>Frontend commits</span>
+        <span><i style="background:var(--done)"></i>Backend commits</span>
+        <span><i style="background:var(--doing)"></i>Tasks completed</span>
+      </div>
+    </div>
+    <svg id="chart" role="img" aria-label="Monthly activity chart"></svg>
+    <div class="chart-foot"><span id="chartFrom"></span><span id="chartSummary"></span><span id="chartTo"></span></div>
+  </div>
+</div>
+
+<div class="note">
+  <b>How to read this:</b> tasks are listed in the order they need to be completed.
+  <span class="tag t-legacy">LEGACY</span> means something was built earlier but must be reworked to meet the brief.
+  <span class="tag t-crit">CRITICAL</span> marks security issues found in the code audit.
+  <span class="tag t-client">CLIENT</span> means a decision or input is needed from the client.
+  Click a checkbox to cycle a task through To do → Ongoing → Done. Changes are saved only in your browser; use <i>Export</i> to send them to the developer.
+</div>
+
+<div class="toolbar" id="toolbar">
+  <button class="chip active" data-f="all" id="f-all">All<span class="n"></span></button>
+  <button class="chip" data-f="done" id="f-done">Done<span class="n"></span></button>
+  <button class="chip" data-f="doing" id="f-doing">Ongoing<span class="n"></span></button>
+  <button class="chip" data-f="todo" id="f-todo">To do<span class="n"></span></button>
+  <button class="chip" data-f="blocked" id="f-blocked">Waiting on client<span class="n"></span></button>
+  <button class="chip" data-f="later" id="f-later">Later<span class="n"></span></button>
+  <input class="search" id="search" type="search" placeholder="Search tasks…" aria-label="Search tasks">
+  <button class="btn-sm" id="expandAll">Expand all</button>
+  <button class="btn-sm" id="collapseAll">Collapse all</button>
+  <button class="btn-sm" id="exportBtn">Export</button>
+  <button class="btn-sm" id="resetBtn" title="Discard local changes">Reset</button>
+</div>
+
+<main id="phases"></main>
+
+<section class="log" id="daily-log">
+  <h2 class="big">Daily log</h2>
+  <div class="log-sub">Daily activity across both repositories (from git history) plus project-management work, with the checklist tasks completed each day.</div>
+  <div class="log-filters">
+    <button class="chip active" data-r="all" id="lr-all">All</button>
+    <button class="chip" data-r="FE" id="lr-fe">Frontend</button>
+    <button class="chip" data-r="BE" id="lr-be">Backend</button>
+    <button class="chip" data-r="PM" id="lr-pm">Planning</button>
+  </div>
+  <div id="logList"></div>
+</section>
+
+<footer>FlatMeta.io · open-source collaborative 2D metaverse · checklist generated from the client brief, the code audit and git history.</footer>
+</div>
+<div id="tip"></div>
+
+<script>
+/* =====================================================================
+   DATA: edit statuses here. Status values: done | doing | todo | blocked | later
+   Task row format: [id, title, detail, status, dateDone (YYYY-MM-DD or ""), tags]
+   tags: "crit" | "legacy" | "client" (space separated)
+   ===================================================================== */
+const UPDATED = "2026-10-13";
+
+const PHASES = [
+{ n:0, title:"Discovery, audit and planning", goal:"Understand the codebase and brief, agree scope and decisions with the client.", tasks:[
+ ["0.1","Analyse frontend codebase (Ionic/Angular)","Structure, routes, services, the 1,040-line home page, dependencies.","done","2026-10-13",""],
+ ["0.2","Analyse backend codebase (Laravel API)","Controllers, models, migrations, routes, PayPal, WebSocket server.","done","2026-10-13",""],
+ ["0.3","Security and bug audit report","15 security issues (S1–S15) and 14 functional bugs (B1–B14) documented.","done","2026-10-13",""],
+ ["0.4","Read the full client brief in detail","All dated entries (31/03/22 → 06/01/23) and the comment threads.","done","2026-10-13",""],
+ ["0.5","Write the phased implementation plan","Architecture, data model, API, realtime, frontend split, verification plan.","done","2026-10-13",""],
+ ["0.6","Create this shareable project checklist","Ordered tasks, progress, monthly activity, daily log.","done","2026-10-13",""],
+ ["0.7","Decide: keep or upgrade frameworks (Laravel 8→12, Angular 15→18+, Ionic 6→8)","Also confirm the production server PHP version.","blocked","","client"],
+ ["0.8","Decide: marketplace payout model","Manual payouts from a ledger balance, or automatic PayPal Payouts (needs Payouts enabled on the Yaze account).","blocked","","client"],
+ ["0.9","Confirm billing model","100 free tiles per user, then $0.10/tile/month through a PayPal subscription whose quantity is revised as tiles change.","blocked","","client"],
+ ["0.10","Confirm login model","Email + 6-digit code (no password). Keep password login for existing users.","blocked","","client"],
+ ["0.11","Choose the FlatMeta Home location and supply the YouTube URL","The location of the FlatMeta-owned showcase area on the map.","blocked","","client"],
+ ["0.12","Provide credentials","PayPal (Yaze) sandbox and live, SMTP mailbox, production server/SSH, Mapbox account, domain DNS.","blocked","","client"],
+]},
+{ n:1, title:"Foundations and environment", goal:"A clean, reproducible base to build on.", tasks:[
+ ["1.1","Angular upgraded to 15 and Capacitor to 5 → 6 → 7","Framework and plugin upgrades.","done","2025-12-22","legacy"],
+ ["1.2","Capacitor 8, Android and iOS projects upgraded (SPM, new app ID com.flatmeta.app)","Native platform refresh.","done","2026-10-13",""],
+ ["1.3","Node/Socket.io server replaced with a native PHP WebSocket server","php artisan websocket:serve (still needs hardening, see phase 7).","done","2026-10-13",""],
+ ["1.4","Fix PHP 8.5 PDO MySQL SSL constant deprecation","config/database.php.","done","2026-10-13",""],
+ ["1.5","Local setup: MySQL database, migrations, seeders, run both apps","Document it in the README.","todo","",""],
+ ["1.6","Create a refactor branch in both repos and agree the commit convention","Conventional commits, PR per phase.","todo","",""],
+ ["1.7","Framework upgrade (if approved in 0.7)","Laravel 12 + PHP 8.2+; Angular 18+/Ionic 8 with standalone components.","todo","",""],
+ ["1.8","Remove dead code and dependencies","Legacy index.js and Node deps, unused 'ol' package, what3words script, Sanctum, abandoned paypal/rest-api-sdk-php.","todo","",""],
+ ["1.9","Configuration hygiene","Use config() not env() in code; full .env.example; separate per-environment configs.","todo","",""],
+ ["1.10","API conventions","/api/v1 prefix, consistent JSON envelope, proper HTTP status codes, Form Requests, API Resources, Policies.","todo","",""],
+ ["1.11","CI pipeline (GitHub Actions)","Frontend build and lint; backend PHPUnit; run on each PR.","todo","",""],
+ ["1.12","Test scaffolding","PHPUnit feature-test base with SQLite; remove the untouched Angular spec files.","todo","",""],
+]},
+{ n:2, title:"Critical security fixes", goal:"Close account takeover, theft and XSS holes before anything else ships.", tasks:[
+ ["2.1","S1: Stop password change without verification","ChangeUserPassword currently accepts only email + new password. Replace it.","todo","","crit"],
+ ["2.2","S2: Secure reset/verification codes","6+ digits, hashed, 15-minute expiry, bound to the email, attempt limits, throttling.","todo","","crit"],
+ ["2.3","S3: Secure payment completion","Bind each subscription/order to its record; verify via webhook or server capture; idempotent; no userID taken from the URL.","todo","","crit"],
+ ["2.4","S4: Remove public PayPal admin routes","CreateProd, CreatePlan, GetAllProducts, GetSubscriptionsDetails → become an artisan command.","todo","","crit"],
+ ["2.5","S5: Ownership check on tile image updates","Policy: only the owner can change their tiles.","todo","","crit"],
+ ["2.6","S6: Secure uploads","Auth required, real MIME validation, size limits, random filenames, no SVG, store outside the web root or on a disk.","todo","","crit"],
+ ["2.7","S7: Remove the SaveImageFromUrl SSRF endpoint","Generate avatars client-side instead (see phase 6).","todo","","crit"],
+ ["2.8","S8: Escape or sanitise all user content in map HTML","Speech bubbles, names, popups; DOMPurify for rich area content.","todo","","crit"],
+ ["2.9","S9: Authenticated WebSocket handshake","Passport token or signed guest token; senderId comes from the server.","todo","","crit"],
+ ["2.10","S10: Private messages only go to their participants","No more broadcasting every message to everyone.","todo","","crit"],
+ ["2.11","S11: Lock down chat REST endpoints","Auth required, sender taken from the token, room membership checked.","todo","","crit"],
+ ["2.12","S12: Respect blocks and rejections in connections","Opening a room must not reactivate a blocked relationship.","todo","","crit"],
+ ["2.13","S13: Stop the public full-user dump","Return only nearby or visible users; exclude deleted ones; minimal fields.","todo","","crit"],
+ ["2.14","S14: WebSocket limits","Maximum frame size, per-client rate limit, Origin allow-list.","todo","","crit"],
+ ["2.15","S15: CORS allow-list, login/register throttling, hide exception messages","Production-safe error responses.","todo","","crit"],
+]},
+{ n:3, title:"Data model and migrations", goal:"A solid schema for tiles, areas, pins, chat, billing and the marketplace.", tasks:[
+ ["3.1","users: email-first, username unique, avatar JSON, settings JSON, last position, role","Password becomes nullable.","todo","",""],
+ ["3.2","login_codes table","email, code_hash, expires_at, attempts.","todo","",""],
+ ["3.3","tiles table with integer grid indices (gx, gy) unique","Replaces fragile lat/lng float matching in user_boxes.","todo","",""],
+ ["3.4","tile_images and tile_revisions tables","One upload can span many tiles; history kept for revert.","todo","",""],
+ ["3.5","areas table","Name, unique slug (custom URL), sanitised description, bbox, centre, views, promoted.","todo","",""],
+ ["3.6","pins table","Name, lat/lng/zoom, share_token, is_public.","todo","",""],
+ ["3.7","connections table (replaces user_followers)","pending / accepted / blocked.","todo","",""],
+ ["3.8","messages table (replaces chats)","nearby/direct scope, room key, guest or user sender, lat/lng, paging index.","todo","",""],
+ ["3.9","subscriptions, listings and ledger_entries tables","Billing, marketplace, 10% commission accounting.","todo","",""],
+ ["3.10","Data migration script","user_boxes → tiles (lat/lng → gx/gy), orders → subscriptions, followers → connections, chats → messages.","todo","",""],
+ ["3.11","Seeders","FlatMeta Home area, flag image library, report reasons, demo users for testing.","todo","",""],
+]},
+{ n:4, title:"App shell, routing and performance", goal:"Open instantly at flatmeta.io/, always-visible dock, modals over the map.", tasks:[
+ ["4.1","Remove the top HOME bar for a fuller-screen map","Brief 25/4/22.","done","2022-04-25","legacy"],
+ ["4.2","Change map attribution text to 'Buy / Customise Land | FlatMeta.io'","Brief 25/4/22 and 28/4/22.","done","2022-04-25",""],
+ ["4.3","Make the bottom tab bar smaller","Brief 28/4/22 (20% smaller).","done","2022-04-28","legacy"],
+ ["4.4","Modernised UI theme and component restyle","Glass/dark design system across pages.","done","2026-10-13",""],
+ ["4.5","Serve the app from root '/' with no /flatmeta/ or /tabs/ prefix","Old URLs redirect. Brief 28/4/22.","todo","","legacy"],
+ ["4.6","Shareable routes: /u/:slug, /p/:token, /@lat,lng, /home","Custom area URLs, pins, coordinates.","todo","",""],
+ ["4.7","Server SPA fallback configuration",".htaccess / nginx rules so deep links load.","todo","",""],
+ ["4.8","Instant first load (OSM-like)","Remove PreloadAllModules and render-blocking scripts; viewport-only data; no blocking loader. Target LCP < 1.5 s.","todo","",""],
+ ["4.9","Bottom dock always visible on every screen","FlatMeta (map) · FlatMeta Home · Marketplace · Pins · Hub.","doing","","legacy"],
+ ["4.10","Login as a small, closable popup over the map","Brief 06/01/23.","todo","",""],
+ ["4.11","Hub side menu fully usable without login","Logged-in actions prompt the email save sheet.","doing","","legacy"],
+ ["4.12","All secondary screens as modals/sheets over the map","Profile, My Land, Pins, Connections, Market, Settings, About.","todo","",""],
+ ["4.13","Core services refactor","SessionService (replaces static GlobaldataService), ApiService with auth interceptor (replaces get/get2/post/post2).","todo","",""],
+ ["4.14","Dark-mode search box readable","Brief 06/01/23 and 28/4/22. Text contrast in both themes.","doing","","legacy"],
+ ["4.15","PWA caching for the app shell","Service worker caches static assets for instant repeat visits.","todo","",""],
+]},
+{ n:5, title:"Map core and the 3-level zoom", goal:"Exactly 3 zoom levels, avatar-centred, correct start location and controls.", tasks:[
+ ["5.1","Leaflet map with geosearch autocomplete","Search places (e.g. 'Karachi').","done","2022-04-20",""],
+ ["5.2","Load directly at buy level (z15)","Brief 28/4/22.","done","2022-04-28",""],
+ ["5.3","Buy button shows the grid (removes the need for a 16th level)","Brief 28/4/22.","done","2022-04-28","legacy"],
+ ["5.4","Enforce exactly 3 zoom levels (5 planet / 10 roam / 15 buy) for mouse wheel","One wheel gesture moves exactly one level.","doing","","legacy"],
+ ["5.5","Enforce 3 levels for pinch zoom on mobile","No intermediate levels.","doing","","legacy"],
+ ["5.6","Double-click moves the avatar (never zooms)","Brief 06/01/23.","done","2026-10-13",""],
+ ["5.7","Zoom always centres on the avatar","Fixes 'zoomed out in London, ended up in China'.","doing","","legacy"],
+ ["5.8","Start location: cached last position → GPS → IP-based country","Never a blank wait. Brief 06/01/23.","todo","",""],
+ ["5.9","HOME button moves both avatar and map to the real location (GPS/IP)","Brief 06/01/23.","doing","","legacy"],
+ ["5.10","LOCATE button moves the map to the avatar","Brief 06/01/23.","done","2026-10-13",""],
+ ["5.11","Off-screen avatar indicator","Edge arrow that recentres on click, so the avatar is never 'lost'.","todo","",""],
+ ["5.12","Combined search: places, areas (custom names), users, pins","One search bar for all.","todo","",""],
+ ["5.13","Grid utility (gx, gy) ↔ lat/lng and bbox maths","Shared by the parcel layer, API and realtime.","todo","",""],
+ ["5.14","Mapbox token URL restriction and OSM fallback","Tile errors fall back to OSM.","doing","",""],
+]},
+{ n:6, title:"Guest-first usage and avatars", goal:"Use everything instantly without login; personal, readable avatars.", tasks:[
+ ["6.1","Avatar shown in a circle on the map","Brief 28/4/22.","done","2022-12-08",""],
+ ["6.2","Random avatar generation and avatar upload","Built on the avataaars.io URL plus the insecure SaveImageFromUrl endpoint; must be rebuilt.","doing","","legacy"],
+ ["6.3","Guest identity and random default avatar on first visit","Stored locally; server signs a guest token.","todo","",""],
+ ["6.4","Local draft storage for guest changes","Land selections, images, area edits and pins are kept until saved.","todo","",""],
+ ["6.5","Avatar dark outline and drop shadow","Visible on light and dark maps. Brief 06/01/23.","doing","","legacy"],
+ ["6.6","Username under the avatar and a hover info card","Brief 06/01/23.","done","2026-10-13",""],
+ ["6.7","Own avatar clearly different from others","Ring/pulse styling plus 'You' label.","doing","",""],
+ ["6.8","Drag the avatar without moving the map, and drag the map without moving the avatar","Brief 06/01/23.","done","2026-10-13",""],
+ ["6.9","Arrow-key movement (like Google I/O Adventure)","Was added on 2022-05-13 but lost in the refactor; restore it.","todo","","legacy"],
+ ["6.10","Avatar builder (DiceBear avataaars style, offline)","Pick hair, eyes, mouth, clothes, skin; randomise; no external request.","todo","",""],
+ ["6.11","Typing a smiley changes the avatar's expression","e.g. :) :( :D map to mouth/eye options.","todo","",""],
+ ["6.12","Save avatar to account (or keep in guest draft)","Single source of truth in the users.avatar JSON.","todo","",""],
+ ["6.13","De-overlap many avatars in the same place","Fan out or cluster ring so 10–100 avatars stay distinguishable.","todo","",""],
+ ["6.14","Avatars visible at z15 and z10, hidden at z5","Brief 15/4/22 and 28/4/22.","todo","",""],
+ ["6.15","'Hello Guest!' popup with working Sign up / Log in links","Brief 06/01/23. Text corrected; links should open the login sheet.","doing","","legacy"],
+]},
+{ n:7, title:"Realtime presence and chat", goal:"Two browsers mean two avatars that can chat. Proximity-based, private when needed.", tasks:[
+ ["7.1","Chat modal, socket chat and saved chat (legacy)","First built 2022-05-17 → 05-28.","done","2022-05-28","legacy"],
+ ["7.2","Native WebSocket client with reconnect and heartbeat","websocket.service.ts.","done","2026-10-13",""],
+ ["7.3","Presence register and cleanup on disconnect","Fixes duplicate 'ghost' avatars after closing a window (brief 28/4/22).","todo","",""],
+ ["7.4","Proximity rooms","Only clients in the same z10 cell and its neighbours receive each other's location, typing and nearby chat.","todo","",""],
+ ["7.5","Throttled location broadcasts and smooth remote movement","Max ~5 updates/s per client; drift animation.","doing","","legacy"],
+ ["7.6","Nearby chat with anyone, on by default","Brief 06/01/23 (no connection required by default).","doing","","legacy"],
+ ["7.7","Speech bubbles next to avatars","Escaped text, auto-fade, stacked for multiple messages.","doing","","legacy"],
+ ["7.8","Live typing callouts","See others' text as they type (brief 28/4/22 #9).","todo","",""],
+ ["7.9","Hangouts-style chat panel","Latest at the bottom, scroll up loads history, copy and paste.","doing","","legacy"],
+ ["7.10","Message persistence and paginated history API","Nearby (per area) and direct rooms.","doing","","legacy"],
+ ["7.11","Setting: chat 'Everyone nearby' / 'Friends only'","In settings and at the bottom of the chat window.","todo","",""],
+ ["7.12","Setting: show avatars All / Friends / None","Enforced on the server.","todo","",""],
+ ["7.13","Private direct chat with connections","Only the two participants receive messages.","todo","",""],
+ ["7.14","Production wss:// via TLS proxy, plus a process supervisor","nginx/Caddy + supervisord/systemd config.","todo","",""],
+ ["7.15","Load test: 100 avatars in one area","Check latency and CPU on the server.","todo","",""],
+]},
+{ n:8, title:"Connections, profiles and reporting", goal:"Find people, connect, view profiles, report abuse.", tasks:[
+ ["8.1","Friend requests list with accept/decline (legacy)","Built 2022-05-16.","done","2022-05-16","legacy"],
+ ["8.2","Report-user popup and report reasons API (legacy)","Built 2022-12-08/09.","done","2022-12-09","legacy"],
+ ["8.3","Click an avatar for a profile card: Add connection, Message, Report","Brief 28/4/22 #8.","doing","","legacy"],
+ ["8.4","Connections manager","Pending, accepted and blocked; unblock; locate a friend on the map.","todo","",""],
+ ["8.5","Profile editing with unique username validation","Display name, username, avatar.","doing","","legacy"],
+]},
+{ n:9, title:"Land: grid, selection and claiming", goal:"Buy tiles at z15 quickly; first 100 free; no double sales.", tasks:[
+ ["9.1","Grid selection, multi-select and unselect (legacy)","Built 2022-04-11 → 05-12.","done","2022-05-12","legacy"],
+ ["9.2","Viewport-based parcel layer (canvas) at every zoom level","GET /parcels?bbox; owned tiles shown scaled at z10/z5.","todo","",""],
+ ["9.3","Buy mode toggle placed next to the search bar or under the zoom buttons","Brief 28/4/22.","doing","","legacy"],
+ ["9.4","Grid styling: half-thickness, more transparent edges","Owned tiles get a different outline colour; no outline once an image is set.","doing","","legacy"],
+ ["9.5","Drag-rectangle multi-select plus tap select on mobile","Makes selecting many tiles easy.","todo","",""],
+ ["9.6","Selection toolbar: count, free quota left, monthly cost","Clear call to action: Claim / Save.","todo","",""],
+ ["9.7","Claim tiles API with free quota (100 per user)","Unique (gx, gy) constraint; transaction-safe.","todo","",""],
+ ["9.8","Guest claims shown as 'unsaved' drafts until email save","Brief 06/01/23.","todo","",""],
+ ["9.9","Release tiles","Updates the subscription quantity.","todo","",""],
+ ["9.10","Click owned land to open an area popup (owner + details)","Built in a basic form; rebuild with the area model.","doing","","legacy"],
+ ["9.11","'Scan' toggle to highlight owned areas with outlines","Brief 15/4/22.","todo","",""],
+ ["9.12","Allow claiming sea tiles","Brief 15/4/22 comment.","todo","",""],
+]},
+{ n:10, title:"Tile images and area personalisation", goal:"Seamless custom images, one image across many tiles, named areas with URLs.", tasks:[
+ ["10.1","Per-tile image from a flag library plus custom upload (legacy)","Built 2022-04-21 → 05-12.","done","2022-05-12","legacy"],
+ ["10.2","Custom rich content editor (Quill) for land (legacy)","Built 2022-04-26/27; must be sanitised.","done","2022-04-27","legacy"],
+ ["10.3","Upload any image or animated GIF","Validation, size limits, server-side thumbnails for zoomed-out views.","todo","",""],
+ ["10.4","One image across many selected tiles","Sliced per tile and clipped to the user's own tiles only. Brief 06/01/23 (marked important).","todo","",""],
+ ["10.5","Seamless rendering: no gaps between neighbouring images","Brief 28/4/22 #1.","todo","",""],
+ ["10.6","Custom images still visible when zoomed out (z10, z5)","Brief 25/4/22.","todo","",""],
+ ["10.7","Revisions and revert to the previous or default image","Brief 15/4/22.","todo","",""],
+ ["10.8","Areas: joined tiles become one area with a name and a sanitised description","Edited on the map while selecting a group of tiles.","todo","",""],
+ ["10.9","Custom URL slug: flatmeta.io/u/pepsi-land, also works in search","Brief 06/01/23 and 28/4/22 #12.","todo","",""],
+ ["10.10","Share area link button (copy / native share)","Brief 06/01/23.","todo","",""],
+ ["10.11","Latest lands list (click to fly there)","Recent-purchases page was a basic version (2022-12-13).","doing","","legacy"],
+ ["10.12","FlatMeta Home showcase area with instructions inside the map tiles","FlatMeta-owned area; 'Home' in the dock goes there. Basic boxes added 2022-05-23.","doing","","legacy"],
+]},
+{ n:11, title:"Pins and sharing", goal:"Save places and share any position with a link.", tasks:[
+ ["11.1","Create named pins at the avatar or map position","Brief 06/01/23 (new feature).","todo","",""],
+ ["11.2","Pins list: fly to, rename, delete","Stored in the guest draft or the account.","todo","",""],
+ ["11.3","Share a pin: flatmeta.io/p/{token}","Public/private toggle.","todo","",""],
+ ["11.4","Share the current position: flatmeta.io/@lat,lng","Opens at the same place, avatar included.","todo","",""],
+]},
+{ n:12, title:"Accounts: email-only login", goal:"Only an email is needed to save; validated by a code.", tasks:[
+ ["12.1","Login, signup, profile and forgot-password screens (legacy)","Password-based; replace with the email-code flow.","done","2022-12-06","legacy"],
+ ["12.2","Request-code endpoint plus email template","6-digit code, 15-minute expiry, throttled.","todo","",""],
+ ["12.3","Verify-code endpoint: create or login account, issue token","Email validated on verify.","todo","",""],
+ ["12.4","Commit the guest draft to the account after verification","Land, images, avatar, pins.","todo","",""],
+ ["12.5","Legacy password login kept as an option for existing users","Pending decision 0.10.","todo","",""],
+ ["12.6","Session restore, logout, account deletion","Tokens revoked on logout.","todo","",""],
+ ["12.7","Production SMTP configured and tested","Deliverability: SPF/DKIM.","todo","",""],
+]},
+{ n:13, title:"Billing (PayPal subscription)", goal:"100 free tiles, then $0.10/tile/month, billed at month end, cancellable.", tasks:[
+ ["13.1","PayPal subscription flow for purchases (legacy)","Built 2022-06-07/10; insecure completion (see 2.3).","done","2022-06-10","legacy"],
+ ["13.2","PayPal REST v2 client (OAuth, Subscriptions, Orders, Webhooks)","Replaces the abandoned SDK.","todo","",""],
+ ["13.3","Artisan command to set up the product and plan","Replaces the public debug routes.","todo","",""],
+ ["13.4","Subscribe when tiles exceed the free 100","Quantity = billable tiles.","todo","",""],
+ ["13.5","Revise the subscription quantity when tiles are added or released","Several tiles in one go.","todo","",""],
+ ["13.6","User can cancel before payment is taken","Brief 28/4/22 #2.","todo","",""],
+ ["13.7","Webhook handler with signature verification","Activated, payment completed, failed, cancelled.","todo","",""],
+ ["13.8","Billing summary UI","Free used / billable tiles / next charge.","todo","",""],
+ ["13.9","Unpaid handling: grace period, then release tiles","Notification emails.","todo","",""],
+ ["13.10","End-to-end sandbox test, then switch to the live Yaze account","Needs the credentials from 0.12.","todo","",""],
+]},
+{ n:14, title:"Marketplace", goal:"Easy buying and selling of land with 10% commission.", tasks:[
+ ["14.1","Sale list and set-sale-price UI (legacy)","Built 2022-05-16 → 06-03; the buy link gives the land back to the seller (bug B2).","done","2022-06-03","legacy"],
+ ["14.2","Create a listing for an area or tile set, with price and details","Seller adds content and description.","todo","",""],
+ ["14.3","Listing card: location, tile count, seller username, preview, content","Brief 06/01/23.","todo","",""],
+ ["14.4","Filters: Most Recent, Most Popular, Promoted","View counting for popularity; admin promote toggle.","todo","",""],
+ ["14.5","Fly to a listing on the map from the marketplace","Highlight the area.","todo","",""],
+ ["14.6","Buy flow: PayPal Orders checkout and capture","Clear steps: Review → Pay → Owned.","todo","",""],
+ ["14.7","Ownership transfer in a DB transaction","Revision history kept; listing closed.","todo","",""],
+ ["14.8","10% commission ledger entries","Seller payable, platform fee.","todo","",""],
+ ["14.9","Seller's subscription quantity reduced for sold tiles","Remaining month charged; next month not (brief comment [k]).","todo","",""],
+ ["14.10","Seller payouts (manual or PayPal Payouts)","Depends on decision 0.8.","todo","",""],
+ ["14.11","Cancel or edit a listing","Owner only.","todo","",""],
+]},
+{ n:15, title:"User dashboard", goal:"Manage everything; see owned land, worth and history.", tasks:[
+ ["15.1","My Places list (legacy)","Built 2022-04-19 → 06-03.","done","2022-06-03","legacy"],
+ ["15.2","Stats popup: tiles owned, estimated worth, bought / sold totals","Brief 06/01/23.","todo","",""],
+ ["15.3","Manage areas: rename, slug, content, image, list for sale","From a single modal.","todo","",""],
+ ["15.4","Transactions and billing history","Purchases, sales, commissions, charges.","todo","",""],
+ ["15.5","Settings: chat scope, avatar visibility, dark mode, notifications","Saved to the account or guest draft.","todo","",""],
+]},
+{ n:16, title:"Admin CMS and moderation", goal:"Remove abuse and revert content quickly.", tasks:[
+ ["16.1","Admin CMS: users, subscriptions, tiles, report texts, user reports (legacy)","Built 2022-12-09.","done","2022-12-09","legacy"],
+ ["16.2","Admin role and secure admin login","Separate from API users.","todo","",""],
+ ["16.3","Remove a user together with their content and ownership","Brief 28/4/22 #6.","todo","",""],
+ ["16.4","Revert tiles or areas to a previous or default image","Uses tile_revisions.","todo","",""],
+ ["16.5","Reports queue with actions (warn, hide, ban)","Linked to the user and area.","todo","",""],
+ ["16.6","Promote listings and edit the FlatMeta Home area","Marketplace 'Promoted' filter source.","todo","",""],
+]},
+{ n:17, title:"Onboarding, content and open source", goal:"A first-time visitor understands the site instantly; the community can contribute.", tasks:[
+ ["17.1","Open-source page with GitHub issues links, README, Code of Conduct, CONTRIBUTING (legacy)","Built 2022-12-12.","done","2022-12-12","legacy"],
+ ["17.2","OSM-style welcome popup (top-left), easy to close","Explains how to use the site; shown on first visit.","todo","",""],
+ ["17.3","Welcome and help copy written (clear English)","Roam, chat, claim land, customise, pins, avatar.","todo","",""],
+ ["17.4","YouTube tutorial link in the popup","Needs the URL (0.11).","blocked","","client"],
+ ["17.5","Record and upload the YouTube tutorial with captions","Client / flatmeta Gmail account.","blocked","","client"],
+ ["17.6","Explain public usage and community code contributions on the site","Brief 06/01/23.","todo","",""],
+ ["17.7","FEATURES.md with open features for contributors, plus an updated README","Brief 06/01/23.","todo","",""],
+ ["17.8","SEO and Open Graph tags for shared links (/u/, /p/, /@)","Rich previews when links are shared.","todo","",""],
+]},
+{ n:18, title:"Mobile web and native apps", goal:"Works better on mobile than desktop; web first.", tasks:[
+ ["18.1","Mobile touch QA: pinch, tap-select, drag avatar, sheets","iOS Safari and Android Chrome.","todo","",""],
+ ["18.2","Responsive layouts for all modals and the dock","Small screens first.","todo","",""],
+ ["18.3","PWA install (manifest, icons, offline shell)","Add to home screen.","todo","",""],
+ ["18.4","Android build and test (Capacitor 8)","Location permission, deep links.","todo","",""],
+ ["18.5","iOS build and test (Capacitor 8, SPM)","Location permission, universal links.","todo","",""],
+]},
+{ n:19, title:"Testing and QA", goal:"Proof that everything works.", tasks:[
+ ["19.1","Backend feature tests","Auth codes, claims and quota, policies, multi-tile images, listings → capture → ledger.","todo","",""],
+ ["19.2","Realtime tests","Auth handshake, proximity filter, direct messages only reach participants.","todo","",""],
+ ["19.3","Frontend build and lint pass","Production build without errors.","todo","",""],
+ ["19.4","Browser E2E: two sessions on one shared link","2 avatars, chat, speech bubbles, zoom lock, Home/Locate.","todo","",""],
+ ["19.5","Cross-browser and device QA","Chrome, Safari, Firefox, Edge; iOS and Android.","todo","",""],
+ ["19.6","Performance audit (Lighthouse)","First load comparable to openstreetmap.org.","todo","",""],
+ ["19.7","Security re-test of S1–S15","Verify every audit finding is closed.","todo","",""],
+]},
+{ n:20, title:"Deployment and launch", goal:"Live at flatmeta.io, then send the client the shared-land link.", tasks:[
+ ["20.1","Production server setup (PHP version, extensions, MySQL)","Matches decision 0.7.","todo","",""],
+ ["20.2","Database backup, then run migrations and data migration on production","Rollback plan.","todo","",""],
+ ["20.3","Deploy API and frontend build (SPA fallback)","api.flatmeta.io + flatmeta.io.","todo","",""],
+ ["20.4","Realtime server behind TLS (wss), supervised","Auto-restart and logs.","todo","",""],
+ ["20.5","Switch PayPal to live and test with a real low-value payment","Yaze account.","todo","",""],
+ ["20.6","Monitoring, error logging and daily backups","Uptime alerts.","todo","",""],
+ ["20.7","Push the latest code to the public GitHub repos","Brief: keep the public repos updated.","todo","",""],
+ ["20.8","Send the client a link to an area with 2–3 avatars chatting","Acceptance test from the brief ('I am waiting for that link').","todo","",""],
+]},
+{ n:21, title:"Later / future roadmap", goal:"Mentioned in the brief as later or ideas; not in the current delivery.", tasks:[
+ ["21.1","HTML/JS or iframe content inside owned tiles (sandboxed)","Brief: '(Later)'.","later","",""],
+ ["21.2","Online public code editor with community voting and admin approval","developers.flatmeta.io.","later","",""],
+ ["21.3","Paint tools: markers, lines, vector shapes, text boxes on land","Brief 15/4/22.","later","",""],
+ ["21.4","Group chat (multi-select avatars)","Brief 15/4/22.","later","",""],
+ ["21.5","Phone number verification","Brief 06/01/23 ('later').","later","",""],
+ ["21.6","Land challenges or takeover of unused land","Brief 15/4/22.","later","",""],
+ ["21.7","Gamification: clans, battles, leaderboards, mini adventures","Walkabout game ideas.","later","",""],
+ ["21.8","Replay recorded scenarios (pay-per-view)","Idea section.","later","",""],
+ ["21.9","NFT / blockchain / crypto integration","Brief 28/4/22 #14.","later","",""],
+]},
+];
+
+/* Daily log: [date, repo FE|BE|PM, author, commits, [summary lines]] */
+const LOG = [
+ ["2026-10-13","PM","Antigravity (AI)",0,["Full project analysis of frontend and backend","Security and bug audit (S1–S15, B1–B14)","Read the full client brief in detail","Phased implementation plan","Created this shareable checklist"]],
+ ["2026-10-13","FE","Najam-Us-Saqib",3,["Modernised UI, replaced Node.js with native WebSockets, fixed map avatar tracking","iOS and Android upgraded (Capacitor 8, SPM, app ID com.flatmeta.app)","Capacitor config updates"]],
+ ["2026-10-13","BE","Najam-Us-Saqib",1,["Native PHP WebSocket server (artisan websocket:serve); Node.js removed","Chat persistence fixes, GetRoomId auto-resolve, PHP 8.5 PDO fix, ReportText seeder"]],
+ ["2025-12-22","FE","Najam-Us-Saqib",9,["Capacitor v5 → v6 → v7 upgrades","Angular updated to 15, plugin updates"]],
+ ["2023-01-16","FE","Najam-Us-Saqib",2,["Zooming fixed","Profile API update"]],
+ ["2023-01-09","FE","Najam-Us-Saqib",2,["Generate avatar added with API","Avatar added"]],
+ ["2023-01-09","BE","Haseeb hanif",17,["UsersController updates (avatar save from URL) ×9","Controller.php updates ×5, api.php, changes ×2"]],
+ ["2023-01-06","FE","Najam-Us-Saqib, Haseeb hanif",5,["Login/signup URL update for tabs","Top popup edit, home.page.scss","New updates"]],
+ ["2022-12-14","BE","Haseeb hanif, flatmeta",3,["Changes ×2","README update"]],
+ ["2022-12-13","FE","Najam-Us-Saqib",2,["Recent purchases list and API","Home routing name update"]],
+ ["2022-12-13","BE","Haseeb hanif",6,["OrdersController and Orders model updates","UserReport model"]],
+ ["2022-12-12","FE","Najam-Us-Saqib",8,["Open-source page with GitHub issues","README, Code of Conduct, CONTRIBUTING","Git links updated"]],
+ ["2022-12-09","FE","Najam-Us-Saqib",1,["Report-user API, report options"]],
+ ["2022-12-09","BE","Haseeb hanif",27,["CMS updates: dashboard, sidebar, login, tiles, create views","UserReportController, HomeController, Orders"]],
+ ["2022-12-08","FE","Najam-Us-Saqib",4,["Report-user popup","Random avatar and avatar upload","Icons as divIcon in a circle","Marker login update, web permissions"]],
+ ["2022-12-07","FE","Najam-Us-Saqib",2,["Icon size fix, multiple popup fix","FAB button for FlatMeta links, new flag icons list"]],
+ ["2022-12-07","BE","Haseeb hanif",6,["ImageController updates (flags) ×5","Changes"]],
+ ["2022-12-06","FE","Najam-Us-Saqib",6,["Sell modal moved to My Places","Forgot-password UI and API","Sign-up fix, login update","Chat send on Enter, own popup update"]],
+ ["2022-12-06","BE","Haseeb hanif",3,["UsersController updates","Changes"]],
+ ["2022-12-05","FE","Najam-Us-Saqib",3,["Ionic updated","Side menu with login options","Capacitor v4 and plugins"]],
+ ["2022-12-02","FE","Najam-Us-Saqib",3,["Socket URL update","Cleanup (www.zip removed)"]],
+ ["2022-07-04","BE","Haseeb hanif",1,["Changes"]],
+ ["2022-06-20","BE","Haseeb hanif",2,["ImageController and api.php updates"]],
+ ["2022-06-10","FE","Najam-Us-Saqib",1,["Thank-you page; PayPal subscription for new buys and sale list"]],
+ ["2022-06-10","BE","Haseeb hanif",11,["Transaction completion, OrdersController and UserBoxes updates"]],
+ ["2022-06-09","FE","Najam-Us-Saqib",1,["Android build.gradle update"]],
+ ["2022-06-07","BE","Haseeb hanif",37,["PayPal subscription integration: OrdersController ×28, PaypalController ×2","config/paypal.php created, web.php routes"]],
+ ["2022-06-03","FE","Najam-Us-Saqib",1,["Routing update, Sale list, My Places UI, sale price API, on-sale status"]],
+ ["2022-06-03","BE","Haseeb hanif",9,["Orders and Users updates (sale price)"]],
+ ["2022-05-31","FE","Najam-Us-Saqib",1,["Area user details added"]],
+ ["2022-05-31","BE","Haseeb hanif",3,["Changes"]],
+ ["2022-05-28","FE","Najam-Us-Saqib",1,["Chat API, room API, chat saved from server (Heroku)"]],
+ ["2022-05-28","BE","Haseeb hanif",4,["Routes and chat API changes, UserFollowersController"]],
+ ["2022-05-27","FE","Najam-Us-Saqib",1,["Routing fix: go to FlatMeta place and event updates"]],
+ ["2022-05-27","BE","Haseeb hanif",9,["UserFollowersController and ChatController updates, api.php"]],
+ ["2022-05-24","FE","Najam-Us-Saqib",7,["Set map place by username/id, URL and routing updates","Modal escape-close off, custom popup CSS fixed","Tile bug fixed on home and current location; other box images shown"]],
+ ["2022-05-24","BE","Haseeb hanif",3,["api.php and changes"]],
+ ["2022-05-23","FE","Najam-Us-Saqib",7,["FlatMeta Home boxes added","Chat component added","Realtime location updates from the map, keyboard","Android update, iOS added, safe area, popup update"]],
+ ["2022-05-23","BE","Haseeb hanif",17,["UsersController ×12, PassportAuthController ×2, api.php ×3"]],
+ ["2022-05-18","FE","Najam-Us-Saqib",3,["Socket working on local server; chat UI working","Socket iOS installation","Show/hide markers on buy tiles"]],
+ ["2022-05-18","BE","Haseeb hanif",18,["Main branch; Node socket server working (server.js ×12)","PassportAuthController, UserBoxes, api.php"]],
+ ["2022-05-17","FE","Najam-Us-Saqib",2,["Chat modal added","Profile photo bug fixed"]],
+ ["2022-05-16","FE","Najam-Us-Saqib",3,["Sale modal, sale price API","Custom popup with dynamic elements","Friend-request list, accept/decline API, My Places list"]],
+ ["2022-05-13","FE","Najam-Us-Saqib",2,["Other avatars moving freely","Marker moves with keyboard arrows (like Google I/O)"]],
+ ["2022-05-12","FE","Najam-Us-Saqib",5,["Multiple box selection completed, unselect","Image selection for tiles, uploaded image preview","Custom content and API"]],
+ ["2022-05-11","FE","Najam-Us-Saqib",2,["Buy-now API, purchased tiles, show my tiles","Cart page update"]],
+ ["2022-05-10","FE","Najam-Us-Saqib",4,["Add-to-cart, get-cart, remove-from-cart APIs","Login/signup APIs, token validation, profile image upload"]],
+ ["2022-05-09","FE","Najam-Us-Saqib",5,["Zoom limits on the mobile app","Go-to-current-location button, location accuracy","Buy button with controls, show/hide other avatars"]],
+ ["2022-05-07","FE","Najam-Us-Saqib",3,["Other people markers (hardcoded lat/lng)","Marker show/hide fixes"]],
+ ["2022-05-06","FE","Najam-Us-Saqib",1,["User avatar update, login API update"]],
+ ["2022-04-29","FE","Najam-Us-Saqib",6,["Profile page, image upload API, avatar on map","Marker animation, own custom popup","Routing to single letter, search box dark colour fixed"]],
+ ["2022-04-28","FE","Najam-Us-Saqib",3,["Load directly at level 15, Buy button shows grids","Bottom menu update, smaller tab bar, full-size images","Remove-from-cart API"]],
+ ["2022-04-27","FE","Najam-Us-Saqib",3,["Swap image API and option, close button on box settings","Show popup API, save editor HTML"]],
+ ["2022-04-26","FE","Najam-Us-Saqib",2,["Quill editor, zoom levels update","Zoom updated to 15"]],
+ ["2022-04-25","FE","Najam-Us-Saqib",3,["Home header removed, map text changed","Cart page, cart API, image upload API, image on box","Market popup"]],
+ ["2022-04-22","FE","Najam-Us-Saqib",10,["Image shown on canvas, add image API","PayPal payment added","My Place API and UI, image box selection on mobile"]],
+ ["2022-04-21","FE","Najam-Us-Saqib",2,["Images API, select image to personalise a box","Menu login/logout"]],
+ ["2022-04-20","FE","Najam-Us-Saqib",3,["Geosearch autocomplete on the map","Selection for own boxes only"]],
+ ["2022-04-19","FE","Najam-Us-Saqib",2,["Box select and image update","My Place page and UI"]],
+ ["2022-04-18","FE","Najam-Us-Saqib",5,["Login/signup with API","Side menu, tabs in menu, dark mode","Get-all-tiles and buy-tiles APIs"]],
+ ["2022-04-15","FE","Najam-Us-Saqib",2,["Login page, providers, routing","Selection, Buy button, reset grid after buying"]],
+ ["2022-04-14","FE","Najam-Us-Saqib",2,["Grid colours, click blocked on sold boxes"]],
+ ["2022-04-13","FE","Najam-Us-Saqib",1,["tab1 page update"]],
+ ["2022-04-12","FE","Najam-Us-Saqib",2,["Updates"]],
+ ["2022-04-11","FE","Najam-Us-Saqib",2,["Grid selection and update"]],
+ ["2022-04-07","FE","Najam-Us-Saqib",7,["Capacitor geolocation, add/remove grid layer","Mobile zoom grid display"]],
+ ["2022-04-06","FE","Najam-Us-Saqib",1,["OpenLayers trial added"]],
+ ["2022-04-05","FE","Najam-Us-Saqib",2,["Initial commit, working example"]],
+];
+
+/* ===================================================================== */
+const LS_KEY = "flatmeta-checklist-overrides-v1";
+const STATUS_LABEL = {done:"Done",doing:"Ongoing",todo:"To do",blocked:"Waiting on client",later:"Later"};
+const CYCLE = {todo:"doing",doing:"done",done:"todo",blocked:"doing",later:"todo"};
+let overrides = {};
+try{ overrides = JSON.parse(localStorage.getItem(LS_KEY)||"{}"); }catch(e){ overrides = {}; }
+
+const fmtDate = d => { if(!d) return ""; const [y,m,dd]=d.split("-").map(Number); return new Date(y,m-1,dd).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}); };
+const todayISO = () => { const t=new Date(); return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0"); };
+const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function allTasks(){
+  const out=[];
+  PHASES.forEach(p=>p.tasks.forEach(t=>{
+    const o=overrides[t[0]];
+    out.push({phase:p.n,id:t[0],title:t[1],detail:t[2],status:o?o.s:t[3],date:o?o.d:t[4],tags:t[5]||"",local:!!o});
+  }));
+  return out;
+}
+
+let filter="all", query="";
+const openPhases = new Set();
+
+function render(){
+  const tasks = allTasks();
+  const scoped = tasks.filter(t=>t.status!=="later");
+  const c = {done:0,doing:0,todo:0,blocked:0,later:0};
+  tasks.forEach(t=>c[t.status]++);
+  const total = scoped.length;
+  const pct = total? Math.round((c.done/total)*100):0;
+  document.getElementById("pct").textContent = pct+"%";
+  const C = 2*Math.PI*50;
+  document.getElementById("ringDone").setAttribute("stroke-dasharray",(C*c.done/total)+" "+C);
+  document.getElementById("ringDoing").setAttribute("stroke-dasharray",(C*(c.done+c.doing)/total)+" "+C);
+  document.getElementById("counts").innerHTML = [
+    ["done","var(--done)"],["doing","var(--doing)"],["todo","var(--todo)"],["blocked","var(--blocked)"],["later","var(--later)"]
+  ].map(([k,col])=>`<div><span><i class="dot" style="background:${col}"></i>${STATUS_LABEL[k]}</span><b>${c[k]}</b></div>`).join("")
+   + `<div style="color:var(--dim);font-size:12px;margin-top:4px"><span>In scope (excl. Later)</span><b>${total}</b></div>`;
+  document.getElementById("stack").innerHTML = ["done","doing","blocked","todo"].map(k=>`<i title="${STATUS_LABEL[k]}: ${c[k]}" style="width:${(c[k]/total*100)}%;background:var(--${k==="todo"?"todo":k})"></i>`).join("");
+  document.querySelectorAll("#toolbar .chip").forEach(b=>{
+    const f=b.dataset.f; b.querySelector(".n").textContent = f==="all"?tasks.length:c[f];
+  });
+
+  const q=query.trim().toLowerCase();
+  const html = PHASES.map(p=>{
+    const pt = tasks.filter(t=>t.phase===p.n);
+    const ptScope = pt.filter(t=>t.status!=="later");
+    const pd = ptScope.filter(t=>t.status==="done").length;
+    const ppct = ptScope.length? Math.round(pd/ptScope.length*100) : 0;
+    const visible = pt.filter(t=>(filter==="all"||t.status===filter) && (!q || (t.id+" "+t.title+" "+t.detail).toLowerCase().includes(q)));
+    if(!visible.length) return "";
+    const isOpen = openPhases.has(p.n) || !!q || filter!=="all";
+    const complete = ptScope.length && pd===ptScope.length;
+    return `<section class="phase ${isOpen?"open":""} ${complete?"complete":""}" id="phase-${p.n}" data-p="${p.n}">
+      <div class="phase-head" data-toggle="${p.n}">
+        <div class="pnum">${complete?"✓":p.n}</div>
+        <div class="phase-title"><h3>Phase ${p.n}: ${esc(p.title)}</h3><p>${esc(p.goal)}</p></div>
+        <div class="pprog"><div class="pbar"><i style="width:${p.n===21?0:ppct}%"></i></div><small>${p.n===21?pt.length+" items":pd+"/"+ptScope.length}</small>
+          <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></div>
+      </div>
+      <div class="tasks">${visible.map(t=>{
+        const tags = t.tags.split(" ").filter(Boolean).map(g=>g==="crit"?'<span class="tag t-crit">CRITICAL</span>':g==="legacy"?'<span class="tag t-legacy">LEGACY</span>':'<span class="tag t-client">CLIENT</span>').join("");
+        return `<div class="task" data-s="${t.status}" id="task-${t.id.replace(".","-")}">
+          <button class="cb" data-id="${t.id}" aria-label="Change status of ${esc(t.title)}" title="Click to change status"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2"><path d="M5 12.5l4.2 4.2L19 7"/></svg></button>
+          <div class="tid">${t.id}</div>
+          <div><div class="ttl">${esc(t.title)}${tags}</div><div class="det">${esc(t.detail)}</div>${t.local?'<div class="ref">● changed locally</div>':""}</div>
+          <div class="right"><span class="badge b-${t.status}">${STATUS_LABEL[t.status]}</span>${t.date?`<span class="date">${fmtDate(t.date)}</span>`:""}</div>
+        </div>`;}).join("")}</div>
+    </section>`;
+  }).join("");
+  document.getElementById("phases").innerHTML = html || '<div class="card" style="text-align:center;color:var(--muted)">No tasks match.</div>';
+  renderChart(tasks);
+  renderLog(tasks);
+}
+
+/* ---------- Monthly activity chart ---------- */
+function monthKey(d){ return d.slice(0,7); }
+function renderChart(tasks){
+  const fe={}, be={}, tk={};
+  LOG.forEach(([d,r,,n])=>{ const k=monthKey(d); if(r==="FE") fe[k]=(fe[k]||0)+n; if(r==="BE") be[k]=(be[k]||0)+n; });
+  tasks.forEach(t=>{ if(t.status==="done"&&t.date){ const k=monthKey(t.date); tk[k]=(tk[k]||0)+1; }});
+  const keys = Object.keys({...fe,...be,...tk}).sort();
+  const months=[]; let [y,m]=keys[0].split("-").map(Number); const [ey,em]=(keys[keys.length-1]>monthKey(UPDATED)?keys[keys.length-1]:monthKey(UPDATED)).split("-").map(Number);
+  while(y<ey||(y===ey&&m<=em)){ months.push(y+"-"+String(m).padStart(2,"0")); m++; if(m>12){m=1;y++;} }
+  const svg=document.getElementById("chart"); const W=svg.clientWidth||800, H=170, pad=22, top=8;
+  const max=Math.max(1,...months.map(k=>(fe[k]||0)+(be[k]||0)), ...months.map(k=>tk[k]||0));
+  const bw=(W-pad)/months.length;
+  let s=`<line x1="${pad}" x2="${W}" y1="${H-18}" y2="${H-18}" stroke="rgba(255,255,255,.12)"/>`;
+  [0.5,1].forEach(f=>{ const yy=top+(H-18-top)*(1-f); s+=`<line x1="${pad}" x2="${W}" y1="${yy}" y2="${yy}" stroke="rgba(255,255,255,.05)"/><text x="0" y="${yy+4}" fill="#64708c" font-size="10">${Math.round(max*f)}</text>`; });
+  months.forEach((k,i)=>{
+    const x=pad+i*bw+bw*0.12, w=Math.max(2,bw*0.76), h0=H-18, sc=(H-18-top)/max;
+    const hf=(fe[k]||0)*sc, hb=(be[k]||0)*sc, ht=(tk[k]||0)*sc;
+    const tip=`<b>${new Date(k+"-01").toLocaleDateString("en-GB",{month:"long",year:"numeric"})}</b><br>Frontend commits: ${fe[k]||0}<br>Backend commits: ${be[k]||0}<br>Tasks completed: ${tk[k]||0}`;
+    s+=`<g class="bar" data-tip="${esc(tip)}"><rect x="${pad+i*bw}" y="${top}" width="${bw}" height="${H-18-top}" fill="transparent"/>`;
+    if(hb) s+=`<rect x="${x}" y="${h0-hb}" width="${w*0.62}" height="${hb}" rx="2" fill="var(--done)"/>`;
+    if(hf) s+=`<rect x="${x}" y="${h0-hb-hf}" width="${w*0.62}" height="${hf}" rx="2" fill="var(--accent)"/>`;
+    if(ht) s+=`<rect x="${x+w*0.66}" y="${h0-ht}" width="${w*0.34}" height="${ht}" rx="2" fill="var(--doing)"/>`;
+    s+=`</g>`;
+    const [yy,mm]=k.split("-");
+    if(mm==="01"||i===0) s+=`<text x="${pad+i*bw}" y="${H-4}" fill="#64708c" font-size="10">${mm==="01"?yy:new Date(k+"-01").toLocaleDateString("en-GB",{month:"short",year:"2-digit"})}</text>`;
+  });
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.innerHTML=s;
+  const totalC = LOG.reduce((a,l)=>a+l[3],0);
+  const activeDays = new Set(LOG.map(l=>l[0])).size;
+  document.getElementById("chartFrom").textContent = new Date(months[0]+"-01").toLocaleDateString("en-GB",{month:"short",year:"numeric"});
+  document.getElementById("chartTo").textContent = new Date(months[months.length-1]+"-01").toLocaleDateString("en-GB",{month:"short",year:"numeric"});
+  document.getElementById("chartSummary").textContent = `${totalC} commits · ${activeDays} active days · ${tasks.filter(t=>t.status==="done").length} tasks done`;
+}
+
+/* ---------- Daily log ---------- */
+let logRepo="all";
+function renderLog(tasks){
+  const byDate={};
+  LOG.forEach(l=>{ if(logRepo!=="all"&&l[1]!==logRepo) return; (byDate[l[0]]=byDate[l[0]]||[]).push(l); });
+  const doneBy={};
+  tasks.forEach(t=>{ if(t.status==="done"&&t.date){ (doneBy[t.date]=doneBy[t.date]||[]).push(t); if(logRepo==="all"&&!byDate[t.date]) byDate[t.date]=[]; }});
+  const dates=Object.keys(byDate).sort().reverse();
+  let lastMonth="", html="";
+  dates.forEach(d=>{
+    const mk=new Date(d+"T00:00:00").toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+    if(mk!==lastMonth){ html+=`<div class="month">${mk}</div>`; lastMonth=mk; }
+    const entries=byDate[d];
+    const commits=entries.reduce((a,e)=>a+e[3],0);
+    const done=(doneBy[d]||[]);
+    html+=`<div class="day" id="day-${d}">
+      <div class="d">${new Date(d+"T00:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}<small>${d.slice(0,4)}${commits?` · ${commits} commit${commits>1?"s":""}`:""}</small></div>
+      <div>${entries.map(e=>`<div class="entry"><span class="repo r-${e[1]}">${e[1]==="FE"?"FRONTEND":e[1]==="BE"?"BACKEND":"PLANNING"}</span>
+        <div><span class="who">${esc(e[2])}${e[3]?` · ${e[3]} commit${e[3]>1?"s":""}`:""}</span><ul>${e[4].map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div></div>`).join("")}
+        ${done.length?`<div class="tasksdone">✓ Tasks completed: ${done.map(t=>`<a href="#task-${t.id.replace(".","-")}" data-goto="${t.phase}" style="color:inherit">${t.id}</a>`).join(", ")}</div>`:""}
+      </div></div>`;
+  });
+  document.getElementById("logList").innerHTML=html||'<div class="card" style="color:var(--muted)">No activity.</div>';
+}
+
+/* ---------- Events ---------- */
+document.getElementById("updated").textContent = fmtDate(UPDATED);
+document.getElementById("phases").addEventListener("click",e=>{
+  const cb=e.target.closest(".cb");
+  if(cb){
+    const id=cb.dataset.id; const t=allTasks().find(x=>x.id===id);
+    const next=CYCLE[t.status];
+    const orig=PHASES.flatMap(p=>p.tasks).find(x=>x[0]===id);
+    const d = next==="done" ? (orig[3]==="done"&&orig[4]?orig[4]:todayISO()) : "";
+    if(next===orig[3] && (next!=="done"||d===orig[4])) delete overrides[id]; else overrides[id]={s:next,d};
+    localStorage.setItem(LS_KEY,JSON.stringify(overrides));
+    render(); return;
+  }
+  const h=e.target.closest("[data-toggle]");
+  if(h){ const n=+h.dataset.toggle; openPhases.has(n)?openPhases.delete(n):openPhases.add(n); h.parentElement.classList.toggle("open"); }
+});
+document.getElementById("toolbar").addEventListener("click",e=>{
+  const b=e.target.closest(".chip"); if(!b) return;
+  document.querySelectorAll("#toolbar .chip").forEach(x=>x.classList.remove("active")); b.classList.add("active");
+  filter=b.dataset.f; render();
+});
+document.getElementById("search").addEventListener("input",e=>{ query=e.target.value; render(); });
+document.getElementById("expandAll").onclick=()=>{ PHASES.forEach(p=>openPhases.add(p.n)); render(); };
+document.getElementById("collapseAll").onclick=()=>{ openPhases.clear(); render(); };
+document.getElementById("resetBtn").onclick=()=>{ if(confirm("Discard your local status changes?")){ overrides={}; localStorage.removeItem(LS_KEY); render(); } };
+document.getElementById("exportBtn").onclick=()=>{
+  const lines=allTasks().filter(t=>t.local).map(t=>`${t.id} → ${STATUS_LABEL[t.status]}${t.date?" ("+t.date+")":""}: ${t.title}`);
+  const txt = lines.length? "FlatMeta checklist: local updates\n"+lines.join("\n") : "No local changes.";
+  navigator.clipboard?.writeText(txt).then(()=>alert(txt+"\n\n(Copied to clipboard)"),()=>alert(txt));
+};
+document.querySelector(".log-filters").addEventListener("click",e=>{
+  const b=e.target.closest(".chip"); if(!b) return;
+  document.querySelectorAll(".log-filters .chip").forEach(x=>x.classList.remove("active")); b.classList.add("active");
+  logRepo=b.dataset.r; renderLog(allTasks());
+});
+document.getElementById("logList").addEventListener("click",e=>{
+  const a=e.target.closest("[data-goto]"); if(a){ openPhases.add(+a.dataset.goto); filter="all"; render(); setTimeout(()=>document.querySelector(a.getAttribute("href"))?.scrollIntoView({behavior:"smooth",block:"center"}),30); e.preventDefault(); }
+});
+const tip=document.getElementById("tip");
+document.getElementById("chart").addEventListener("mousemove",e=>{
+  const g=e.target.closest(".bar"); if(!g){tip.style.opacity=0;return;}
+  tip.innerHTML=g.dataset.tip; tip.style.opacity=1;
+  const x=Math.min(e.clientX+14, window.innerWidth-200); tip.style.left=x+"px"; tip.style.top=(e.clientY+14)+"px";
+});
+document.getElementById("chart").addEventListener("mouseleave",()=>tip.style.opacity=0);
+window.addEventListener("resize",()=>renderChart(allTasks()));
+
+openPhases.add(0); openPhases.add(1); openPhases.add(2);
+render();
+</script>
+</body>
+</html>

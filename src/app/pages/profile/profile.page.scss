@@ -277,3 +277,51 @@
     }
   }
 }
+
+.trait-swatches-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  background: var(--flatmeta-surface-muted);
+  border-radius: 12px;
+
+  .swatch-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--flatmeta-text-secondary);
+  }
+
+  .swatch-list {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    .color-swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid #090d16;
+      cursor: pointer;
+      transition: transform 0.15s ease;
+
+      &.active {
+        transform: scale(1.2);
+        box-shadow: 0 0 0 2px #38bdf8;
+      }
+    }
+  }
+}
+
+.traits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+
+  .meta-input-item {
+    margin-bottom: 4px;
+  }
+}

@@ -1,27 +1,40 @@
 <ion-tabs>
 
   <ion-tab-bar slot="bottom" class="meta-dock-tab-bar">
-    <ion-tab-button tab="home" class="meta-dock-btn">
+    <ion-tab-button tab="home" (click)="goToMap()" class="meta-dock-btn">
       <div class="dock-icon-wrap">
-        <ion-icon name="planet"></ion-icon>
+        <ion-icon name="map-outline"></ion-icon>
       </div>
-      <ion-label>Metaverse</ion-label>
+      <ion-label>FlatMeta</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button (click)="goToFlatMetaHome()" class="meta-dock-btn">
+      <div class="dock-icon-wrap">
+        <ion-icon name="home-outline"></ion-icon>
+      </div>
+      <ion-label>FlatMeta Home</ion-label>
     </ion-tab-button>
 
     <ion-tab-button tab="salelist" class="meta-dock-btn">
       <div class="dock-icon-wrap">
-        <ion-icon name="storefront"></ion-icon>
+        <ion-icon name="pricetag-outline"></ion-icon>
       </div>
-      <ion-label>Marketplace</ion-label>
+      <ion-label>On Sale</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button tab="myplaces" class="meta-dock-btn">
+      <div class="dock-icon-wrap">
+        <ion-icon name="cube-outline"></ion-icon>
+      </div>
+      <ion-label>My Land</ion-label>
     </ion-tab-button>
 
     <ion-tab-button (click)="general.toggleMenu()" class="meta-dock-btn">
       <div class="dock-icon-wrap">
-        <ion-icon name="apps"></ion-icon>
+        <ion-icon name="menu-outline"></ion-icon>
       </div>
-      <ion-label>Hub</ion-label>
+      <ion-label>Menu</ion-label>
     </ion-tab-button>
   </ion-tab-bar>
 
 </ion-tabs>
-

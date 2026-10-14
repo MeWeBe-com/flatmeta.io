@@ -1,7 +1,7 @@
 <ion-header class="ion-no-border meta-page-header">
   <ion-toolbar class="meta-page-toolbar">
     <ion-title class="meta-page-title">
-      <span class="gradient-text">Marketplace</span>
+      <span class="gradient-text">Land Marketplace</span>
     </ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="getList()" fill="clear" color="primary" title="Refresh Listings">
@@ -17,12 +17,12 @@
     <div class="market-hero">
       <div class="hero-text">
         <div class="hero-badge">
-          <span class="meta-badge badge-cyan">Virtual Real Estate</span>
+          <span class="meta-badge badge-cyan">2D Metaverse Real Estate</span>
         </div>
-        <h2>Prime Land <span class="gradient-text-accent">Parcels</span></h2>
-        <p>Acquire virtual coordinates, customize parcel artwork, and trade on the 2D metaverse.</p>
+        <h2>Land Areas <span class="gradient-text-accent">On Sale</span></h2>
+        <p>Browse customized land areas listed by citizens, inspect their coordinates, or buy &amp; take immediate control.</p>
       </div>
-      <div class="market-stats" *ngIf="tilesList?.length > 0">
+      <div class="market-stats">
         <div class="stat-pill">
           <span class="stat-num">{{ tilesList.length }}</span>
           <span class="stat-lbl">Active Listings</span>
@@ -30,14 +30,34 @@
       </div>
     </div>
 
+    <!-- Filter Bar: All, Most Recent, Most Popular, Promoted -->
+    <div class="market-filter-bar">
+      <button class="filter-pill" [class.active]="activeFilter === 'all'" (click)="setFilter('all')">
+        <ion-icon name="apps-outline"></ion-icon>
+        All Listings
+      </button>
+      <button class="filter-pill" [class.active]="activeFilter === 'recent'" (click)="setFilter('recent')">
+        <ion-icon name="time-outline"></ion-icon>
+        Most Recent
+      </button>
+      <button class="filter-pill" [class.active]="activeFilter === 'popular'" (click)="setFilter('popular')">
+        <ion-icon name="flame-outline"></ion-icon>
+        Most Popular
+      </button>
+      <button class="filter-pill" [class.active]="activeFilter === 'promoted'" (click)="setFilter('promoted')">
+        <ion-icon name="sparkles-outline"></ion-icon>
+        Promoted
+      </button>
+    </div>
+
     <!-- Empty State -->
     <div class="empty-state-wrap meta-card-glass" *ngIf="tilesList?.length === 0">
       <div class="empty-icon-box">
         <ion-icon name="storefront-outline"></ion-icon>
       </div>
-      <h3>No Active Listings</h3>
-      <p>All currently available land is being explored or held. Roam the earth at 15x zoom to select and mint brand new tiles!</p>
-      <ion-button [routerLink]="['/flatmeta/home']" class="meta-btn-gradient">
+      <h3>No Matching Listings</h3>
+      <p>Try switching the filter above or head to the world map at 15x zoom to claim and list your own land!</p>
+      <ion-button [routerLink]="['/']" class="meta-btn-gradient">
         <ion-icon name="planet-outline" slot="start"></ion-icon>
         Explore World Map
       </ion-button>
@@ -47,15 +67,18 @@
     <div class="parcels-grid" *ngIf="tilesList?.length > 0">
       <div class="parcel-card meta-card" *ngFor="let c of tilesList; let i = index">
         <!-- Thumbnail Wrap -->
-        <div class="parcel-thumb-wrap">
+        <div class="parcel-thumb-wrap" (click)="toUserPlace(c)" style="cursor: pointer;">
           <img [src]="c?.image || 'assets/def.jpeg'" class="parcel-image" alt="Parcel Image" />
           <div class="thumb-badge">
-            <span class="meta-badge badge-purple">{{ c?.no_of_tiles }} Tiles</span>
+            <span class="meta-badge badge-purple">{{ c?.tiles?.length || 1 }} Squares</span>
+            <span class="meta-badge badge-amber" *ngIf="c?.promoted" style="margin-left: 6px;">
+              <ion-icon name="sparkles"></ion-icon> Promoted
+            </span>
           </div>
           <div class="thumb-overlay">
             <span class="verified-tag">
-              <ion-icon name="shield-checkmark"></ion-icon>
-              Deed Verified
+              <ion-icon name="eye-outline"></ion-icon>
+              {{ c?.views || 0 }} views
             </span>
           </div>
         </div>
@@ -63,26 +86,39 @@
         <!-- Parcel Details -->
         <div class="parcel-card-body">
           <div class="parcel-header">
-            <h4 class="parcel-title">Metaverse Plot #{{ c?.id || (i + 1) }}</h4>
-            <span class="price-chip">${{ c?.amount }} <small>/ tile</small></span>
+            <h4 class="parcel-title">{{ c?.title || ('Metaverse Area #' + (i + 1)) }}</h4>
+            <span class="price-chip">${{ c?.sale_price }} <small>/ sq</small></span>
+          </div>
+
+          <div class="parcel-seller-row">
+            <span class="seller-tag">
+              <ion-icon name="person-circle-outline"></ion-icon>
+              @{{ c?.username }}
+            </span>
+            <span class="slug-tag" *ngIf="c?.slug">/u/{{ c?.slug }}</span>
+            <span class="slug-tag" *ngIf="c?.three_words">///{{ c?.three_words }}</span>
           </div>
 
           <div class="parcel-meta-info">
             <div class="info-row">
-              <span class="info-lbl">Total Investment:</span>
-              <span class="info-val">${{ ((c?.amount || 0) * (c?.no_of_tiles || 1)).toFixed(2) }} USD</span>
+              <span class="info-lbl">Coordinates:</span>
+              <span class="info-val">{{ c?.center_lat?.toFixed(4) }}, {{ c?.center_lng?.toFixed(4) }}</span>
+            </div>
+            <div class="info-row" style="margin-top: 4px;">
+              <span class="info-lbl">Total Buyout:</span>
+              <span class="info-val" style="color: #34d399;">${{ (c?.total_sale_value || 0).toFixed(2) }} USD</span>
             </div>
           </div>
 
           <!-- Action Buttons -->
           <div class="parcel-actions">
-            <ion-button fill="outline" class="btn-action-view" [routerLink]="['/flatmeta/home']" (click)="toUserPlace(c)">
+            <ion-button fill="outline" class="btn-action-view" (click)="toUserPlace(c)">
               <ion-icon name="locate-outline" slot="start"></ion-icon>
-              View
+              Fly to Land
             </ion-button>
-            <ion-button class="meta-btn-gradient btn-action-buy" (click)="makePayment(c?.buy_link)">
-              <ion-icon name="card-outline" slot="start"></ion-icon>
-              Buy
+            <ion-button class="meta-btn-gradient btn-action-buy" (click)="buyListing(c)" [disabled]="c?.is_mine">
+              <ion-icon name="cart-outline" slot="start"></ion-icon>
+              {{ c?.is_mine ? 'Owned' : 'Buy Land' }}
             </ion-button>
           </div>
         </div>

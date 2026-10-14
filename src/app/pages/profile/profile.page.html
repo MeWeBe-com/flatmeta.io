@@ -1,10 +1,10 @@
 <ion-header class="ion-no-border meta-page-header">
   <ion-toolbar class="meta-page-toolbar">
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/flatmeta/home" text="" icon="arrow-back-outline"></ion-back-button>
+      <ion-back-button defaultHref="/" text="" icon="arrow-back-outline"></ion-back-button>
     </ion-buttons>
     <ion-title class="meta-page-title">
-      <span class="gradient-text">Citizen Profile</span>
+      <span class="gradient-text">Avatar Studio &amp; Profile</span>
     </ion-title>
   </ion-toolbar>
 </ion-header>
@@ -18,28 +18,28 @@
         <img [src]="profileImg || 'assets/user.jpeg'" class="avatar-image-large" alt="Citizen Avatar" />
         <div class="avatar-badge-status">
           <span class="pulse-dot"></span>
-          <span>Online Citizen</span>
+          <span>{{ meta.getCurrentIdentity().is_guest ? 'Guest Explorer' : 'Verified Citizen' }}</span>
         </div>
       </div>
 
       <div class="avatar-identity-info">
-        <h2 class="profile-fullname">{{ profileForm.value.fullname || 'Metaverse Citizen' }}</h2>
+        <h2 class="profile-fullname">{{ profileForm.value.fullname || 'Hello Guest!' }}</h2>
         <span class="profile-username">@{{ profileForm.value.username }}</span>
         <div class="profile-role-tag">
-          <span class="meta-badge badge-emerald">Verified Resident</span>
-          <span class="meta-badge badge-cyan">Level 1 Owner</span>
+          <span class="meta-badge badge-emerald">100 Free Squares</span>
+          <span class="meta-badge badge-cyan">Live 2D Avatar</span>
         </div>
       </div>
 
       <!-- Avatar Action Buttons -->
       <div class="avatar-actions-bar">
+        <ion-button fill="outline" class="btn-avatar-action btn-dice" (click)="generateAvatar()">
+          <ion-icon name="dice-outline" slot="start"></ion-icon>
+          Randomize Avatar
+        </ion-button>
         <ion-button fill="outline" class="btn-avatar-action" (click)="chooseFile()">
           <ion-icon name="cloud-upload-outline" slot="start"></ion-icon>
           Upload Photo
-        </ion-button>
-        <ion-button fill="outline" class="btn-avatar-action btn-dice" (click)="generateAvatar()">
-          <ion-icon name="shuffle-outline" slot="start"></ion-icon>
-          Dice Avatar
         </ion-button>
       </div>
 
@@ -47,61 +47,167 @@
         style="visibility: hidden; display: none;" />
     </div>
 
+    <!-- Interactive Circular Avatar Customizer Card -->
+    <div class="profile-form-card meta-card-glass">
+      <div class="card-section-head">
+        <ion-icon name="color-palette-outline"></ion-icon>
+        <h3>Customize Circular Avatar</h3>
+      </div>
+
+      <!-- Circle Background Swatches -->
+      <div class="trait-swatches-row">
+        <span class="swatch-label">Circle Ring Color:</span>
+        <div class="swatch-list">
+          <button
+            type="button"
+            class="color-swatch"
+            *ngFor="let c of circleBgs"
+            [style.background]="c"
+            [class.active]="avatarConfig.circleBg === c"
+            (click)="selectCircleBg(c)">
+          </button>
+        </div>
+      </div>
+
+      <div class="traits-grid">
+        <ion-item class="meta-input-item">
+          <ion-label position="stacked">Hair / Hat Style</ion-label>
+          <ion-select [(ngModel)]="avatarConfig.topType" (ionChange)="onTraitChange()" interface="popover">
+            <ion-select-option *ngFor="let t of topTypes" [value]="t">{{ t }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <ion-item class="meta-input-item">
+          <ion-label position="stacked">Hair Color</ion-label>
+          <ion-select [(ngModel)]="avatarConfig.hairColor" (ionChange)="onTraitChange()" interface="popover">
+            <ion-select-option *ngFor="let t of hairColors" [value]="t">{{ t }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <ion-item class="meta-input-item">
+          <ion-label position="stacked">Skin Tone</ion-label>
+          <ion-select [(ngModel)]="avatarConfig.skinColor" (ionChange)="onTraitChange()" interface="popover">
+            <ion-select-option *ngFor="let t of skinColors" [value]="t">{{ t }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <ion-item class="meta-input-item">
+          <ion-label position="stacked">Expression / Mouth</ion-label>
+          <ion-select [(ngModel)]="avatarConfig.mouthType" (ionChange)="onTraitChange()" interface="popover">
+            <ion-select-option *ngFor="let t of mouthTypes" [value]="t">{{ t }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <ion-item class="meta-input-item">
+          <ion-label position="stacked">Eyes</ion-label>
+          <ion-select [(ngModel)]="avatarConfig.eyeType" (ionChange)="onTraitChange()" interface="popover">
+            <ion-select-option *ngFor="let t of eyeTypes" [value]="t">{{ t }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <ion-item class="meta-input-item">
+          <ion-label position="stacked">Eyebrows</ion-label>
+          <ion-select [(ngModel)]="avatarConfig.eyebrowType" (ionChange)="onTraitChange()" interface="popover">
+            <ion-select-option *ngFor="let t of eyebrowTypes" [value]="t">{{ t }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <ion-item class="meta-input-item">
+          <ion-label position="stacked">Glasses / Accessories</ion-label>
+          <ion-select [(ngModel)]="avatarConfig.accessoriesType" (ionChange)="onTraitChange()" interface="popover">
+            <ion-select-option *ngFor="let t of accessoriesTypes" [value]="t">{{ t }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <ion-item class="meta-input-item">
+          <ion-label position="stacked">Facial Hair</ion-label>
+          <ion-select [(ngModel)]="avatarConfig.facialHairType" (ionChange)="onTraitChange()" interface="popover">
+            <ion-select-option *ngFor="let t of facialHairTypes" [value]="t">{{ t }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <ion-item class="meta-input-item">
+          <ion-label position="stacked">Outfit / Clothing</ion-label>
+          <ion-select [(ngModel)]="avatarConfig.clotheType" (ionChange)="onTraitChange()" interface="popover">
+            <ion-select-option *ngFor="let t of clotheTypes" [value]="t">{{ t }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+      </div>
+    </div>
+
+    <!-- Map Visibility & Chat Preferences -->
+    <div class="profile-form-card meta-card-glass">
+      <div class="card-section-head">
+        <ion-icon name="chatbubbles-outline"></ion-icon>
+        <h3>Metaverse Presence &amp; Chat Settings</h3>
+      </div>
+
+      <ion-item class="meta-input-item">
+        <ion-label>Show Avatars on Map</ion-label>
+        <ion-select [(ngModel)]="meta.avatarVisibility" interface="popover">
+          <ion-select-option value="all">All Citizens &amp; Guests</ion-select-option>
+          <ion-select-option value="friends">Friends Only</ion-select-option>
+          <ion-select-option value="none">Hide Other Avatars</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <ion-item class="meta-input-item">
+        <ion-label>Proximity Chat Mode</ion-label>
+        <ion-select [(ngModel)]="meta.chatScope" interface="popover">
+          <ion-select-option value="everyone">Everyone Nearby</ion-select-option>
+          <ion-select-option value="friends">Friends Only</ion-select-option>
+        </ion-select>
+      </ion-item>
+    </div>
+
     <!-- Citizen Form Card -->
     <div class="profile-form-card meta-card-glass">
       <div class="card-section-head">
         <ion-icon name="id-card-outline"></ion-icon>
-        <h3>Citizen Records</h3>
+        <h3>{{ meta.getCurrentIdentity().is_guest ? 'Verify Email to Permanently Save' : 'Citizen Records' }}</h3>
       </div>
 
       <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" (keyup.enter)="onSubmit()" novalidate class="auth-form">
         <!-- Full Name -->
         <div class="input-group">
-          <label class="input-label">Full Name</label>
+          <label class="input-label">Display Name</label>
           <div class="input-field-wrap" [class.field-error]="getControl.fullname.touched && getControl.fullname.invalid">
             <ion-icon name="person-outline" class="field-icon"></ion-icon>
-            <ion-input placeholder="Enter Full Name" type="text" formControlName="fullname"></ion-input>
-          </div>
-          <div class="field-error-msg" *ngIf="getControl.fullname.touched && getControl.fullname.errors?.required">
-            Full name is required
+            <ion-input placeholder="Enter Display Name" type="text" formControlName="fullname"></ion-input>
           </div>
         </div>
 
-        <!-- Username (Readonly) -->
+        <!-- Username -->
         <div class="input-group">
           <div class="label-row">
-            <label class="input-label">Citizen Username</label>
-            <span class="immutable-pill">Permanent Tag</span>
+            <label class="input-label">Citizen Handle (@username)</label>
           </div>
-          <div class="input-field-wrap field-readonly">
+          <div class="input-field-wrap">
             <ion-icon name="at-outline" class="field-icon"></ion-icon>
-            <ion-input placeholder="Username" type="text" formControlName="username" readonly></ion-input>
+            <ion-input placeholder="username" type="text" formControlName="username"></ion-input>
           </div>
         </div>
 
-        <!-- Email Address (Readonly) -->
+        <!-- Email Address -->
         <div class="input-group">
           <div class="label-row">
-            <label class="input-label">Registered Email</label>
-            <span class="immutable-pill">Verified</span>
+            <label class="input-label">Email Address (Only Email Required to Save)</label>
+            <span class="immutable-pill">{{ meta.getCurrentIdentity().is_guest ? 'Instant Upgrade' : 'Verified' }}</span>
           </div>
-          <div class="input-field-wrap field-readonly">
+          <div class="input-field-wrap">
             <ion-icon name="mail-outline" class="field-icon"></ion-icon>
-            <ion-input placeholder="Email" type="email" formControlName="email" readonly></ion-input>
+            <ion-input placeholder="you@example.com" type="email" formControlName="email"></ion-input>
           </div>
         </div>
 
         <!-- Submit Button -->
         <div class="form-actions">
-          <ion-button expand="block" class="meta-btn-gradient btn-update-profile" type="submit" [disabled]="profileForm.invalid">
+          <ion-button expand="block" class="meta-btn-gradient btn-update-profile" type="submit">
             <ion-icon name="checkmark-done-outline" slot="start"></ion-icon>
-            Update Citizen Records
+            Save Citizen Profile &amp; Avatar
           </ion-button>
         </div>
       </form>
     </div>
-
-    <!-- Hidden 3D Avatar Render Canvas Container -->
-    <div id="canvasRen" style="width: 1px; height: 1px; opacity: 0; pointer-events: none; overflow: hidden;"></div>
   </div>
 </ion-content>

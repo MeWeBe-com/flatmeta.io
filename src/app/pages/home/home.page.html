@@ -1,191 +1,464 @@
-<!-- <ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>
-      Home
-    </ion-title>
-  </ion-toolbar>
-</ion-header> -->
-
 <ion-content [fullscreen]="true">
   <!-- Map Container -->
   <div id="mapId"></div>
 
-  <!-- Floating HUD Map Controls -->
-  <div class="map-floating-hud">
-    <!-- Zoom Levels HUD (Strictly 3 levels: 15, 10, 5) -->
-    <div class="hud-group">
-      <button class="hud-btn" [class.active]="currentZoomLevel === 15" (click)="setZoomLevel(15)" title="Zoom 15: Land Parcels">
-        <span class="zoom-label">15x</span>
+  <!-- Top Bar: Omni-Search + Buy Grid + Scan + Pins + Quick Save (Brief 28/4/22: Buy button same level as search bar) -->
+  <div class="top-omni-bar">
+    <div class="omni-search-box">
+      <ion-icon name="search-outline" class="search-icon"></ion-icon>
+      <input
+        type="text"
+        [(ngModel)]="searchQuery"
+        (input)="onSearchInput()"
+        (focus)="onSearchInput()"
+        placeholder="Search world places, /u/pepsi-land, 3-words, pins..."
+        aria-label="Search FlatMeta"
+      />
+      <button type="button" class="clear-search-btn" *ngIf="searchQuery" (click)="clearSearch()" aria-label="Clear search">
+        <ion-icon name="close-circle"></ion-icon>
       </button>
-      <div class="hud-divider"></div>
-      <button class="hud-btn" [class.active]="currentZoomLevel === 10" (click)="setZoomLevel(10)" title="Zoom 10: City / Region">
-        <span class="zoom-label">10x</span>
-      </button>
-      <div class="hud-divider"></div>
-      <button class="hud-btn" [class.active]="currentZoomLevel === 5" (click)="setZoomLevel(5)" title="Zoom 5: Global World">
-        <span class="zoom-label">5x</span>
-      </button>
+
+      <!-- Omni-Search Autocomplete Dropdown -->
+      <div class="omni-search-dropdown" *ngIf="showSearchDropdown && searchResults.length > 0">
+        <div
+          class="search-result-item"
+          *ngFor="let r of searchResults"
+          (click)="selectSearchResult(r)"
+        >
+          <div class="r-badge" [attr.data-type]="r.type">
+            <ion-icon
+              [name]="r.type === 'area' ? 'cube' : r.type === 'pin' ? 'bookmark' : r.type === 'citizen' ? 'person' : 'location'"
+            ></ion-icon>
+          </div>
+          <div class="r-text">
+            <div class="r-title">{{ r.title }}</div>
+            <div class="r-sub">{{ r.subtitle }}</div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Quick Navigation & Layer Tools -->
-    <div class="hud-group">
-      <button class="hud-btn" (click)="toAvatarLocation()" title="Center on Avatar">
-        <ion-icon name="locate-outline"></ion-icon>
-      </button>
-      <div class="hud-divider"></div>
-      <button class="hud-btn" [class.active]="tiles != null" (click)="showGrid()" title="Toggle Land Grid (Level 15)">
+    <!-- Top Action Pills (Same level as Search Bar) -->
+    <div class="top-action-pills">
+      <button
+        type="button"
+        class="top-pill-btn buy-pill"
+        [class.active]="buyGridActive"
+        (click)="toggleBuyGrid()"
+        title="Toggle Land Selection Grid (Zoom 15)"
+      >
         <ion-icon name="grid-outline"></ion-icon>
-        <span class="active-dot" *ngIf="tiles != null"></span>
+        <span>{{ buyGridActive ? 'Grid ON' : 'Buy Land' }}</span>
       </button>
-      <div class="hud-divider"></div>
-      <button class="hud-btn" (click)="getCurrentLocation()" title="GPS Current Location">
-        <ion-icon name="navigate-outline"></ion-icon>
+
+      <button
+        type="button"
+        class="top-pill-btn scan-pill"
+        [class.active]="scanModeActive"
+        (click)="toggleScanMode()"
+        title="Highlight Owned Land Outlines & Inspect Owners"
+      >
+        <ion-icon name="scan-outline"></ion-icon>
+        <span>Scan</span>
+      </button>
+
+      <button
+        type="button"
+        class="top-pill-btn pins-pill"
+        (click)="showPinsModal = true"
+        title="Saved Pins & Bookmarks"
+      >
+        <ion-icon name="bookmark-outline"></ion-icon>
+        <span>Pins ({{ savedPins.length }})</span>
+      </button>
+
+      <button
+        type="button"
+        class="top-pill-btn save-pill"
+        *ngIf="isGuest"
+        (click)="meta.openAuthModal$.next({ mode: 'email-quick', reason: 'Save your land, avatar & pins with just your email' })"
+        title="Save Changes Permanently with Email"
+      >
+        <ion-icon name="mail-unread-outline"></ion-icon>
+        <span>Save{{ stats?.unsavedGuestChanges ? ' (' + stats.unsavedGuestChanges + ')' : '' }}</span>
       </button>
     </div>
   </div>
 
-  <!-- Welcome / Guest Onboarding Card (#top-pop) -->
+  <!-- Off-Screen Avatar Indicator Pill (Brief 06/01/23: "I seem to have lost my Avatar... gone off screen") -->
+  <button
+    type="button"
+    class="offscreen-avatar-pill"
+    *ngIf="isAvatarOffScreen"
+    (click)="toAvatarLocation()"
+  >
+    <ion-icon name="locate"></ion-icon>
+    <span>Avatar is off-screen · Click to Locate</span>
+  </button>
+
+  <!-- Left Floating HUD Map Controls -->
+  <div class="map-floating-hud">
+    <!-- Zoom Levels HUD (Strictly 3 levels: 15 Buy, 10 Roam, 5 Planet) -->
+    <div class="hud-group">
+      <button class="hud-btn" (click)="stepZoomLevel(1)" [disabled]="currentZoomLevel === 15" title="Zoom In (Around Avatar)">
+        <ion-icon name="add"></ion-icon>
+      </button>
+      <div class="hud-divider"></div>
+      <button class="hud-btn" [class.active]="currentZoomLevel === 15" (click)="setZoomLevel(15)" title="Zoom 15: Buy & Customize Land">
+        <span class="zoom-label">15x</span>
+      </button>
+      <div class="hud-divider"></div>
+      <button class="hud-btn" [class.active]="currentZoomLevel === 10" (click)="setZoomLevel(10)" title="Zoom 10: Roam & View Graphics">
+        <span class="zoom-label">10x</span>
+      </button>
+      <div class="hud-divider"></div>
+      <button class="hud-btn" [class.active]="currentZoomLevel === 5" (click)="setZoomLevel(5)" title="Zoom 5: Planet View">
+        <span class="zoom-label">5x</span>
+      </button>
+      <div class="hud-divider"></div>
+      <button class="hud-btn" (click)="stepZoomLevel(-1)" [disabled]="currentZoomLevel === 5" title="Zoom Out (Around Avatar)">
+        <ion-icon name="remove"></ion-icon>
+      </button>
+    </div>
+
+    <!-- Navigation & Location Controls (Locate Avatar, My Real GPS/IP Home, FlatMeta Showcase Home, Share, Help) -->
+    <div class="hud-group">
+      <button class="hud-btn" (click)="toAvatarLocation()" title="Locate Avatar (Center Map on Avatar)">
+        <ion-icon name="locate-outline"></ion-icon>
+      </button>
+      <div class="hud-divider"></div>
+      <button class="hud-btn" (click)="getCurrentLocation()" title="HOME: Move Avatar & Map to My Real Location (GPS / IP)">
+        <ion-icon name="navigate-outline"></ion-icon>
+      </button>
+      <div class="hud-divider"></div>
+      <button class="hud-btn" (click)="flyToFlatMetaHome()" title="FlatMeta Home Showcase Plaza">
+        <ion-icon name="home-outline"></ion-icon>
+      </button>
+      <div class="hud-divider"></div>
+      <button class="hud-btn" (click)="shareCurrentPositionLink()" title="Copy Shareable Link to Current Position">
+        <ion-icon name="share-social-outline"></ion-icon>
+      </button>
+      <div class="hud-divider"></div>
+      <button class="hud-btn" [class.active]="ShowtopPop" (click)="ShowtopPop = !ShowtopPop" title="Welcome Guide & Instructions">
+        <ion-icon name="help-circle-outline"></ion-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- OSM-Style Top-Left Welcome & Onboarding Popup (#top-pop) (Brief 06/01/23 lines 31, 61-65) -->
   <div id="top-pop" *ngIf="ShowtopPop">
     <div class="pop-header">
       <div class="pop-title-area">
         <h3 *ngIf="isGuest">Hello Guest!</h3>
-        <h3 *ngIf="!isGuest">Welcome, {{currentUser?.fullname || currentUser?.username}}!</h3>
-        <span class="badge-guest" *ngIf="isGuest">Guest Mode</span>
-        <span class="badge-citizen" *ngIf="!isGuest">Citizen</span>
+        <h3 *ngIf="!isGuest">Hello {{ currentUser?.fullname || currentUser?.username }}!</h3>
+        <span class="badge-guest" *ngIf="isGuest">100 Free Squares</span>
+        <span class="badge-citizen" *ngIf="!isGuest">Verified Citizen</span>
       </div>
-      <button class="btn-close" (click)="ShowtopPop = false" aria-label="Close">
+      <button class="btn-close" (click)="closeWelcomePop()" aria-label="Close">
         <ion-icon name="close"></ion-icon>
       </button>
     </div>
 
     <p class="pop-desc">
-      FlatMeta is an open-source 2D metaverse. Roam the earth, interact with online avatars in real time, and claim digital land parcels.
+      Welcome to <strong>FlatMeta.io</strong> — the open-source collaborative 2D metaverse! Everything works immediately without logging in. Only verify your email when you want to permanently save your land, avatar, and pins.
     </p>
 
     <div class="pop-features">
       <div class="feature-item">
         <ion-icon name="walk-outline"></ion-icon>
-        <span>Double-click or drag your avatar to travel anywhere</span>
-      </div>
-      <div class="feature-item">
-        <ion-icon name="chatbubbles-outline"></ion-icon>
-        <span>Speech bubbles appear live over roaming citizens</span>
+        <span><strong>Move Avatar:</strong> Double-click anywhere on the map, drag your avatar, or use keyboard arrow keys.</span>
       </div>
       <div class="feature-item">
         <ion-icon name="cube-outline"></ion-icon>
-        <span>Virtual parcels available at 15x zoom for $1.00 USD</span>
+        <span><strong>100 Free Squares:</strong> Click <strong>Buy Land</strong> to claim up to 100 squares free and span 1 image across multiple squares!</span>
+      </div>
+      <div class="feature-item">
+        <ion-icon name="chatbubbles-outline"></ion-icon>
+        <span><strong>Live Chat & Smileys:</strong> Chat with nearby avatars in the Hangouts bar. Type <code>:)</code> or <code>:D</code> to change your expression!</span>
+      </div>
+      <div class="feature-item">
+        <ion-icon name="code-slash-outline"></ion-icon>
+        <span><strong>Public Open Source:</strong> Anyone can contribute features via <a href="https://github.com/flatmeta/flatmeta.io" target="_blank" rel="noopener">GitHub</a>.</span>
       </div>
     </div>
 
-    <div class="button-box" *ngIf="isGuest">
-      <ion-button [routerLink]="['/flatmeta/login']" fill="solid" color="primary">Sign In</ion-button>
-      <ion-button [routerLink]="['/flatmeta/signup']" fill="outline" color="primary">Sign Up</ion-button>
-      <ion-button (click)="ShowtopPop = false" fill="clear" color="light">Explore</ion-button>
+    <!-- YouTube Video Guide Link & Quick Actions (Brief 06/01/23 lines 62-63) -->
+    <div class="pop-video-row">
+      <a href="https://www.youtube.com/watch?v=hMjtFRqaTsI" target="_blank" rel="noopener noreferrer" class="yt-guide-link">
+        <ion-icon name="logo-youtube"></ion-icon>
+        <span>Watch FlatMeta Video Guide & Demo</span>
+      </a>
     </div>
 
-    <div class="button-box" *ngIf="!isGuest">
-      <ion-button (click)="ShowtopPop = false" fill="solid" color="primary">Start Exploring</ion-button>
-      <ion-button [routerLink]="['/flatmeta/opensource']" fill="outline" color="primary">Learn More</ion-button>
+    <div class="button-box">
+      <ion-button
+        *ngIf="isGuest"
+        (click)="meta.openAuthModal$.next({ mode: 'email-quick', reason: 'Register with just your email to save your changes' })"
+        fill="solid"
+        color="primary"
+      >
+        Sign Up / Save
+      </ion-button>
+      <ion-button (click)="selectBlockAroundAvatar(2); closeWelcomePop()" fill="outline" color="primary">
+        Claim 2x2 Free Land
+      </ion-button>
+      <ion-button (click)="closeWelcomePop()" fill="clear" color="light">
+        Explore
+      </ion-button>
     </div>
   </div>
 
-  <!-- Selected Parcels Floating Action Bar -->
+  <!-- Selected Unowned Parcels Floating Action Bar (100 Free Quota + Multi-Select Helpers) -->
   <div class="parcel-action-bar" *ngIf="selectedBoxs.length > 0">
     <div class="parcel-info">
-      <div class="parcel-count"><strong>{{selectedBoxs.length}}</strong> Parcel{{selectedBoxs.length > 1 ? 's' : ''}} Selected</div>
-      <div class="parcel-price">Total: ${{selectedBoxs.length * 1}} USD ($1.00 / tile)</div>
+      <div class="parcel-count">
+        <strong>{{ selectedBoxs.length }}</strong> Square{{ selectedBoxs.length > 1 ? 's' : '' }} Selected
+        <span class="free-tag" *ngIf="claimCostPreview.paidCount === 0">FREE ({{ stats?.freeQuotaRemaining }} free left)</span>
+      </div>
+      <div class="parcel-price" *ngIf="claimCostPreview.paidCount === 0">
+        $0.00 Due Now · Covered by your 100 Free Squares quota!
+      </div>
+      <div class="parcel-price" *ngIf="claimCostPreview.paidCount > 0">
+        {{ claimCostPreview.freeCount }} Free + {{ claimCostPreview.paidCount }} Billable (${{ claimCostPreview.monthlyUsd.toFixed(2) }}/mo at month-end)
+      </div>
     </div>
     <div class="parcel-buttons">
-      <ion-button fill="clear" color="medium" (click)="removeSelectedBoxes()">Cancel</ion-button>
-      <ion-button fill="solid" color="primary" (click)="addToCart()">
-        <ion-icon name="cart-outline" slot="start"></ion-icon>
-        Add to Cart
+      <button type="button" class="mini-block-btn" (click)="selectBlockAroundAvatar(2)" title="Select 2x2 Block">2x2</button>
+      <button type="button" class="mini-block-btn" (click)="selectBlockAroundAvatar(3)" title="Select 3x3 Block">3x3</button>
+      <ion-button fill="clear" color="medium" size="small" (click)="clearSelection()">Cancel</ion-button>
+      <ion-button fill="solid" color="success" size="small" (click)="claimSelectedNow()">
+        <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+        {{ claimCostPreview.paidCount === 0 ? 'Claim Free' : 'Claim & Subscribe' }}
       </ion-button>
     </div>
   </div>
 
-  <!-- Owned Parcels Management Bar -->
+  <!-- Owned Parcels Personalization Bar (Multi-Tile Image Span + Custom URL + Rich Details) -->
   <div class="parcel-manage-bar" *ngIf="myBoxs.length > 0">
     <div class="parcel-info">
-      <div class="parcel-count"><strong>Owned Parcel</strong></div>
-      <div class="parcel-price">Personalize artwork & info</div>
+      <div class="parcel-count">
+        <strong>{{ myBoxs.length }} Owned Square{{ myBoxs.length > 1 ? 's' : '' }}</strong> Selected
+      </div>
+      <div class="parcel-price">
+        {{ myBoxs.length > 1 ? 'Ready to span 1 image across all ' + myBoxs.length + ' squares!' : 'Click more of your squares or "Whole Area" to group-edit' }}
+      </div>
     </div>
     <div class="parcel-buttons">
-      <ion-button fill="clear" color="medium" (click)="removeSelectedBoxes()">Close</ion-button>
-      <ion-button fill="outline" color="primary" (click)="imgSelection = true">
+      <button type="button" class="mini-block-btn" (click)="selectAllInMyArea()" title="Select all squares in this area">
+        Whole Area
+      </button>
+      <ion-button fill="outline" color="primary" size="small" (click)="imgSelection = true">
         <ion-icon name="image-outline" slot="start"></ion-icon>
-        Artwork
+        {{ myBoxs.length > 1 ? 'Span Image' : 'Image' }}
       </ion-button>
-      <ion-button fill="solid" color="primary" (click)="showEditor = true">
+      <ion-button fill="solid" color="primary" size="small" (click)="showEditor = true">
         <ion-icon name="create-outline" slot="start"></ion-icon>
-        Edit Text
+        Details / URL / Sell
+      </ion-button>
+      <ion-button fill="clear" color="secondary" size="small" (click)="shareSelectedAreaLink()" title="Copy Custom Area URL">
+        <ion-icon name="share-social-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+      <ion-button fill="clear" color="medium" size="small" (click)="clearSelection()">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
       </ion-button>
     </div>
   </div>
 
-  <!-- Image Selection Modal -->
-  <ion-modal [isOpen]="imgSelection" [swipeToClose]="false" [presentingElement]="routerOutlet.nativeEl" mode="ios"
-    backdrop-dismiss="false">
+  <!-- Google Hangouts-Style Docked Nearby Chat Window (Brief 06/01/23 lines 32, 89-95) -->
+  <div class="hangouts-dock" [class.open]="chatDrawerOpen">
+    <!-- Collapsed Pill Button -->
+    <button type="button" class="hangouts-Launcher" *ngIf="!chatDrawerOpen" (click)="toggleHangoutsDrawer()">
+      <div class="hl-left">
+        <span class="live-dot"></span>
+        <ion-icon name="chatbubbles"></ion-icon>
+        <span>Nearby Chat ({{ otherMarkers.length + 1 }} in area)</span>
+      </div>
+      <span class="unread-badge" *ngIf="unreadChatCount > 0">{{ unreadChatCount }}</span>
+    </button>
+
+    <!-- Expanded Hangouts Window -->
+    <div class="hangouts-panel meta-card-glass" *ngIf="chatDrawerOpen">
+      <div class="hp-header" (click)="toggleHangoutsDrawer()">
+        <div class="hp-title">
+          <span class="live-dot"></span>
+          <div>
+            <h4>Nearby Metaverse Chat</h4>
+            <small>{{ settings?.chatScope === 'everyone' ? 'Talking to Everyone Nearby' : 'Friends Only Mode' }}</small>
+          </div>
+        </div>
+        <button type="button" class="hp-close" (click)="toggleHangoutsDrawer(); $event.stopPropagation()">
+          <ion-icon name="chevron-down"></ion-icon>
+        </button>
+      </div>
+
+      <!-- Scrollable Message History (Latest at bottom like Google Hangouts) -->
+      <div class="hp-messages" #hangoutsScroll>
+        <div
+          class="hp-msg-row"
+          *ngFor="let m of chatMessages"
+          [class.mine]="m.senderId === getSessionUserId()"
+        >
+          <img [src]="m.senderAvatar || 'assets/icon/avatar-default.svg'" class="hp-avatar" alt="Avatar" />
+          <div class="hp-bubble">
+            <div class="hp-meta">
+              <span class="hp-sender">@{{ m.senderUsername }}</span>
+              <span class="hp-time">{{ m.created_at | date: 'shortTime' }}</span>
+            </div>
+            <div class="hp-text">{{ m.message }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Box with Live Typing Callout & Smiley Expression Reaction -->
+      <div class="hp-input-row">
+        <input
+          type="text"
+          [(ngModel)]="hangoutsInput"
+          (input)="onHangoutsTyping()"
+          (keyup.enter)="sendHangoutsMessage()"
+          placeholder="Say hi nearby... (try :) or :D)"
+        />
+        <button type="button" class="hp-send-btn" (click)="sendHangoutsMessage()" [disabled]="!hangoutsInput.trim()">
+          <ion-icon name="send"></ion-icon>
+        </button>
+      </div>
+
+      <!-- Bottom Chat & Visibility Options (Brief 06/01/23 lines 32 & 94) -->
+      <div class="hp-footer-options">
+        <button type="button" class="hp-opt-chip" (click)="toggleChatScopeSetting()">
+          <ion-icon [name]="settings?.chatScope === 'everyone' ? 'globe-outline' : 'people-outline'"></ion-icon>
+          <span>Chat: {{ settings?.chatScope === 'everyone' ? 'Everyone' : 'Friends Only' }}</span>
+        </button>
+        <button type="button" class="hp-opt-chip" (click)="cycleAvatarVisibilitySetting()">
+          <ion-icon name="eye-outline"></ion-icon>
+          <span>Avatars: {{ settings?.avatarVisibility | uppercase }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 1: Image Upload & Multi-Tile Image Spanning
+       (Brief 06/01/23 line 112: "select multiple boxes, and upload 1 image to fill all of them")
+       ====================================================================== -->
+  <ion-modal
+    [isOpen]="imgSelection"
+    [swipeToClose]="true"
+    [presentingElement]="routerOutlet.nativeEl"
+    mode="ios"
+    (didDismiss)="imgSelection = false"
+  >
     <ng-template>
-      <ion-header>
-        <ion-toolbar>
-          <ion-title>Select Image </ion-title>
+      <ion-header class="ion-no-border meta-page-header">
+        <ion-toolbar class="meta-page-toolbar">
+          <ion-title>Customize Land Artwork ({{ myBoxs.length }} Square{{ myBoxs.length > 1 ? 's' : '' }})</ion-title>
           <ion-buttons slot="end">
             <ion-button (click)="imgSelection = false">
               <ion-icon name="close-outline"></ion-icon>
             </ion-button>
           </ion-buttons>
-
         </ion-toolbar>
       </ion-header>
-      <ion-content class="ion-padding">
-        <ion-grid>
 
+      <ion-content class="ion-padding">
+        <!-- Multi-Tile Image Spanning Mode Toggle -->
+        <div class="span-mode-banner" *ngIf="myBoxs.length > 1">
+          <div class="span-info">
+            <h4>Span 1 Image Across All {{ myBoxs.length }} Selected Squares</h4>
+            <p>Fits your uploaded graphic seamlessly across your entire selected area with zero grid borders.</p>
+          </div>
+          <ion-toggle [(ngModel)]="spanImageAcrossSelection" color="primary" mode="ios"></ion-toggle>
+        </div>
+
+        <ion-grid>
           <ion-row>
-            <ion-col *ngIf="showUplaodedImage" size="12">
-              <div class="ion-text-center">
-                <img [src]="selectedImg.url" class="box-img">
+            <ion-col *ngIf="selectedImg" size="12">
+              <div class="ion-text-center preview-selected-box">
+                <img [src]="selectedImg.url || selectedImg" class="box-img-preview" alt="Selected Artwork" />
+                <p class="preview-caption">
+                  {{ myBoxs.length > 1 && spanImageAcrossSelection ? 'Will span seamlessly across ' + myBoxs.length + ' squares' : 'Applied per square' }}
+                </p>
               </div>
             </ion-col>
-            <ion-col size="12">
-              <input type="file" #fileInput (change)="choosePhoto($event)" hidden="true" accept="image/*"
-                style="visibility: hidden;" />
-              <ion-button expand="block" fill="outline" color="dark" (click)="chooseFile()">Upload Custom Image
+
+            <ion-col size="12" sizeMd="6">
+              <input
+                type="file"
+                #fileInput
+                (change)="choosePhoto($event)"
+                hidden="true"
+                accept="image/*,.gif"
+                style="visibility: hidden; display: none;"
+              />
+              <ion-button expand="block" class="meta-btn-gradient" (click)="chooseFile()">
+                <ion-icon name="cloud-upload-outline" slot="start"></ion-icon>
+                Upload Custom Image / GIF
+              </ion-button>
+            </ion-col>
+
+            <ion-col size="6" sizeMd="3">
+              <ion-button expand="block" fill="outline" color="warning" (click)="revertMySelectionArtwork(false)">
+                <ion-icon name="arrow-undo-outline" slot="start"></ion-icon>
+                Revert Previous
+              </ion-button>
+            </ion-col>
+
+            <ion-col size="6" sizeMd="3">
+              <ion-button expand="block" fill="outline" color="medium" (click)="revertMySelectionArtwork(true)">
+                <ion-icon name="map-outline" slot="start"></ion-icon>
+                Clear to Map
               </ion-button>
             </ion-col>
           </ion-row>
 
-
           <ion-row>
             <ion-col size="12">
-              <ion-searchbar show-clear-button="focus" placeholder="Search Icon" animated="true"
-                (ionChange)="searchIcon($event)"></ion-searchbar>
+              <ion-searchbar
+                show-clear-button="focus"
+                placeholder="Search preset banners or country flags..."
+                animated="true"
+                (ionChange)="searchIcon($event)"
+              ></ion-searchbar>
             </ion-col>
-            <ion-col size="4" *ngFor="let bi of boxImgs">
-              <div class="ion-text-center" [ngClass]="[selectedImg?.url == bi?.url ? 'selectImg' : '']"
-                (click)="selectedImg = bi">
-                <img [src]="bi?.url" class="box-img">
+            <ion-col size="4" sizeMd="3" *ngFor="let bi of boxImgs">
+              <div
+                class="ion-text-center preset-tile-card"
+                [class.selectImg]="selectedImg?.url == bi?.url"
+                (click)="selectedImg = bi"
+              >
+                <img [src]="bi?.url" class="box-img" [alt]="bi?.country || 'Preset'" />
+                <span class="preset-lbl">{{ bi?.country || bi?.name }}</span>
               </div>
             </ion-col>
           </ion-row>
-
         </ion-grid>
       </ion-content>
+
       <ion-footer collapse="fade" mode="ios">
-        <ion-toolbar>
-          <ion-button expand="block" (click)="confirmImg()">Confirm Image</ion-button>
+        <ion-toolbar class="ion-padding-horizontal">
+          <ion-button expand="block" class="meta-btn-gradient" [disabled]="!selectedImg" (click)="confirmImg()">
+            <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+            Apply Artwork to {{ myBoxs.length }} Square{{ myBoxs.length > 1 ? 's' : '' }}
+          </ion-button>
         </ion-toolbar>
       </ion-footer>
     </ng-template>
   </ion-modal>
 
-  <!-- Editor Modal -->
-  <ion-modal [isOpen]="showEditor" [swipeToClose]="false" [presentingElement]="routerOutlet.nativeEl" mode="ios"
-    backdrop-dismiss="false">
+  <!-- ======================================================================
+       MODAL 2: Area Details, Custom URL (/u/slug), 3-Words, Rich HTML & Marketplace Listing
+       ====================================================================== -->
+  <ion-modal
+    [isOpen]="showEditor"
+    [swipeToClose]="true"
+    [presentingElement]="routerOutlet.nativeEl"
+    mode="ios"
+    (didDismiss)="showEditor = false"
+  >
     <ng-template>
-      <ion-header>
-        <ion-toolbar>
-          <ion-title>Add Data to Your Box </ion-title>
+      <ion-header class="ion-no-border meta-page-header">
+        <ion-toolbar class="meta-page-toolbar">
+          <ion-title>Customize Land Area & URL</ion-title>
           <ion-buttons slot="end">
             <ion-button (click)="showEditor = false">
               <ion-icon name="close-outline"></ion-icon>
@@ -193,51 +466,254 @@
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
+
       <ion-content class="ion-padding">
-        <quill-editor [(ngModel)]="qEditor"></quill-editor>
+        <div class="area-editor-form">
+          <div class="ae-field">
+            <label>Area Title / Name</label>
+            <input type="text" [(ngModel)]="areaTitleInput" placeholder="e.g. Pepsi Refresh Zone" />
+          </div>
+
+          <div class="ae-row">
+            <div class="ae-field">
+              <label>Custom Share URL (flatmeta.io/u/...)</label>
+              <input type="text" [(ngModel)]="areaSlugInput" placeholder="e.g. pepsi-land" />
+            </div>
+            <div class="ae-field">
+              <label>Custom 3-Word Address</label>
+              <input type="text" [(ngModel)]="areaThreeWordsInput" placeholder="e.g. najam.flatmeta.home" />
+            </div>
+          </div>
+
+          <div class="ae-field">
+            <label>Interactive Embed / External Widget URL (Optional)</label>
+            <input type="url" [(ngModel)]="areaEmbedUrlInput" placeholder="https://example.com/embed-widget" />
+          </div>
+
+          <div class="ae-sale-box">
+            <div class="ae-sale-toggle">
+              <div>
+                <strong>List Area on Public Marketplace (On Sale)</strong>
+                <small>Other citizens can buy this area (FlatMeta takes 10% commission)</small>
+              </div>
+              <ion-toggle [(ngModel)]="areaOnSaleInput" color="success" mode="ios"></ion-toggle>
+            </div>
+
+            <div class="ae-field" *ngIf="areaOnSaleInput" style="margin-top: 10px;">
+              <label>Asking Price per Square ($ USD)</label>
+              <input type="number" [(ngModel)]="areaSalePriceInput" min="0.1" step="0.1" />
+              <small class="sale-math">
+                Total Listing Price: <strong>${{ ((areaSalePriceInput || 0) * (myBoxs.length || 1)).toFixed(2) }} USD</strong>
+                (You receive 90%: ${{ ((areaSalePriceInput || 0) * (myBoxs.length || 1) * 0.9).toFixed(2) }})
+              </small>
+            </div>
+          </div>
+
+          <div class="ae-field">
+            <label>Area Rich Content & Description</label>
+            <quill-editor [(ngModel)]="qEditor"></quill-editor>
+          </div>
+        </div>
       </ion-content>
+
       <ion-footer collapse="fade" mode="ios">
-        <ion-toolbar>
-          <ion-button expand="block" (click)="editorSubmit()">Submit</ion-button>
+        <ion-toolbar class="ion-padding-horizontal">
+          <ion-button expand="block" class="meta-btn-gradient" (click)="editorSubmit()">
+            <ion-icon name="save-outline" slot="start"></ion-icon>
+            Save Area Details & URL
+          </ion-button>
         </ion-toolbar>
       </ion-footer>
     </ng-template>
   </ion-modal>
 
-  <!-- report popover -->
+  <!-- ======================================================================
+       MODAL 3: Inspect Land Area Callout & Direct Purchase on Map
+       (Brief 06/01/23 line 98: "when I go there what do I do to purchase and take control of it?")
+       ====================================================================== -->
+  <ion-modal
+    [isOpen]="showAreaInspectModal"
+    [swipeToClose]="true"
+    [presentingElement]="routerOutlet.nativeEl"
+    mode="ios"
+    (didDismiss)="showAreaInspectModal = false"
+  >
+    <ng-template>
+      <ion-header class="ion-no-border meta-page-header">
+        <ion-toolbar class="meta-page-toolbar">
+          <ion-title>{{ inspectedArea?.title || 'Land Area Details' }}</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="showAreaInspectModal = false">
+              <ion-icon name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="ion-padding" *ngIf="inspectedArea">
+        <div class="inspect-area-card meta-card-glass">
+          <div class="ia-banner">
+            <img [src]="inspectedArea.image" [alt]="inspectedArea.title" onerror="this.src='assets/icon/placeholder-land.svg'" />
+            <div class="ia-badges">
+              <span class="meta-badge badge-purple">{{ inspectedArea.no_of_tiles }} Square{{ inspectedArea.no_of_tiles > 1 ? 's' : '' }}</span>
+              <span class="meta-badge badge-emerald" *ngIf="inspectedArea.on_sale">
+                ON SALE · ${{ inspectedArea.sale_price.toFixed(2) }}/tile
+              </span>
+              <span class="meta-badge badge-amber" *ngIf="inspectedArea.promoted">Promoted</span>
+            </div>
+          </div>
+
+          <div class="ia-owner-row">
+            <img [src]="inspectedArea.user_avatar || 'assets/icon/avatar-default.svg'" class="ia-owner-avatar" alt="Owner" />
+            <div class="ia-owner-info">
+              <h4>{{ inspectedArea.fullname }}</h4>
+              <span>@{{ inspectedArea.username }} · {{ inspectedArea.location_label }}</span>
+            </div>
+            <ion-button
+              fill="outline"
+              size="small"
+              (click)="copyShareLink('u/' + inspectedArea.slug, 'Area URL')"
+            >
+              <ion-icon name="link-outline" slot="start"></ion-icon>
+              /u/{{ inspectedArea.slug }}
+            </ion-button>
+          </div>
+
+          <div class="ia-address-pills">
+            <span class="addr-pill" (click)="copyShareLink('u/' + inspectedArea.slug, '3-Word Address')">
+              <ion-icon name="grid-outline"></ion-icon>
+              3-Words: <strong>{{ inspectedArea.three_words }}</strong>
+            </span>
+            <span class="addr-pill">
+              <ion-icon name="eye-outline"></ion-icon>
+              {{ inspectedArea.views }} views
+            </span>
+          </div>
+
+          <div class="ia-rich-body" [innerHTML]="inspectedArea.custom_details || '<p>No description added yet.</p>'"></div>
+
+          <!-- Optional Sandboxed Interactive Iframe -->
+          <div class="ia-embed-box" *ngIf="safeEmbedUrl">
+            <h5>Interactive Area Experience</h5>
+            <iframe [src]="safeEmbedUrl" sandbox="allow-scripts allow-same-origin" title="Interactive Land Content"></iframe>
+          </div>
+
+          <!-- Direct Buy & Take Control Section if On Sale -->
+          <div class="ia-buy-box" *ngIf="inspectedArea.on_sale">
+            <div class="ia-buy-price">
+              <span>Acquire All {{ inspectedArea.no_of_tiles }} Squares</span>
+              <strong>${{ (inspectedArea.sale_price * inspectedArea.no_of_tiles).toFixed(2) }} USD</strong>
+              <small>Instant deed transfer (includes 10% FlatMeta marketplace fee)</small>
+            </div>
+            <ion-button expand="block" class="meta-btn-gradient" (click)="buyInspectedAreaNow(inspectedArea)">
+              <ion-icon name="cart-outline" slot="start"></ion-icon>
+              Buy Now & Take Control
+            </ion-button>
+          </div>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- ======================================================================
+       MODAL 4: Saved Pins Manager & Sharing
+       (Brief 06/01/23 lines 105-106: "user can add and save pins with a name, so they can go back to them whenever they want. Should be able to share pins")
+       ====================================================================== -->
+  <ion-modal
+    [isOpen]="showPinsModal"
+    [swipeToClose]="true"
+    [presentingElement]="routerOutlet.nativeEl"
+    mode="ios"
+    (didDismiss)="showPinsModal = false"
+  >
+    <ng-template>
+      <ion-header class="ion-no-border meta-page-header">
+        <ion-toolbar class="meta-page-toolbar">
+          <ion-title>Saved Pins & Locations</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="showPinsModal = false">
+              <ion-icon name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="ion-padding">
+        <div class="add-pin-box meta-card-glass">
+          <h4>Pin Current Avatar / Map Location</h4>
+          <div class="add-pin-row">
+            <input
+              type="text"
+              [(ngModel)]="newPinName"
+              placeholder="Enter pin name (e.g. My Karachi HQ)"
+              (keyup.enter)="saveCurrentLocationPin()"
+            />
+            <ion-button class="meta-btn-gradient" (click)="saveCurrentLocationPin()">
+              <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+              Save Pin
+            </ion-button>
+          </div>
+        </div>
+
+        <div class="pins-list">
+          <div class="pin-card meta-card" *ngFor="let p of savedPins">
+            <div class="pin-info" (click)="flyToSavedPin(p)">
+              <div class="pin-icon">
+                <ion-icon name="bookmark"></ion-icon>
+              </div>
+              <div>
+                <h4>{{ p.name }}</h4>
+                <small>{{ p.three_words }} · ({{ p.lat.toFixed(4) }}, {{ p.lng.toFixed(4) }})</small>
+              </div>
+            </div>
+            <div class="pin-actions">
+              <ion-button fill="outline" size="small" (click)="flyToSavedPin(p)">
+                <ion-icon name="locate-outline" slot="start"></ion-icon>
+                Go
+              </ion-button>
+              <ion-button
+                fill="clear"
+                size="small"
+                color="secondary"
+                (click)="copyShareLink('p/' + p.id, 'Pin Link')"
+                title="Share Pin Link"
+              >
+                <ion-icon name="share-social-outline" slot="icon-only"></ion-icon>
+              </ion-button>
+              <ion-button
+                fill="clear"
+                size="small"
+                color="danger"
+                (click)="meta.deletePin(p.id)"
+                title="Delete Pin"
+              >
+                <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+              </ion-button>
+            </div>
+          </div>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Report User Popover -->
   <ion-popover [isOpen]="reportPopover" (didDismiss)="reportPopover = false; toReportUser = undefined">
     <ng-template>
       <div class="ion-content-pop">
-
         <div class="icon">
           <ion-button fill="clear" color="dark" (click)="reportPopover = false; toReportUser = undefined">
             <ion-icon slot="icon-only" name="close"></ion-icon>
           </ion-button>
         </div>
-
         <div class="content">
-          <p class="head">Report User!</p>
+          <p class="head">Report Citizen</p>
         </div>
         <ng-container *ngFor="let rt of reportList">
-            <div (click)="reportUser(rt?.id)">
-              <p>
-                {{rt?.text}}
-              </p>
-            </div>          
-        </ng-container>       
-
+          <div (click)="reportUser(rt?.id)">
+            <p>{{ rt?.text }}</p>
+          </div>
+        </ng-container>
       </div>
     </ng-template>
   </ion-popover>
-
-  <ion-popover >
-    <ng-template>
-      <div class="ion-content-top-menu">
-        <div class="icon">
-          
-        </div>
-      </div>
-    </ng-template>
-  </ion-popover>
-
 </ion-content>

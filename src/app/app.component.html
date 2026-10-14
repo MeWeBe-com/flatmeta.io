@@ -15,36 +15,59 @@
           </div>
         </div>
 
-        <!-- Citizen Card (Logged In) -->
-        <div class="citizen-card" *ngIf="profile != undefined">
+        <!-- Active Identity Card (Works for both Logged-in Citizen & Guest) -->
+        <div class="citizen-card">
           <div class="citizen-avatar-wrap">
-            <img [src]="profile?.image || 'assets/user.jpeg'" class="citizen-avatar" alt="Avatar" />
+            <img [src]="meta.getCurrentAvatar()" class="citizen-avatar" alt="Avatar" />
             <span class="online-indicator"></span>
           </div>
           <div class="citizen-details">
-            <h4 class="citizen-name">{{ profile?.fullname || profile?.username }}</h4>
-            <span class="citizen-handle">@{{ profile?.username }}</span>
+            <h4 class="citizen-name">{{ meta.getCurrentFullname() }}</h4>
+            <span class="citizen-handle">@{{ meta.getCurrentUsername() }}</span>
             <div class="citizen-status">
-              <span class="meta-badge badge-emerald">Verified Citizen</span>
+              <span class="meta-badge badge-emerald" *ngIf="!meta.isGuest()">Verified Citizen</span>
+              <span class="meta-badge badge-cyan" *ngIf="meta.isGuest()">Guest Explorer (Free Mode)</span>
             </div>
           </div>
         </div>
 
-        <!-- Guest Invitation Card (Logged Out) -->
-        <div class="guest-card" *ngIf="profile == undefined">
-          <div class="guest-card-content">
-            <div class="guest-icon">
-              <ion-icon name="sparkles-outline"></ion-icon>
+        <!-- Portfolio & 100 Free Squares Summary Popup Card (Brief 06/01/23 line 99) -->
+        <div class="menu-stats-card" *ngIf="stats">
+          <div class="stats-row">
+            <div class="stat-cell">
+              <span class="s-val">{{ stats.totalTilesOwned }}</span>
+              <span class="s-lbl">Owned Tiles</span>
             </div>
-            <h4>Welcome, Explorer</h4>
-            <p>Sign in to claim land parcels, customize your 3D avatar, and trade in the metaverse.</p>
+            <div class="stat-cell">
+              <span class="s-val text-emerald">{{ stats.freeQuotaRemaining }}<small>/100</small></span>
+              <span class="s-lbl">Free Left</span>
+            </div>
+            <div class="stat-cell">
+              <span class="s-val text-cyan">${{ stats.estimatedWorth.toFixed(2) }}</span>
+              <span class="s-lbl">Est. Worth</span>
+            </div>
+          </div>
+          <div class="stats-sub-row">
+            <span>Bought: <strong>${{ stats.totalBoughtUsd.toFixed(2) }}</strong></span>
+            <span>Sold: <strong>${{ stats.totalSoldUsd.toFixed(2) }}</strong></span>
+          </div>
+        </div>
+
+        <!-- Guest Save Prompt (Email-Only Verification per Brief 06/01/23) -->
+        <div class="guest-card" *ngIf="meta.isGuest()">
+          <div class="guest-card-content">
+            <h4>Save Your World Changes</h4>
+            <p>
+              Use everything without login! When you're ready to permanently save your land, avatar, and pins, just verify your email.
+            </p>
             <div class="guest-actions">
-              <ion-menu-toggle [autoHide]="false">
-                <ion-button expand="block" class="meta-btn-gradient" [routerLink]="['/flatmeta/login']">
-                  Sign In
+              <ion-menu-toggle [autoHide]="true">
+                <ion-button expand="block" class="meta-btn-gradient" (click)="openQuickSaveModal('email-quick', 'Save your guest land, avatar & pins permanently')">
+                  <ion-icon name="mail-outline" slot="start"></ion-icon>
+                  Save with Email
                 </ion-button>
-                <ion-button expand="block" fill="outline" color="light" class="btn-signup-outline" [routerLink]="['/flatmeta/signup']">
-                  Create Account
+                <ion-button expand="block" fill="outline" color="light" class="btn-signup-outline" (click)="openQuickSaveModal('login')">
+                  Password Login
                 </ion-button>
               </ion-menu-toggle>
             </div>
@@ -52,9 +75,9 @@
         </div>
 
         <!-- Navigation Menu Items -->
-        <div class="menu-section-label">Navigation</div>
+        <div class="menu-section-label">Metaverse Hub</div>
         <ion-list class="menu-nav-list" lines="none">
-          <ion-menu-toggle autoHide="false" *ngFor="let p of pages">
+          <ion-menu-toggle autoHide="true" *ngFor="let p of pages">
             <div class="nav-item-wrapper" (click)="goTo(p)">
               <div class="nav-icon-box">
                 <ion-icon [name]="p.icon || 'chevron-forward-outline'"></ion-icon>
@@ -65,11 +88,11 @@
           </ion-menu-toggle>
 
           <!-- Logout Item -->
-          <div class="nav-item-wrapper nav-logout" (click)="logOut()" *ngIf="profile != undefined">
+          <div class="nav-item-wrapper nav-logout" (click)="logOut()" *ngIf="!meta.isGuest()">
             <div class="nav-icon-box logout-icon">
               <ion-icon name="log-out-outline"></ion-icon>
             </div>
-            <div class="nav-title">Disconnect / Logout</div>
+            <div class="nav-title">Switch to Guest / Logout</div>
           </div>
         </ion-list>
       </ion-content>
@@ -93,4 +116,84 @@
     </ion-menu>
     <ion-router-outlet id="main-content"></ion-router-outlet>
   </ion-split-pane>
+
+  <!-- Compact Closable Email-Save / Login Popup Overlay (Brief 06/01/23: "When go to Login page, cannot close it, should be a smaller popup, can close, and bottom menu should always show in all cases") -->
+  <div class="quick-auth-backdrop" *ngIf="showAuthModal" (click)="showAuthModal = false">
+    <div class="quick-auth-dialog meta-card-glass" (click)="$event.stopPropagation()">
+      <div class="qa-header">
+        <div class="qa-brand">
+          <ion-icon name="planet"></ion-icon>
+          <div>
+            <h3>{{ authMode === 'email-quick' ? 'Save Changes with Email' : 'Citizen Sign In' }}</h3>
+            <span class="qa-sub">{{ authReason || 'No password required — just validate your email to retain your land & avatar.' }}</span>
+          </div>
+        </div>
+        <button type="button" class="qa-close" (click)="showAuthModal = false" aria-label="Close popup">
+          <ion-icon name="close"></ion-icon>
+        </button>
+      </div>
+
+      <!-- Mode Switcher Tabs -->
+      <div class="qa-tabs">
+        <button type="button" [class.active]="authMode === 'email-quick'" (click)="authMode = 'email-quick'">
+          Instant Email Save
+        </button>
+        <button type="button" [class.active]="authMode === 'login'" (click)="authMode = 'login'">
+          Password Login
+        </button>
+      </div>
+
+      <!-- 1. Email-Only Save / Registration (Brief 06/01/23 lines 67-68) -->
+      <div class="qa-body" *ngIf="authMode === 'email-quick'">
+        <div class="qa-field">
+          <label>Your Email Address</label>
+          <input type="email" [(ngModel)]="quickEmail" placeholder="you@example.com" />
+        </div>
+        <div class="qa-field">
+          <label>Citizen Username (shown under your avatar)</label>
+          <input type="text" [(ngModel)]="quickUsername" placeholder="e.g. london_explorer" />
+        </div>
+
+        <div class="qa-field" *ngIf="quickCodeSent">
+          <label>6-Digit Email Verification Code</label>
+          <input type="text" [(ngModel)]="quickCodeInput" placeholder="Enter 6-digit code" maxlength="6" />
+          <small class="qa-hint">Code sent to {{ quickEmail }} (demo code auto-filled: {{ generatedDemoCode }})</small>
+        </div>
+
+        <div class="qa-actions">
+          <ion-button expand="block" class="meta-btn-gradient" *ngIf="!quickCodeSent" (click)="sendQuickVerificationCode()">
+            <ion-icon name="mail-unread-outline" slot="start"></ion-icon>
+            Send Verification Code
+          </ion-button>
+          <ion-button expand="block" class="meta-btn-gradient" *ngIf="quickCodeSent" (click)="verifyQuickEmailAndSave()">
+            <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+            Verify & Save Permanently
+          </ion-button>
+        </div>
+      </div>
+
+      <!-- 2. Classic Email + Password Login -->
+      <div class="qa-body" *ngIf="authMode === 'login'">
+        <div class="qa-field">
+          <label>Email Address</label>
+          <input type="email" [(ngModel)]="loginEmail" placeholder="citizen@flatmeta.io" />
+        </div>
+        <div class="qa-field">
+          <label>Password</label>
+          <input type="password" [(ngModel)]="loginPassword" placeholder="Enter password" (keyup.enter)="submitPasswordLogin()" />
+        </div>
+        <div class="qa-actions">
+          <ion-button expand="block" class="meta-btn-gradient" (click)="submitPasswordLogin()">
+            <ion-icon name="log-in-outline" slot="start"></ion-icon>
+            Sign In
+          </ion-button>
+        </div>
+      </div>
+
+      <div class="qa-footer">
+        <span>Want to keep exploring without saving yet?</span>
+        <button type="button" class="qa-link" (click)="showAuthModal = false">Continue as Guest</button>
+      </div>
+    </div>
+  </div>
 </ion-app>

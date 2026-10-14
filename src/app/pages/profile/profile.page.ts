@@ -3,8 +3,9 @@ import { EventsService } from 'src/app/providers/events.service';
 import { StorageService } from 'src/app/providers/storage.service';
 import { GeneralService } from 'src/app/providers/general.service';
 import { HttpService } from 'src/app/providers/http.service';
-import { UntypedFormGroup, UntypedFormBuilder, Validators } from "@angular/forms";
+import { UntypedFormGroup, UntypedFormBuilder, Validators } from '@angular/forms';
 import { GlobaldataService } from 'src/app/providers/globaldata.service';
+import { MetaverseService, AvatarConfig } from 'src/app/providers/metaverse.service';
 
 @Component({
   selector: 'app-profile',
@@ -16,37 +17,55 @@ export class ProfilePage implements OnInit {
 
   profileForm: UntypedFormGroup;
   profileImg: string = '';
-  canvas: any;
+  avatarConfig: AvatarConfig;
+
+  topTypes = GlobaldataService.topType;
+  accessoriesTypes = GlobaldataService.accessoriesType;
+  hairColors = GlobaldataService.hairColor;
+  facialHairTypes = GlobaldataService.facialHairType;
+  clotheTypes = GlobaldataService.clotheType;
+  eyeTypes = GlobaldataService.eyeType;
+  eyebrowTypes = GlobaldataService.eyebrowType;
+  mouthTypes = GlobaldataService.mouthType;
+  skinColors = GlobaldataService.skinColor;
+  circleBgs = ['#2563eb', '#0891b2', '#7c3aed', '#059669', '#db2777', '#d97706', '#4f46e5', '#0f172a'];
 
   constructor(
     public general: GeneralService,
     public http: HttpService,
     public formBuilder: UntypedFormBuilder,
     private storage: StorageService,
-    public events: EventsService
-  ) { }
+    public events: EventsService,
+    public meta: MetaverseService
+  ) {
+    this.avatarConfig = this.meta.getAvatarConfig();
+  }
 
   ngOnInit() {
     this.initSignupForm();
+    this.syncCurrentIdentity();
     this.events.receiveLogin().subscribe((res: any) => {
       if (res) {
-        this.profileForm.patchValue(res);
-        this.profileImg = res.user_image;
+        this.syncCurrentIdentity();
       }
-    })
+    });
   }
 
   ionViewDidEnter() {
-    if (GlobaldataService.userObject != undefined) {
-      this.profileForm.patchValue({
-        user_id: GlobaldataService.userObject.user_id,
-        fullname: GlobaldataService.userObject.fullname,
-        username: GlobaldataService.userObject.username,
-        email: GlobaldataService.userObject.email,
-        user_image: GlobaldataService.userObject.user_image
-      });
-      this.profileImg = GlobaldataService.userObject.user_image;
-    }
+    this.syncCurrentIdentity();
+  }
+
+  syncCurrentIdentity() {
+    const identity = this.meta.getCurrentIdentity();
+    this.avatarConfig = this.meta.getAvatarConfig();
+    this.profileImg = identity.user_image;
+    this.profileForm.patchValue({
+      user_id: identity.user_id,
+      fullname: identity.fullname,
+      username: identity.username,
+      email: identity.email || '',
+      user_image: identity.user_image,
+    });
   }
 
   initSignupForm() {
@@ -54,86 +73,89 @@ export class ProfilePage implements OnInit {
       user_id: '',
       fullname: ['', [Validators.required]],
       username: ['', [Validators.required]],
-      email: ['', [Validators.required, Validators.email, Validators.pattern("^[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,4}$")]],
-      user_image: ''
-    })
+      email: ['', [Validators.required, Validators.email]],
+      user_image: '',
+    });
   }
 
   get getControl() {
     return this.profileForm.controls;
   }
 
+  onTraitChange() {
+    this.meta.saveAvatarConfig(this.avatarConfig);
+    this.profileImg = this.meta.getCurrentIdentity().user_image;
+    this.profileForm.patchValue({ user_image: this.profileImg });
+  }
+
+  selectCircleBg(color: string) {
+    this.avatarConfig.circleBg = color;
+    this.onTraitChange();
+  }
+
+  generateAvatar() {
+    this.avatarConfig = this.meta.randomizeAvatarConfig();
+    this.meta.saveAvatarConfig(this.avatarConfig);
+    this.profileImg = this.meta.getCurrentIdentity().user_image;
+    this.profileForm.patchValue({ user_image: this.profileImg });
+    this.general.presentToast('New random circular avatar generated!');
+  }
+
   chooseFile() {
     this.fileInput.nativeElement.click();
   }
 
-  choosePhoto = async (e) => {
-    if (e.target.files.length > 0) {
-      this.general.presentLoading();
-      for (let i = 0; i < e.target.files.length; i++) {
-        this.http.uploadImages(e.target.files[i], 'UploadUserImage').subscribe((res: any) => {
-          this.general.stopLoading();
-          if (res.status == true) {
-            this.profileImg = res.data.user_image;
-            this.profileForm.patchValue({
-              user_image: res.data.file_name
-            })
-            this.general.presentToast('Image Uploaded!')
-          } else {
-            this.general.presentToast(res.data.message);
-          }
-        }, (e) => {
-          this.general.stopLoading();
-          console.log(e)
-        })
-      }
-    }
-  }
+  choosePhoto = async (e: any) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        this.profileImg = dataUrl;
+        this.profileForm.patchValue({ user_image: dataUrl });
+        if (GlobaldataService.userObject) {
+          GlobaldataService.userObject.user_image = dataUrl;
+          this.storage.setObject('userObject', GlobaldataService.userObject);
+        }
+        this.meta.broadcastPresence('join');
+        this.general.presentToast('Custom avatar photo applied!');
+      };
+      reader.readAsDataURL(file);
 
-  onSubmit() {
+      // Also upload to backend if available
+      this.http.uploadImages(file, 'UploadUserImage').subscribe(
+        (res: any) => {
+          if (res && res.status === true && res.data?.user_image) {
+            this.profileImg = res.data.user_image;
+            this.profileForm.patchValue({ user_image: res.data.file_name || res.data.user_image });
+          }
+        },
+        () => {}
+      );
+    }
+  };
+
+  async onSubmit() {
     if (this.profileForm.invalid) {
+      this.general.presentToast('Please enter your Name, Username, and valid Email.');
       return;
     }
-    this.http.post('UpdateUser', this.profileForm.value, true).subscribe((res: any) => {
-      this.general.stopLoading();
-      if (res.status == true) {
-        this.profileForm.patchValue(res.data);
-        //this.profileImg = res.data.user_image;
-        GlobaldataService.userObject = res.data;
-        this.storage.setObject('userObject', res.data);
-      } else {
-        this.general.presentToast(res.message);
-      }
-    },
-      (e) => {
-        this.general.stopLoading();
-        console.log(e)
-      })
-  }
 
-  generateAvatar() {
-    let tt = this.general.getRandomInt(0, GlobaldataService.topType.length)
-    let at = this.general.getRandomInt(0, GlobaldataService.accessoriesType.length)
-    let hc = this.general.getRandomInt(0, GlobaldataService.hairColor.length)
-    let fht = this.general.getRandomInt(0, GlobaldataService.facialHairType.length)
-    let ct = this.general.getRandomInt(0, GlobaldataService.clotheType.length)
-    let et = this.general.getRandomInt(0, GlobaldataService.eyeType.length)
-    let ebt = this.general.getRandomInt(0, GlobaldataService.eyebrowType.length)
-    let mt = this.general.getRandomInt(0, GlobaldataService.mouthType.length)
-    let sc = this.general.getRandomInt(0, GlobaldataService.skinColor.length)
-    this.general.presentLoading();
-    let imgs = `https://avataaars.io/?avatarStyle=Transparent&topType=${GlobaldataService.topType[tt]}&accessoriesType=${GlobaldataService.accessoriesType[at]}&hairColor=${GlobaldataService.hairColor[hc]}&facialHairType=${GlobaldataService.facialHairType[fht]}&clotheType=${GlobaldataService.clotheType[ct]}&eyeType=${GlobaldataService.eyeType[et]}&eyebrowType=${GlobaldataService.eyebrowType[ebt]}&mouthType=${GlobaldataService.mouthType[mt]}&skinColor=${GlobaldataService.skinColor[sc]}`;
-    this.profileImg = imgs;
+    const val = this.profileForm.value;
+    // Upgrade guest or update citizen immediately via MetaverseService
+    const userObj = await this.meta.verifyEmailAndUpgradeGuest(val.email, val.fullname);
+    userObj.username = val.username.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase() || userObj.username;
+    userObj.fullname = val.fullname;
+    userObj.user_image = this.profileImg || userObj.user_image;
+    GlobaldataService.userObject = userObj;
+    await this.storage.setObject('userObject', userObj);
+    this.events.publishLogin(userObj);
+    this.general.presentToast('Citizen profile & avatar saved!');
 
-    this.http.post(`SaveImageFromUrl?user_id=${GlobaldataService.userObject.user_id}`, { image_url: this.profileImg }, false).subscribe((res: any) => {
-      this.general.stopLoading();
-      if (res.status == true) {
-        this.profileImg = res.data.image_url;
-      }
-    },
-      (e) => {
-        this.general.stopLoading();
-        console.log(e)
-      })
+    // Best-effort sync with backend API
+    this.http.post('UpdateUser', this.profileForm.value, false).subscribe(
+      () => {},
+      () => {}
+    );
   }
 }

@@ -7,6 +7,10 @@ const routes: Routes = [
   {
     path: '',
     component: HomePage
+  },
+  {
+    path: ':id/:username',
+    component: HomePage
   }
 ];
 

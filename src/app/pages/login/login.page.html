@@ -4,41 +4,65 @@
     <div class="glow-orb glow-orb-1"></div>
     <div class="glow-orb glow-orb-2"></div>
 
-    <div class="auth-card meta-card-glass">
+    <div class="auth-card meta-card-glass" style="position: relative;">
+      <!-- Close Button so user is never trapped on Login -->
+      <button
+        type="button"
+        (click)="closeLogin()"
+        title="Close and return to Map"
+        style="position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.16); background: rgba(15,23,42,0.7); color: #f8fafc; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px;">
+        <ion-icon name="close-outline"></ion-icon>
+      </button>
+
       <!-- Brand & Welcome -->
       <div class="auth-header">
         <div class="auth-logo-badge">
           <ion-icon name="planet"></ion-icon>
         </div>
-        <h2 class="auth-title">Welcome <span class="gradient-text">Back</span></h2>
-        <p class="auth-subtitle">Sign in to roam FlatMeta, trade land, and interact with online citizens.</p>
+        <h2 class="auth-title">Save &amp; <span class="gradient-text">Sign In</span></h2>
+        <p class="auth-subtitle">Verify your email to permanently save your Guest avatar &amp; 100 free land squares, or sign in with password.</p>
+      </div>
+
+      <!-- Instant Email-Only Save Box -->
+      <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 14px; padding: 12px; margin-bottom: 18px;">
+        <div style="font-size: 12px; font-weight: 700; color: #34d399; margin-bottom: 8px;">
+          Instant Email Verification (No Password Needed)
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <input
+            type="email"
+            [(ngModel)]="quickEmail"
+            placeholder="you@example.com"
+            (keyup.enter)="verifyEmailOnly()"
+            style="flex: 1; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 8px 12px; color: #f8fafc; font-size: 13px; outline: none;" />
+          <ion-button size="small" color="success" (click)="verifyEmailOnly()" style="margin: 0; --border-radius: 10px; font-weight: 700;">
+            Verify
+          </ion-button>
+        </div>
       </div>
 
       <!-- Form -->
       <form [formGroup]="loginForm" (ngSubmit)="onSubmitLogin()" (keyup.enter)="onSubmitLogin()" novalidate class="auth-form">
         <!-- Email Input -->
         <div class="input-group">
-          <label class="input-label">Email or Username</label>
+          <label class="input-label">Email Address</label>
           <div class="input-field-wrap" [class.field-error]="getLoginControl.email.touched && getLoginControl.email.invalid">
             <ion-icon name="mail-outline" class="field-icon"></ion-icon>
             <ion-input type="email" placeholder="citizen@flatmeta.io" formControlName="email" enterkeyhint="next"
               (keydown)="onKeydown($event)">
             </ion-input>
           </div>
-          <div class="field-error-msg" *ngIf="getLoginControl.email.touched && getLoginControl.email.errors?.required">
-            Email or username is required
-          </div>
         </div>
 
         <!-- Password Input -->
         <div class="input-group">
           <div class="label-row">
-            <label class="input-label">Password</label>
+            <label class="input-label">Password (Optional for Quick Verify)</label>
             <button type="button" class="btn-forgot-link" (click)="presentAlertPrompt()">
               Forgot?
             </button>
           </div>
-          <div class="input-field-wrap" [class.field-error]="getLoginControl.password.touched && getLoginControl.password.invalid">
+          <div class="input-field-wrap">
             <ion-icon name="lock-closed-outline" class="field-icon"></ion-icon>
             <ion-input [type]="showPass ? 'text' : 'password'" placeholder="Enter your password" formControlName="password"
               enterkeyhint="done">
@@ -47,16 +71,12 @@
               <ion-icon [name]="showPass ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
             </button>
           </div>
-          <div class="field-error-msg" *ngIf="getLoginControl.password.touched && getLoginControl.password.errors?.required">
-            Password is required
-          </div>
         </div>
 
         <!-- Submit Button -->
         <div class="form-actions">
-          <ion-button expand="block" class="meta-btn-gradient auth-btn-submit" [disabled]="loginForm.invalid" type="submit"
-            *ngIf="!loading">
-            Sign In to FlatMeta
+          <ion-button expand="block" class="meta-btn-gradient auth-btn-submit" type="submit" *ngIf="!loading">
+            Sign In / Save Account
             <ion-icon name="arrow-forward-outline" slot="end"></ion-icon>
           </ion-button>
 
@@ -68,8 +88,8 @@
 
       <!-- Bottom Alternative -->
       <div class="auth-footer-note">
-        <span>New to the metaverse?</span>
-        <a [routerLink]="['/flatmeta/signup']" class="signup-link">Create Citizen Account</a>
+        <span>Want to keep exploring as Guest?</span>
+        <a (click)="closeLogin()" style="cursor: pointer;" class="signup-link">Return to World Map</a>
       </div>
     </div>
   </div>
