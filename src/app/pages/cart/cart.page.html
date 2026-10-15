@@ -1,10 +1,10 @@
 <ion-header class="ion-no-border meta-page-header">
   <ion-toolbar class="meta-page-toolbar">
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/flatmeta/home" text="" icon="arrow-back-outline"></ion-back-button>
+      <ion-back-button defaultHref="/" text="" icon="arrow-back-outline"></ion-back-button>
     </ion-buttons>
     <ion-title class="meta-page-title">
-      <span class="gradient-text">Cart & Checkout</span>
+      <span class="gradient-text">Cart & Subscription Billing</span>
     </ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="getCart()" fill="clear" color="primary" title="Refresh Cart">
@@ -16,17 +16,53 @@
 
 <ion-content [fullscreen]="true" class="cart-content">
   <div class="cart-container">
+    <!-- Citizen Quota & Subscription Overview Banner -->
+    <div class="summary-card meta-card-glass" style="margin-bottom: 20px;">
+      <h3 class="summary-title">Citizen Land Quota & Subscription</h3>
+      <div class="breakdown-table">
+        <div class="breakdown-row">
+          <span class="b-lbl">Owned Land Squares</span>
+          <span class="b-val">{{ stats?.ownedTilesCount || 0 }} Squares</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="b-lbl">100 Free Squares Quota Remaining</span>
+          <span class="b-val text-free">{{ stats?.freeSquaresRemaining ?? 100 }} / 100 FREE</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="b-lbl">Billable Subscription Squares ($0.10/sq/mo)</span>
+          <span class="b-val">{{ stats?.paidSubscriptionSquares || 0 }} Squares</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="b-lbl">Estimated Portfolio Worth</span>
+          <span class="b-val">${{ (stats?.worthUsd || 0).toFixed(2) }} USD</span>
+        </div>
+        <div class="divider"></div>
+        <div class="breakdown-row total-row">
+          <span class="t-lbl">End-of-Month Subscription</span>
+          <span class="t-val gradient-text">${{ (stats?.monthlySubscriptionUsd || 0).toFixed(2) }} / mo</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Empty Cart State -->
     <div class="empty-state-wrap meta-card-glass" *ngIf="cartData?.length === 0">
       <div class="empty-icon-box">
         <ion-icon name="cart-outline"></ion-icon>
       </div>
-      <h3>Your Cart is Empty</h3>
-      <p>You haven't added any land parcels yet. Explore the metaverse map at 15x zoom and select tiles to purchase!</p>
-      <ion-button [routerLink]="['/flatmeta/home']" class="meta-btn-gradient">
-        <ion-icon name="planet-outline" slot="start"></ion-icon>
-        Explore World Map
-      </ion-button>
+      <h3>No Pending Cart Items</h3>
+      <p>
+        Every citizen gets <strong>100 FREE squares</strong> to claim and customize directly on the map! Beyond 100 squares, extra parcels are billed at <strong>$0.10 USD/square/month</strong> at the end of the month (cancel anytime).
+      </p>
+      <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+        <ion-button [routerLink]="['/']" class="meta-btn-gradient">
+          <ion-icon name="planet-outline" slot="start"></ion-icon>
+          Claim Squares on Map
+        </ion-button>
+        <ion-button [routerLink]="['/myplaces']" fill="outline">
+          <ion-icon name="cube-outline" slot="start"></ion-icon>
+          My Land Portfolio
+        </ion-button>
+      </div>
     </div>
 
     <!-- Active Cart View -->
@@ -72,36 +108,29 @@
               <span class="b-val">{{ cartData.length }}</span>
             </div>
             <div class="breakdown-row">
-              <span class="b-lbl">Rate per Tile</span>
-              <span class="b-val">$0.10 USD</span>
+              <span class="b-lbl">Free Quota Applied</span>
+              <span class="b-val text-free">Up to {{ stats?.freeSquaresRemaining ?? 100 }} Free</span>
             </div>
             <div class="breakdown-row">
-              <span class="b-lbl">Land Deed Registration</span>
-              <span class="b-val text-free">FREE</span>
-            </div>
-
-            <!-- Voucher Row -->
-            <div class="voucher-box">
-              <div class="voucher-input-wrap">
-                <ion-icon name="pricetag-outline"></ion-icon>
-                <ion-input placeholder="Enter Promo Code"></ion-input>
-              </div>
-              <ion-button fill="outline" size="small" class="btn-voucher">Apply</ion-button>
+              <span class="b-lbl">Rate Beyond 100 Free</span>
+              <span class="b-val">$0.10 USD / mo</span>
             </div>
 
             <div class="divider"></div>
 
             <div class="breakdown-row total-row">
-              <span class="t-lbl">Total Due</span>
-              <span class="t-val gradient-text">${{ (cartData.length * 0.1).toFixed(2) }} USD</span>
+              <span class="t-lbl">Due Now</span>
+              <span class="t-val gradient-text">
+                ${{ ((cartData.length > (stats?.freeSquaresRemaining ?? 100) ? (cartData.length - (stats?.freeSquaresRemaining ?? 100)) : 0) * 0.1).toFixed(2) }} USD
+              </span>
             </div>
           </div>
 
           <!-- Checkout Actions -->
           <div class="checkout-actions">
             <ion-button expand="block" class="meta-btn-gradient btn-checkout" (click)="makeBuy()">
-              <ion-icon name="card-outline" slot="start"></ion-icon>
-              Proceed to PayPal Checkout
+              <ion-icon name="checkmark-done-outline" slot="start"></ion-icon>
+              Claim & Activate Parcels
             </ion-button>
 
             <ion-button expand="block" fill="outline" class="btn-clear-cart" (click)="removeFromCart()">
@@ -112,7 +141,7 @@
 
           <div class="security-guarantee">
             <ion-icon name="shield-checkmark"></ion-icon>
-            <span>Verified ownership registered instantly in FlatMeta database.</span>
+            <span>Verified ownership registered in FlatMeta. Cancel subscription anytime before month-end.</span>
           </div>
         </div>
       </div>

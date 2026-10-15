@@ -127,6 +127,7 @@ export class MyplacesPage implements OnInit {
       order_id: this.selectedGroup.area_id,
       sale_price: this.tilePrice,
       on_sale: this.onSale,
+      custom_details: this.areaDescription,
     };
     this.http.post('UpdateSalePrice', d, false).subscribe(
       () => {},
@@ -145,6 +146,12 @@ export class MyplacesPage implements OnInit {
           role: 'destructive',
           handler: () => {
             const count = this.meta.releaseTiles(item.tiles.map((t) => ({ gx: t.gx, gy: t.gy })));
+            if (!this.meta.isGuest()) {
+              this.http.post('ReleaseOrder', { order_id: item.area_id }, false).subscribe({
+                next: () => {},
+                error: () => {},
+              });
+            }
             this.showSellModal = false;
             this.refreshPortfolio();
             this.general.presentToast(`Released ${count} square(s).`);

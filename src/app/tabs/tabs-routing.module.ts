@@ -67,6 +67,10 @@ const childRoutes: Routes = [
   {
     path: 'recentpurchases',
     loadChildren: () => import('../pages/recentpurchases/recentpurchases.module').then(m => m.RecentpurchasesPageModule)
+  },
+  {
+    path: ':slug',
+    loadChildren: () => import('../pages/home/home.module').then(m => m.HomePageModule)
   }
 ];
 

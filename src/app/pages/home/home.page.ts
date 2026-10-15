@@ -409,6 +409,15 @@ export class HomePage implements OnInit, OnDestroy {
         setTimeout(() => this.flyToFlatMetaHome(), 250);
         return;
       }
+      // Support coordinate strings passed directly in root URL (e.g. /51.5097,-0.1043)
+      const cleanedCoord = slug.replace(/^@/, '');
+      const coordParts = cleanedCoord.split(',').map(Number);
+      if (coordParts.length >= 2 && !isNaN(coordParts[0]) && !isNaN(coordParts[1])) {
+        const z = coordParts[2] ? this.snapToAllowedZoom(coordParts[2]) : 15;
+        setTimeout(() => this.flyToAndMoveAvatar(coordParts[0], coordParts[1], z), 250);
+        return;
+      }
+
       const area = this.meta.findAreaBySlugOrThreeWords(slug);
       if (area) {
         setTimeout(() => {
@@ -1138,6 +1147,11 @@ export class HomePage implements OnInit, OnDestroy {
   public claimSelectedNow() {
     if (this.selectedBoxs.length === 0) return;
 
+    const tilesPayload = this.selectedBoxs.map((e) => ({
+      lat: e.lat.toString(),
+      lng: e.lng.toString(),
+    }));
+
     const result = this.meta.claimSelectedSquares(this.selectedBoxs);
     if (result.claimed.length === 0) {
       this.general.presentToast('Those squares are already claimed.');
@@ -1149,6 +1163,20 @@ export class HomePage implements OnInit, OnDestroy {
     this.myBoxs = [...result.claimed];
     this.populateEditorFromSelection();
     this.redrawLandLayers();
+
+    if (!this.isGuest) {
+      this.http
+        .post(
+          'ClaimTiles',
+          {
+            tiles: tilesPayload,
+            custom_details: result.claimed[0]?.custom_details || '',
+            image: result.claimed[0]?.image || '',
+          },
+          false
+        )
+        .subscribe({ next: () => {}, error: () => {} });
+    }
 
     if (result.billableAdded === 0) {
       this.general.presentToast(
@@ -1213,10 +1241,17 @@ export class HomePage implements OnInit, OnDestroy {
 
   public revertMySelectionArtwork(toDefaultMap: boolean = false) {
     if (this.myBoxs.length === 0) return;
+    const orderId = this.myBoxs[0]?.order_id;
     this.meta.revertTilesArtwork(
       this.myBoxs.map((b) => ({ gx: b.gx, gy: b.gy })),
       toDefaultMap
     );
+    if (!this.isGuest && orderId) {
+      this.http.post('RevertBoxImage', { order_id: orderId }, false).subscribe({
+        next: () => {},
+        error: () => {},
+      });
+    }
     this.imgSelection = false;
     this.redrawLandLayers();
     this.general.presentToast(toDefaultMap ? 'Reverted squares to default map view.' : 'Reverted to previous image.');
@@ -1278,6 +1313,8 @@ export class HomePage implements OnInit, OnDestroy {
           {
             order_id: this.myBoxs[0].order_id,
             custom_details: this.qEditor,
+            on_sale: this.areaOnSaleInput,
+            sale_price: this.areaSalePriceInput,
           },
           false
         )
@@ -1307,6 +1344,12 @@ export class HomePage implements OnInit, OnDestroy {
     if (!area) return;
     const res = this.meta.buyMarketplaceListing(area.order_id);
     if (res.success) {
+      if (!this.isGuest) {
+        this.http.post('BuyMarketplaceOrder', { order_id: area.order_id }, false).subscribe({
+          next: () => {},
+          error: () => {},
+        });
+      }
       this.showAreaInspectModal = false;
       this.redrawLandLayers();
       this.general.presentToast(

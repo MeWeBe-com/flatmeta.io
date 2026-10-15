@@ -2,7 +2,10 @@
 	"appId": "com.flatmeta.app",
 	"appName": "FlatMeta",
 	"webDir": "www",
-	"bundledWebRuntime": false,
+	"server": {
+		"androidScheme": "https",
+		"cleartext": true
+	},
 	"packageClassList": [
 		"AppPlugin",
 		"GeolocationPlugin",

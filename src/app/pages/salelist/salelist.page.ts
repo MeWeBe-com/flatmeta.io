@@ -49,7 +49,7 @@ export class SalelistPage implements OnInit {
   }
 
   fetchBackendListings() {
-    this.http.get('SaleList', false).subscribe(
+    this.http.get('SaleList?filter=' + this.activeFilter, false).subscribe(
       (res: any) => {
         if (res && res.status === true && Array.isArray(res.data?.tiles)) {
           this.meta.mergeBackendTiles(res.data.tiles);
@@ -99,6 +99,12 @@ export class SalelistPage implements OnInit {
             const result = this.meta.buyMarketplaceListing(c.area_id);
             this.general.presentToast(result.message);
             if (result.ok) {
+              if (!this.meta.isGuest()) {
+                this.http.post('BuyMarketplaceOrder', { order_id: c.area_id }, false).subscribe({
+                  next: () => {},
+                  error: () => {},
+                });
+              }
               this.loadListings();
               this.toUserPlace(c);
             }
@@ -132,11 +138,11 @@ export class SalelistPage implements OnInit {
     const browser = this.iab.create(url + '/' + GlobaldataService.userObject.user_id, '_blank', options);
     browser.on('loadstart').subscribe(
       (res) => {
-        if (res.url.includes('flatmeta.io/TransactionCompleted')) {
+        if (res.url.includes('TransactionCompleted')) {
           setTimeout(() => {
             this.general.presentToast('Payment Successful!');
             browser.close();
-            this.general.goToPage('t/thankyou');
+            this.general.goToPage('thankyou');
           }, 250);
         }
       },

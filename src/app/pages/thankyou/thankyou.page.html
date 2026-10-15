@@ -1,7 +1,7 @@
 <ion-header class="ion-no-border meta-page-header">
   <ion-toolbar class="meta-page-toolbar">
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/flatmeta/home" text="" icon="arrow-back-outline"></ion-back-button>
+      <ion-back-button defaultHref="/" text="" icon="arrow-back-outline"></ion-back-button>
     </ion-buttons>
     <ion-title class="meta-page-title">
       <span class="gradient-text">Transaction Complete</span>
@@ -19,7 +19,7 @@
 
       <h2 class="thankyou-title">Deed <span class="gradient-text">Acquired!</span></h2>
       <p class="thankyou-subtitle">
-        Your payment was processed successfully. The virtual land parcels have been transferred to your citizen profile and registered in the FlatMeta database.
+        Your land parcels have been transferred to your citizen profile and registered in the FlatMeta database.
       </p>
 
       <div class="deed-status-card">
@@ -29,18 +29,18 @@
         </div>
         <div class="status-row">
           <span class="s-lbl">Access Privileges:</span>
-          <span class="s-val">Custom Artwork & Text Entry</span>
+          <span class="s-val">Custom Artwork, Multi-Tile Span & Custom URL</span>
         </div>
       </div>
 
       <div class="thankyou-actions">
-        <ion-button expand="block" class="meta-btn-gradient btn-return-world" [routerLink]="['/flatmeta/home']">
+        <ion-button expand="block" class="meta-btn-gradient btn-return-world" [routerLink]="['/']">
           <ion-icon name="planet-outline" slot="start"></ion-icon>
-          Return to Metaverse
+          Return to Metaverse Map
         </ion-button>
-        <ion-button expand="block" fill="outline" class="btn-view-portfolio" [routerLink]="['/flatmeta/myplaces']">
+        <ion-button expand="block" fill="outline" class="btn-view-portfolio" [routerLink]="['/myplaces']">
           <ion-icon name="cube-outline" slot="start"></ion-icon>
-          View in My Places
+          View in My Land Portfolio
         </ion-button>
       </div>
     </div>

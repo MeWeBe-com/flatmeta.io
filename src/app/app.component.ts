@@ -117,6 +117,17 @@ export class AppComponent {
           });
         }
       });
+      App.addListener('appUrlOpen', (event) => {
+        this.zone.run(() => {
+          try {
+            const url = new URL(event.url);
+            const path = (url.pathname || '').replace(/^\/+/, '');
+            if (path) {
+              this.general.goToPage(path);
+            }
+          } catch (e) {}
+        });
+      });
     });
   }
 

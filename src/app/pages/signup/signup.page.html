@@ -1,9 +1,14 @@
 <ion-header class="ion-no-border meta-header">
   <ion-toolbar class="meta-toolbar">
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/flatmeta/login" text="" icon="arrow-back-outline"></ion-back-button>
+      <ion-back-button defaultHref="/" text="" icon="arrow-back-outline"></ion-back-button>
     </ion-buttons>
-    <ion-title class="meta-title">Citizen Registration</ion-title>
+    <ion-title class="meta-title">Save Citizen Account</ion-title>
+    <ion-buttons slot="end">
+      <ion-button [routerLink]="['/']" fill="clear" title="Close and return to Map">
+        <ion-icon name="close-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -18,53 +23,49 @@
         <div class="auth-logo-badge">
           <ion-icon name="person-add"></ion-icon>
         </div>
-        <h2 class="auth-title">Join <span class="gradient-text">FlatMeta</span></h2>
-        <p class="auth-subtitle">Mint your citizen identity to buy land, explore virtual worlds, and connect with people.</p>
+        <h2 class="auth-title">Save to <span class="gradient-text">FlatMeta</span></h2>
+        <p class="auth-subtitle">
+          Enter your email to permanently save your <strong>100 Free Squares</strong>, custom land artwork, pins, and avatar. Password is optional!
+        </p>
       </div>
 
       <form [formGroup]="signupForm" (ngSubmit)="onSubmit()" (keyup.enter)="onSubmit()" novalidate class="auth-form">
-        <!-- Full Name -->
+        <!-- Email (Only required field per Brief 06/01/23) -->
         <div class="input-group">
-          <label class="input-label">Full Name</label>
-          <div class="input-field-wrap" [class.field-error]="getControl.fullname.touched && getControl.fullname.invalid">
-            <ion-icon name="person-outline" class="field-icon"></ion-icon>
-            <ion-input placeholder="Satoshi Nakamoto" type="text" formControlName="fullname"></ion-input>
+          <label class="input-label">Email Address *</label>
+          <div class="input-field-wrap" [class.field-error]="getControl.email.touched && getControl.email.invalid">
+            <ion-icon name="mail-outline" class="field-icon"></ion-icon>
+            <ion-input placeholder="you@flatmeta.io" type="email" formControlName="email"></ion-input>
           </div>
-          <div class="field-error-msg" *ngIf="getControl.fullname.touched && getControl.fullname.errors?.required">
-            Full name is required
+          <div class="field-error-msg" *ngIf="getControl.email.touched && getControl.email.invalid">
+            Please enter a valid email address
           </div>
         </div>
 
-        <!-- Username -->
+        <!-- Citizen Username (Optional - auto-derived from email if blank) -->
         <div class="input-group">
-          <label class="input-label">Citizen Username</label>
-          <div class="input-field-wrap" [class.field-error]="getControl.username.touched && getControl.username.invalid">
+          <label class="input-label">Citizen Username (Optional)</label>
+          <div class="input-field-wrap">
             <ion-icon name="at-outline" class="field-icon"></ion-icon>
             <ion-input placeholder="satoshi" type="text" formControlName="username"></ion-input>
           </div>
-          <div class="field-error-msg" *ngIf="getControl.username.touched && getControl.username.errors?.required">
-            Username is required
+        </div>
+
+        <!-- Full Name (Optional) -->
+        <div class="input-group">
+          <label class="input-label">Display Name (Optional)</label>
+          <div class="input-field-wrap">
+            <ion-icon name="person-outline" class="field-icon"></ion-icon>
+            <ion-input placeholder="Satoshi Nakamoto" type="text" formControlName="fullname"></ion-input>
           </div>
         </div>
 
-        <!-- Email -->
+        <!-- Optional Password -->
         <div class="input-group">
-          <label class="input-label">Email Address</label>
-          <div class="input-field-wrap" [class.field-error]="getControl.email.touched && getControl.email.invalid">
-            <ion-icon name="mail-outline" class="field-icon"></ion-icon>
-            <ion-input placeholder="satoshi@flatmeta.io" type="email" formControlName="email"></ion-input>
-          </div>
-          <div class="field-error-msg" *ngIf="getControl.email.touched && getControl.email.errors?.required">
-            Valid email is required
-          </div>
-        </div>
-
-        <!-- Password -->
-        <div class="input-group">
-          <label class="input-label">Password</label>
-          <div class="input-field-wrap" [class.field-error]="getControl.password.touched && getControl.password.invalid">
+          <label class="input-label">Password (Optional)</label>
+          <div class="input-field-wrap">
             <ion-icon name="lock-closed-outline" class="field-icon"></ion-icon>
-            <ion-input placeholder="Create secure password" [type]="showPass ? 'text' : 'password'" formControlName="password">
+            <ion-input placeholder="Leave blank for passwordless email login" [type]="showPass ? 'text' : 'password'" formControlName="password">
             </ion-input>
             <button type="button" class="btn-toggle-pass" (click)="showPass = !showPass" aria-label="Toggle password">
               <ion-icon [name]="showPass ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
@@ -72,31 +73,10 @@
           </div>
         </div>
 
-        <!-- Confirm Password -->
-        <div class="input-group">
-          <label class="input-label">Confirm Password</label>
-          <div class="input-field-wrap" [class.field-error]="getControl.confirm_password.touched && (getControl.confirm_password.invalid || signupForm.value.password != signupForm.value.confirm_password)">
-            <ion-icon name="shield-checkmark-outline" class="field-icon"></ion-icon>
-            <ion-input placeholder="Confirm password" [type]="showPass ? 'text' : 'password'" formControlName="confirm_password">
-            </ion-input>
-          </div>
-          <div class="field-error-msg" *ngIf="getControl.confirm_password.touched && signupForm.value.password != signupForm.value.confirm_password">
-            Passwords do not match
-          </div>
-        </div>
-
-        <!-- Password Requirements Notice -->
-        <div class="password-notice-pill">
-          <ion-icon name="information-circle-outline"></ion-icon>
-          <span>Min 8 chars, 1 uppercase, 1 number, and 1 special symbol</span>
-        </div>
-
         <!-- Submit Button -->
         <div class="form-actions">
-          <ion-button expand="block" class="meta-btn-gradient auth-btn-submit"
-            [disabled]="signupForm.invalid || (signupForm.value.password != signupForm.value.confirm_password)"
-            type="submit">
-            Create Citizen ID
+          <ion-button expand="block" class="meta-btn-gradient auth-btn-submit" [disabled]="signupForm.invalid" type="submit">
+            Verify Email & Save Account
             <ion-icon name="sparkles-outline" slot="end"></ion-icon>
           </ion-button>
         </div>
@@ -104,8 +84,10 @@
 
       <!-- Bottom Alternative -->
       <div class="auth-footer-note">
-        <span>Already have an account?</span>
-        <a [routerLink]="['/flatmeta/login']" class="signup-link">Sign In</a>
+        <span>Already registered?</span>
+        <a [routerLink]="['/login']" class="signup-link">Sign In</a>
+        <span style="margin: 0 6px;">•</span>
+        <a [routerLink]="['/']" class="signup-link">Back to Map</a>
       </div>
     </div>
   </div>

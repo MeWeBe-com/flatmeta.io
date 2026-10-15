@@ -66,5 +66,20 @@
     </array>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <true/>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>FlatMeta uses your location to teleport your avatar to your real-world position on the map when you tap GPS Home.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>FlatMeta uses your location to center the 2D Metaverse map around your real-world position.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>FlatMeta allows you to upload custom artwork for your owned land squares and avatar profile.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>FlatMeta allows you to capture photos for your avatar or custom land squares.</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+      <key>NSAllowsArbitraryLoads</key>
+      <true/>
+      <key>NSAllowsLocalNetworking</key>
+      <true/>
+    </dict>
   </dict>
 </plist>

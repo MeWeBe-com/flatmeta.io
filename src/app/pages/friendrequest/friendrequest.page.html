@@ -1,10 +1,10 @@
 <ion-header class="ion-no-border meta-page-header">
   <ion-toolbar class="meta-page-toolbar">
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/flatmeta/home" text="" icon="arrow-back-outline"></ion-back-button>
+      <ion-back-button defaultHref="/" text="" icon="arrow-back-outline"></ion-back-button>
     </ion-buttons>
     <ion-title class="meta-page-title">
-      <span class="gradient-text">Friend Requests</span>
+      <span class="gradient-text">Connections & Friends</span>
     </ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="getReqList()" fill="clear" color="primary" title="Refresh">
@@ -23,28 +23,49 @@
           <span class="meta-badge badge-cyan">Social Network</span>
         </div>
         <h2>Citizen <span class="gradient-text-accent">Connections</span></h2>
-        <p>Accept friend invites from roaming citizens to chat in real-time and coordinate land trades.</p>
+        <p>Connect with roaming citizens to filter avatars on your map, send direct messages, or jump straight to their coordinates.</p>
       </div>
     </div>
 
-    <!-- Empty State -->
-    <div class="empty-state-wrap meta-card-glass" *ngIf="requests?.length === 0">
-      <div class="empty-icon-box">
-        <ion-icon name="people-outline"></ion-icon>
+    <!-- Active Citizens Directory -->
+    <div class="requests-list">
+      <div class="request-card meta-card" *ngFor="let c of citizens">
+        <div class="card-left-avatar">
+          <img [src]="c.image" class="requester-avatar" [alt]="c.fullname" />
+          <span class="avatar-ring"></span>
+        </div>
+
+        <div class="card-body">
+          <div class="request-message-wrap">
+            <h4 style="margin: 0 0 2px 0; font-weight: 800; color: var(--flatmeta-text-primary);">
+              {{ c.fullname }} <span style="font-size: 12px; color: #38bdf8; font-weight: 600;">@{{ c.username }}</span>
+            </h4>
+            <p class="request-msg" style="margin: 0;">{{ c.bio }}</p>
+          </div>
+
+          <div class="request-actions-row" style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <ion-button size="small" class="meta-btn-gradient" (click)="openDirectChat(c)">
+              <ion-icon name="chatbubble-ellipses-outline" slot="start"></ion-icon>
+              Chat
+            </ion-button>
+            <ion-button size="small" fill="outline" (click)="locateCitizenOnMap(c)">
+              <ion-icon name="locate-outline" slot="start"></ion-icon>
+              Find on Map
+            </ion-button>
+            <ion-button size="small" [fill]="c.connected ? 'solid' : 'outline'" [color]="c.connected ? 'success' : 'primary'" (click)="toggleConnection(c)">
+              <ion-icon [name]="c.connected ? 'checkmark-circle' : 'person-add-outline'" slot="start"></ion-icon>
+              {{ c.connected ? 'Connected' : 'Connect' }}
+            </ion-button>
+          </div>
+        </div>
       </div>
-      <h3>No Pending Requests</h3>
-      <p>You have no active connection invites. Double-click on citizen avatars roaming in your sector to send them a greeting!</p>
-      <ion-button [routerLink]="['/flatmeta/home']" class="meta-btn-gradient">
-        <ion-icon name="planet-outline" slot="start"></ion-icon>
-        Explore Metaverse
-      </ion-button>
     </div>
 
-    <!-- Requests List -->
-    <div class="requests-list" *ngIf="requests?.length > 0">
+    <!-- Backend Friend Requests List -->
+    <div class="requests-list" *ngIf="requests?.length > 0" style="margin-top: 20px;">
       <div class="request-card meta-card" *ngFor="let r of requests">
         <div class="card-left-avatar">
-          <img [src]="r?.image || 'assets/user.jpeg'" class="requester-avatar" alt="Avatar" />
+          <img [src]="r?.image || 'assets/icon/avatar-default.svg'" class="requester-avatar" alt="Avatar" />
           <span class="avatar-ring"></span>
         </div>
 
@@ -54,7 +75,6 @@
           </div>
 
           <div class="request-actions-row">
-            <!-- Pending State: Accept or Decline -->
             <div class="action-buttons-group" *ngIf="r?.status == '2'">
               <ion-button fill="outline" class="btn-decline" (click)="updateRequest(r?.request_id, 3)">
                 <ion-icon name="close-outline" slot="start"></ion-icon>
@@ -66,7 +86,6 @@
               </ion-button>
             </div>
 
-            <!-- Handled State -->
             <div class="status-indicator-wrap" *ngIf="r?.status == '1' || r?.status == '3'">
               <span class="meta-badge badge-emerald" *ngIf="r?.status == '1'">
                 <ion-icon name="checkmark-circle"></ion-icon>

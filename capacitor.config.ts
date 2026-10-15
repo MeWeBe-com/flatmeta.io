@@ -4,7 +4,10 @@ const config: CapacitorConfig = {
   appId: 'com.flatmeta.app',
   appName: 'FlatMeta',
   webDir: 'www',
-  bundledWebRuntime: false
+  server: {
+    androidScheme: 'https',
+    cleartext: true,
+  },
 };
 
 export default config;
