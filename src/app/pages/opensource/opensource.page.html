@@ -4,7 +4,7 @@
       <ion-back-button defaultHref="/" text="" icon="arrow-back-outline"></ion-back-button>
     </ion-buttons>
     <ion-title class="meta-page-title">
-      <span class="gradient-text">Open Source & Community Code Lab</span>
+      <span class="gradient-text">Open source &amp; community</span>
     </ion-title>
   </ion-toolbar>
 </ion-header>
@@ -16,14 +16,14 @@
       <div class="hero-logo-box">
         <ion-icon name="code-slash"></ion-icon>
       </div>
-      <h2>FlatMeta <span class="gradient-text">Collaborative Protocol</span></h2>
+      <h2>Build FlatMeta <span class="gradient-text">with us</span></h2>
       <p class="hero-desc">
-        FlatMeta.io is an open-source, community-driven 2D Metaverse. Anyone can explore the public repositories on GitHub, customize their land with interactive code, or submit and vote on live code improvements below.
+        FlatMeta is free and open source. The community can change how the site works: suggest a feature, write the code, and if enough people vote for it an admin reviews it and puts it live. Grab the code on GitHub, run it locally, and send your improvements.
       </p>
       <div class="hero-badges">
         <span class="meta-badge badge-cyan">Public GitHub</span>
         <span class="meta-badge badge-purple">Community Voted Code</span>
-        <span class="meta-badge badge-emerald">100 Free Squares / Citizen</span>
+        <span class="meta-badge badge-emerald">Free to use</span>
       </div>
     </div>
 
@@ -31,9 +31,9 @@
     <div class="resources-card meta-card-glass">
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
         <div>
-          <h3 class="section-title" style="margin: 0; border: none; padding: 0;">Online Public Code Editor (Mini-Git-Lab)</h3>
+          <h3 class="section-title" style="margin: 0; border: none; padding: 0;">Propose a change</h3>
           <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--flatmeta-text-muted);">
-            Edit a module below or upload a modified file, then commit it for community voting and admin approval.
+            Start from a template or upload a changed file, describe it, and submit it for community voting.
           </p>
         </div>
         <div style="display: flex; gap: 6px; flex-wrap: wrap;">
@@ -86,14 +86,15 @@
 
         <ion-button class="meta-btn-gradient" (click)="submitProposal()">
           <ion-icon name="git-commit-outline" slot="start"></ion-icon>
-          Commit Code Proposal
+          Submit for voting
         </ion-button>
       </div>
     </div>
 
-    <!-- Community Code Proposals & Voting Queue -->
+    <!-- Proposals — vote for what you want Queue -->
     <div class="resources-card meta-card-glass">
-      <h3 class="section-title">Community Code Proposals & Voting</h3>
+      <h3 class="section-title">Proposals — vote for what you want</h3>
+      <p class="r-desc" *ngIf="!proposals.length">No proposals yet — be the first.</p>
       <div class="resource-links-list">
         <div class="resource-link-item" *ngFor="let p of proposals" style="align-items: flex-start; cursor: default;">
           <div class="r-icon contrib-icon" style="margin-top: 2px;">
@@ -102,7 +103,7 @@
           <div class="r-info">
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
               <span class="r-title" style="margin: 0;">{{ p.title }}</span>
-              <span class="meta-badge" [ngClass]="p.status === 'Approved & Live' ? 'badge-emerald' : 'badge-cyan'" style="font-size: 10px; padding: 2px 8px;">
+              <span class="meta-badge" [ngClass]="p.status === 'Approved' ? 'badge-emerald' : p.status === 'Testing' ? 'badge-amber' : 'badge-cyan'" style="font-size: 10px; padding: 2px 8px;">
                 {{ p.status }}
               </span>
             </div>
@@ -120,7 +121,7 @@
 
     <!-- Community Contribution Feature List (Brief lines 123-125) -->
     <div class="resources-card meta-card-glass">
-      <h3 class="section-title">Community Feature List & Contribution Roadmap</h3>
+      <h3 class="section-title">Feature list — pick something to work on</h3>
       <div class="resource-links-list">
         <div class="resource-link-item" *ngFor="let f of roadmapFeatures" style="cursor: default;">
           <div class="r-icon github-icon">

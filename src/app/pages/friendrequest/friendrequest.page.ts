@@ -1,146 +1,72 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { IonRouterOutlet, ModalController } from '@ionic/angular';
+import { Subscription } from 'rxjs';
 import { GeneralService } from 'src/app/providers/general.service';
-import { HttpService } from 'src/app/providers/http.service';
 import { EventsService } from 'src/app/providers/events.service';
-import { MetaverseService } from 'src/app/providers/metaverse.service';
-import { ChatComponent } from 'src/app/components/chat/chat.component';
+import { Friend, FriendRequest, FriendsService } from 'src/app/providers/friends.service';
+import { Citizen, PresenceService } from 'src/app/providers/presence.service';
+import { SessionService } from 'src/app/providers/session.service';
 
 @Component({
   selector: 'app-friendrequest',
   templateUrl: './friendrequest.page.html',
   styleUrls: ['./friendrequest.page.scss'],
 })
-export class FriendrequestPage implements OnInit {
-  requests: any[] = [];
-  citizens: Array<{
-    id: string;
-    fullname: string;
-    username: string;
-    image: string;
-    bio: string;
-    lat: number;
-    lng: number;
-    connected: boolean;
-  }> = [];
+export class FriendrequestPage implements OnInit, OnDestroy {
+  requests: FriendRequest[] = [];
+  friends: Friend[] = [];
+  online: Citizen[] = [];
+  private subs = new Subscription();
 
   constructor(
     public general: GeneralService,
-    public http: HttpService,
-    public meta: MetaverseService,
-    public events: EventsService,
-    private router: Router,
-    private modalController: ModalController,
-    private routerOutlet: IonRouterOutlet
+    public session: SessionService,
+    public friendsService: FriendsService,
+    private presence: PresenceService,
+    private events: EventsService,
+    private router: Router
   ) {}
 
   ngOnInit() {
-    this.buildCitizensDirectory();
+    this.subs.add(this.friendsService.requests$.subscribe((r) => (this.requests = r.filter((x) => x.status === '2'))));
+    this.subs.add(this.friendsService.friends$.subscribe((f) => (this.friends = f)));
+    this.subs.add(this.presence.citizens$.subscribe((c) => (this.online = c)));
+  }
+
+  ngOnDestroy() {
+    this.subs.unsubscribe();
   }
 
   ionViewWillEnter() {
-    this.buildCitizensDirectory();
-    this.getReqList();
+    this.friendsService.refresh();
   }
 
-  buildCitizensDirectory() {
-    const [baseLat, baseLng] = MetaverseService.FLATMETA_HOME_COORDS;
-    this.citizens = [
-      {
-        id: 'citizen_aria',
-        fullname: 'Aria Vance',
-        username: 'aria_meta',
-        image: this.meta.generateAvatarDataUrl({
-          ...this.meta.createRandomAvatarConfig(),
-          topType: 'LongHairCurvy',
-          circleBg: '#7c3aed',
-          mouthType: 'Smile',
-        }),
-        bio: 'Community Architect at FlatMeta Home Plaza',
-        lat: baseLat + 0.00042,
-        lng: baseLng + 0.00055,
-        connected: this.meta.isFriend('citizen_aria'),
-      },
-      {
-        id: 'citizen_zane',
-        fullname: 'Zane Sterling',
-        username: 'zane_builder',
-        image: this.meta.generateAvatarDataUrl({
-          ...this.meta.createRandomAvatarConfig(),
-          topType: 'ShortHairShortWaved',
-          accessoriesType: 'Sunglasses',
-          circleBg: '#059669',
-          mouthType: 'Twinkle',
-        }),
-        bio: 'Land Trader & Interactive Tile Creator',
-        lat: baseLat - 0.00038,
-        lng: baseLng + 0.00048,
-        connected: this.meta.isFriend('citizen_zane'),
-      },
-    ];
+  isOnline(userId: number | string) {
+    return this.online.find((c) => c.id === String(userId));
   }
 
-  getReqList() {
-    this.http.get('GetAllFriendRequest', false).subscribe(
-      (res: any) => {
-        if (res && res.status == true && Array.isArray(res.data?.requests)) {
-          this.requests = res.data.requests;
-        }
-      },
-      () => {}
-    );
+  async respond(req: FriendRequest, accept: boolean) {
+    const res = await this.friendsService.respond(req.request_id, accept);
+    this.general.presentToast(res.message || (accept ? 'Connected.' : 'Request declined.'));
   }
 
-  toggleConnection(citizen: any) {
-    const nowFriend = this.meta.toggleFriend(citizen.id);
-    citizen.connected = nowFriend;
-    this.http.post('SendFriendRequest', { follower_user_id: citizen.id }, false).subscribe({
-      next: () => {},
-      error: () => {},
-    });
-    this.general.presentToast(
-      nowFriend
-        ? `Connected with @${citizen.username}! You can now chat in Friends-Only mode.`
-        : `Disconnected from @${citizen.username}.`
-    );
+  async connect(c: Citizen) {
+    const res = await this.friendsService.sendRequest(c.id);
+    this.general.presentToast(res.message);
+    if (res.needsAuth) this.session.requestAuth('Verify your email to add connections.');
   }
 
-  async openDirectChat(citizen: any) {
-    const modal = await this.modalController.create({
-      component: ChatComponent,
-      mode: 'ios',
-      presentingElement: this.routerOutlet.nativeEl,
-      componentProps: { id: citizen.id, name: citizen.fullname },
-    });
-    await modal.present();
+  chat(person: { id: string; fullname: string; username: string; avatarUrl: string }) {
+    this.presence.openDirect(person);
+    this.router.navigateByUrl('/');
   }
 
-  locateCitizenOnMap(citizen: any) {
-    this.router.navigate(['/']);
-    setTimeout(() => {
-      this.events.publishToUser({
-        lat: citizen.lat,
-        lng: citizen.lng,
-        tile_lat: citizen.lat,
-        tile_lng: citizen.lng,
-      });
-    }, 150);
+  chatFriend(f: Friend) {
+    const live = this.isOnline(f.user_id);
+    this.chat({ id: String(f.user_id), fullname: f.fullname, username: f.username, avatarUrl: live?.avatarUrl || f.image });
   }
 
-  updateRequest(rid: any, status: any) {
-    const d = {
-      request_id: rid,
-      status: status,
-    };
-    this.http.post('UpdateFriendRequestStatus', d, false).subscribe(
-      (res: any) => {
-        if (res && res.status == true) {
-          this.getReqList();
-          this.general.presentToast(res.data?.message || 'Connection updated');
-        }
-      },
-      () => {}
-    );
+  findOnMap(c: Citizen) {
+    this.router.navigateByUrl('/').then(() => setTimeout(() => this.events.publishToUser({ lat: c.lat, lng: c.lng }), 150));
   }
 }

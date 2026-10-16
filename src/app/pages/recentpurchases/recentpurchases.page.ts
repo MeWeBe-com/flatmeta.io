@@ -1,70 +1,36 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { GeneralService } from 'src/app/providers/general.service';
-import { HttpService } from 'src/app/providers/http.service';
 import { EventsService } from 'src/app/providers/events.service';
-import { MetaverseService, LandAreaGroup } from 'src/app/providers/metaverse.service';
+import { LandArea, LandService } from 'src/app/providers/land.service';
 
+/** "Latest tile lands created by other users": click one to fly there. */
 @Component({
   selector: 'app-recentpurchases',
   templateUrl: './recentpurchases.page.html',
   styleUrls: ['./recentpurchases.page.scss'],
 })
-export class RecentpurchasesPage implements OnInit {
-  tilesList: LandAreaGroup[] = [];
+export class RecentpurchasesPage {
+  areas: LandArea[] = [];
 
-  constructor(
-    public general: GeneralService,
-    public http: HttpService,
-    public events: EventsService,
-    public meta: MetaverseService,
-    private router: Router
-  ) {}
-
-  ngOnInit() {
-    this.loadRecent();
-    this.meta.tiles$.subscribe(() => {
-      this.loadRecent();
-    });
-  }
+  constructor(public general: GeneralService, private events: EventsService, private land: LandService, private router: Router) {}
 
   ionViewWillEnter() {
-    this.loadRecent();
-    this.fetchBackendRecent();
+    this.load();
   }
 
-  loadRecent() {
-    this.tilesList = this.meta
-      .getGroupedAreas()
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+  refresh() {
+    this.load();
+    this.general.presentToast('Refreshing…', 1200);
   }
 
-  fetchBackendRecent() {
-    this.http.get('LatestPurchasedTiles', false).subscribe(
-      (res: any) => {
-        if (res && res.status === true && Array.isArray(res.data?.tiles)) {
-          this.meta.mergeBackendTiles(res.data.tiles);
-          this.loadRecent();
-        }
-      },
-      () => {}
-    );
+  private async load() {
+    const list = await this.land.latest(48);
+    if (list) this.areas = list.filter((a) => !a.draft && !a.official);
+    else this.general.presentToast('Could not load the latest land.');
   }
 
-  getList() {
-    this.loadRecent();
-    this.fetchBackendRecent();
-    this.general.presentToast('Recent activity updated');
-  }
-
-  toUserPlace(c: LandAreaGroup) {
-    this.router.navigate(['/']);
-    setTimeout(() => {
-      this.events.publishToUser({
-        tile_lat: c.center_lat,
-        tile_lng: c.center_lng,
-        area_id: c.area_id,
-      });
-    }, 150);
+  showOnMap(area: LandArea) {
+    this.router.navigateByUrl('/').then(() => setTimeout(() => this.events.publishToUser(area), 150));
   }
 }

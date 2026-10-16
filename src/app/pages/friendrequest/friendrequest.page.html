@@ -3,102 +3,56 @@
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/" text="" icon="arrow-back-outline"></ion-back-button>
     </ion-buttons>
-    <ion-title class="meta-page-title">
-      <span class="gradient-text">Connections & Friends</span>
-    </ion-title>
-    <ion-buttons slot="end">
-      <ion-button (click)="getReqList()" fill="clear" color="primary" title="Refresh">
-        <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
-      </ion-button>
-    </ion-buttons>
+    <ion-title class="meta-page-title"><span class="gradient-text">Connections</span></ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true" class="friends-content">
-  <div class="friends-container">
-    <!-- Hero Header -->
-    <div class="friends-hero">
-      <div class="hero-text">
-        <div class="hero-badge">
-          <span class="meta-badge badge-cyan">Social Network</span>
-        </div>
-        <h2>Citizen <span class="gradient-text-accent">Connections</span></h2>
-        <p>Connect with roaming citizens to filter avatars on your map, send direct messages, or jump straight to their coordinates.</p>
+<ion-content [fullscreen]="true" class="ion-padding">
+  <div class="conn-page">
+    <section class="conn-card meta-card-glass" *ngIf="session.isGuest">
+      <h3>Connect with people</h3>
+      <p>Connections let you chat privately and see each other wherever you are. Verify your email to start connecting.</p>
+      <ion-button (click)="session.requestAuth('Verify your email to add connections.')">
+        <ion-icon name="mail-outline" slot="start"></ion-icon>Verify email
+      </ion-button>
+    </section>
+
+    <section class="conn-card meta-card-glass" *ngIf="!session.isGuest && requests.length">
+      <h3>Requests <span class="meta-badge badge-amber">{{ requests.length }}</span></h3>
+      <div class="person" *ngFor="let r of requests">
+        <img [src]="r.image" alt="" />
+        <div class="who"><b>{{ r.fullname }}</b><small>@{{ r.username }} · {{ r.created_at }}</small></div>
+        <ion-button size="small" (click)="respond(r, true)">Accept</ion-button>
+        <ion-button size="small" fill="outline" color="medium" (click)="respond(r, false)">Decline</ion-button>
       </div>
-    </div>
+    </section>
 
-    <!-- Active Citizens Directory -->
-    <div class="requests-list">
-      <div class="request-card meta-card" *ngFor="let c of citizens">
-        <div class="card-left-avatar">
-          <img [src]="c.image" class="requester-avatar" [alt]="c.fullname" />
-          <span class="avatar-ring"></span>
+    <section class="conn-card meta-card-glass" *ngIf="!session.isGuest">
+      <h3>Your connections</h3>
+      <p class="hint" *ngIf="!friends.length">No connections yet. Tap someone's avatar on the map and press <b>Connect</b>.</p>
+      <div class="person" *ngFor="let f of friends">
+        <img [src]="isOnline(f.user_id)?.avatarUrl || f.image" alt="" />
+        <div class="who">
+          <b>{{ f.fullname }}</b>
+          <small>@{{ f.username }} · {{ isOnline(f.user_id) ? 'online now' : 'offline' }}</small>
         </div>
-
-        <div class="card-body">
-          <div class="request-message-wrap">
-            <h4 style="margin: 0 0 2px 0; font-weight: 800; color: var(--flatmeta-text-primary);">
-              {{ c.fullname }} <span style="font-size: 12px; color: #38bdf8; font-weight: 600;">@{{ c.username }}</span>
-            </h4>
-            <p class="request-msg" style="margin: 0;">{{ c.bio }}</p>
-          </div>
-
-          <div class="request-actions-row" style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-            <ion-button size="small" class="meta-btn-gradient" (click)="openDirectChat(c)">
-              <ion-icon name="chatbubble-ellipses-outline" slot="start"></ion-icon>
-              Chat
-            </ion-button>
-            <ion-button size="small" fill="outline" (click)="locateCitizenOnMap(c)">
-              <ion-icon name="locate-outline" slot="start"></ion-icon>
-              Find on Map
-            </ion-button>
-            <ion-button size="small" [fill]="c.connected ? 'solid' : 'outline'" [color]="c.connected ? 'success' : 'primary'" (click)="toggleConnection(c)">
-              <ion-icon [name]="c.connected ? 'checkmark-circle' : 'person-add-outline'" slot="start"></ion-icon>
-              {{ c.connected ? 'Connected' : 'Connect' }}
-            </ion-button>
-          </div>
-        </div>
+        <ion-button size="small" fill="outline" *ngIf="isOnline(f.user_id) as live" (click)="findOnMap(live)">Find</ion-button>
+        <ion-button size="small" (click)="chatFriend(f)">Chat</ion-button>
       </div>
-    </div>
+    </section>
 
-    <!-- Backend Friend Requests List -->
-    <div class="requests-list" *ngIf="requests?.length > 0" style="margin-top: 20px;">
-      <div class="request-card meta-card" *ngFor="let r of requests">
-        <div class="card-left-avatar">
-          <img [src]="r?.image || 'assets/icon/avatar-default.svg'" class="requester-avatar" alt="Avatar" />
-          <span class="avatar-ring"></span>
-        </div>
-
-        <div class="card-body">
-          <div class="request-message-wrap">
-            <p class="request-msg">{{ r?.message || 'Wants to connect with you in FlatMeta.' }}</p>
-          </div>
-
-          <div class="request-actions-row">
-            <div class="action-buttons-group" *ngIf="r?.status == '2'">
-              <ion-button fill="outline" class="btn-decline" (click)="updateRequest(r?.request_id, 3)">
-                <ion-icon name="close-outline" slot="start"></ion-icon>
-                Decline
-              </ion-button>
-              <ion-button class="meta-btn-gradient btn-accept" (click)="updateRequest(r?.request_id, 1)">
-                <ion-icon name="checkmark-outline" slot="start"></ion-icon>
-                Accept
-              </ion-button>
-            </div>
-
-            <div class="status-indicator-wrap" *ngIf="r?.status == '1' || r?.status == '3'">
-              <span class="meta-badge badge-emerald" *ngIf="r?.status == '1'">
-                <ion-icon name="checkmark-circle"></ion-icon>
-                Connected
-              </span>
-              <span class="meta-badge badge-amber" *ngIf="r?.status == '3'">
-                <ion-icon name="close-circle"></ion-icon>
-                Declined
-              </span>
-            </div>
-          </div>
-        </div>
+    <section class="conn-card meta-card-glass">
+      <h3>Online now</h3>
+      <p class="hint" *ngIf="!online.length">No one else is online. Share a link to your position from the map to invite people.</p>
+      <div class="person" *ngFor="let c of online">
+        <img [src]="c.avatarUrl" alt="" />
+        <div class="who"><b>{{ c.fullname }}</b><small>@{{ c.username }}{{ c.isGuest ? ' · guest' : '' }}</small></div>
+        <ion-button size="small" fill="outline" (click)="findOnMap(c)">Find</ion-button>
+        <ion-button size="small" fill="outline" (click)="chat(c)">Chat</ion-button>
+        <ion-button size="small" *ngIf="!c.isGuest && !friendsService.isFriend(c.id)" [disabled]="friendsService.isRequested(c.id)" (click)="connect(c)">
+          {{ friendsService.isRequested(c.id) ? 'Requested' : 'Connect' }}
+        </ion-button>
       </div>
-    </div>
+    </section>
   </div>
 </ion-content>

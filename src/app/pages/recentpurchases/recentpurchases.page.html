@@ -4,10 +4,10 @@
       <ion-back-button defaultHref="/" text="" icon="arrow-back-outline"></ion-back-button>
     </ion-buttons>
     <ion-title class="meta-page-title">
-      <span class="gradient-text">Recent Purchases</span>
+      <span class="gradient-text">Latest land</span>
     </ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="getList()" fill="clear" color="primary" title="Refresh Activity">
+      <ion-button (click)="refresh()" fill="clear" color="primary" title="Refresh">
         <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
       </ion-button>
     </ion-buttons>
@@ -20,68 +20,72 @@
     <div class="activity-hero">
       <div class="hero-text">
         <div class="hero-badge">
-          <span class="meta-badge badge-purple">Public Ledger</span>
+          <span class="meta-badge badge-purple">Newest first</span>
         </div>
-        <h2>Transaction <span class="gradient-text-accent">Activity</span></h2>
-        <p>Real-time land acquisitions and verified ownership transfers across the 2D earth.</p>
+        <h2>New <span class="gradient-text-accent">land</span></h2>
+        <p>The latest areas people have claimed and made their own. Tap one to visit it.</p>
       </div>
-      <div class="activity-stats" *ngIf="tilesList?.length > 0">
+      <div class="activity-stats" *ngIf="areas.length">
         <div class="stat-pill">
-          <span class="stat-num">{{ tilesList.length }}</span>
-          <span class="stat-lbl">Recent Deeds</span>
+          <span class="stat-num">{{ areas.length }}</span>
+          <span class="stat-lbl">Areas</span>
         </div>
       </div>
     </div>
 
     <!-- Empty State -->
-    <div class="empty-state-wrap meta-card-glass" *ngIf="tilesList?.length === 0">
+    <div class="empty-state-wrap meta-card-glass" *ngIf="!areas.length">
       <div class="empty-icon-box">
         <ion-icon name="receipt-outline"></ion-icon>
       </div>
-      <h3>No Recent Activity</h3>
-      <p>No new transactions recorded recently. Explore the map at 15x zoom and make the first move!</p>
+      <h3>No land claimed yet</h3>
+      <p>Be the first: on the map press <b>Buy land</b>, tap some squares and claim them free.</p>
       <ion-button [routerLink]="['/']" class="meta-btn-gradient">
         <ion-icon name="planet-outline" slot="start"></ion-icon>
-        Explore World Map
+        Go to the map
       </ion-button>
     </div>
 
     <!-- Cards Grid -->
-    <div class="parcels-grid" *ngIf="tilesList?.length > 0">
-      <div class="parcel-card meta-card" *ngFor="let c of tilesList; let i = index">
-        <div class="parcel-thumb-wrap" (click)="toUserPlace(c)" style="cursor: pointer;">
-          <img [src]="c?.image || 'assets/def.jpeg'" class="parcel-image" alt="Purchased Land" />
+    <div class="parcels-grid" *ngIf="areas.length">
+      <div class="parcel-card meta-card" *ngFor="let c of areas">
+        <div class="parcel-thumb-wrap" (click)="showOnMap(c)" style="cursor: pointer;">
+          <img [src]="c.image || 'assets/icon/placeholder-land.svg'" class="parcel-image" alt="" />
           <div class="thumb-badge">
-            <span class="meta-badge badge-cyan">{{ c?.tiles?.length || 1 }} Squares</span>
+            <span class="meta-badge badge-cyan">{{ c.no_of_tiles }} square{{ c.no_of_tiles === 1 ? '' : 's' }}</span>
           </div>
           <div class="thumb-overlay">
             <span class="verified-tag">
               <ion-icon name="checkmark-done-circle"></ion-icon>
-              @{{ c?.username }}
+              @{{ c.username }}
             </span>
           </div>
         </div>
 
         <div class="parcel-card-body">
           <div class="parcel-header">
-            <h4 class="parcel-title">{{ c?.title || ('Deed Parcel #' + (i + 1)) }}</h4>
-            <span class="price-chip">${{ c?.sale_price || 0.1 }} <small>/ sq</small></span>
+            <h4 class="parcel-title">{{ c.title }}</h4>
+            <span class="price-chip" *ngIf="c.on_sale">For sale ${{ c.total_sale_value.toFixed(2) }}</span>
           </div>
 
           <div class="parcel-meta-info">
-            <div class="info-row">
-              <span class="info-lbl">Coordinates:</span>
-              <span class="info-val">{{ c?.center_lat?.toFixed(4) }}, {{ c?.center_lng?.toFixed(4) }}</span>
+            <div class="info-row" *ngIf="c.slug">
+              <span class="info-lbl">Link</span>
+              <span class="info-val">flatmeta.io/u/{{ c.slug }}</span>
             </div>
             <div class="info-row" style="margin-top: 4px;">
-              <span class="info-lbl">Est. Value:</span>
-              <span class="info-val">${{ (c?.total_sale_value || (c?.tiles?.length || 1) * 0.1).toFixed(2) }} USD</span>
+              <span class="info-lbl">Where</span>
+              <span class="info-val">{{ c.lat.toFixed(4) }}, {{ c.lng.toFixed(4) }}</span>
+            </div>
+            <div class="info-row" style="margin-top: 4px;" *ngIf="c.created_at">
+              <span class="info-lbl">Claimed</span>
+              <span class="info-val">{{ c.created_at | date: 'mediumDate' }}</span>
             </div>
           </div>
 
-          <ion-button expand="block" class="meta-btn-gradient btn-teleport" (click)="toUserPlace(c)">
+          <ion-button expand="block" class="meta-btn-gradient btn-teleport" (click)="showOnMap(c)">
             <ion-icon name="locate-outline" slot="start"></ion-icon>
-            Teleport to Parcel
+            Visit
           </ion-button>
         </div>
       </div>

@@ -14,10 +14,10 @@
 
   <link rel="icon" type="image/png" href="assets/icon/favicon.png"/>
 
-  <!-- Google Fonts: Plus Jakarta Sans & Space Grotesk -->
+  <!-- Fonts load in the background so they never delay the first paint (system fonts until then). -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 
   <!-- add to homescreen for ios -->
   <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -27,10 +27,11 @@
   <script>
     (function() {
       try {
-        var raw = localStorage.getItem('CapacitorStorage.darkMode') || localStorage.getItem('darkMode');
+        // Same rule as AppComponent: saved choice, else the device setting.
+        var saved = JSON.parse(localStorage.getItem('flatmeta_settings_v3') || '{}').darkMode;
         var isDark = true;
-        if (raw !== null && raw !== undefined) {
-          isDark = raw === 'true' || raw === '"true"';
+        if (saved === true || saved === false) {
+          isDark = saved;
         } else if (window.matchMedia) {
           isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         }

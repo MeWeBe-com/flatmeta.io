@@ -1,7 +1,7 @@
 <ion-tabs>
 
   <ion-tab-bar slot="bottom" class="meta-dock-tab-bar">
-    <ion-tab-button tab="home" (click)="goToMap()" class="meta-dock-btn">
+    <ion-tab-button (click)="goToMap()" class="meta-dock-btn" [class.tab-selected]="onMap">
       <div class="dock-icon-wrap">
         <ion-icon name="map-outline"></ion-icon>
       </div>

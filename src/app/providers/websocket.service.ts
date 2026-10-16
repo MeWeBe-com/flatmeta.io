@@ -1,5 +1,5 @@
 import { Injectable, NgZone } from '@angular/core';
-import { Observable, Subject } from 'rxjs';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { environment } from 'src/environments/environment';
 
 export interface WebSocketMessage {
@@ -14,7 +14,7 @@ export class WebSocketService {
   private socket: WebSocket | null = null;
   private url: string = environment.wsUrl || environment.socketUrl || 'ws://localhost:3500';
   private eventSubjects: Map<string, Subject<any>> = new Map();
-  private isConnectedSubject: Subject<boolean> = new Subject<boolean>();
+  private isConnectedSubject = new BehaviorSubject<boolean>(false);
   public isConnected$: Observable<boolean> = this.isConnectedSubject.asObservable();
   private reconnectInterval: number = 2000;
   private maxReconnectInterval: number = 10000;
@@ -40,7 +40,6 @@ export class WebSocketService {
 
       this.socket.onopen = () => {
         this.zone.run(() => {
-          console.log('[WebSocket] Connected successfully to', this.url);
           this.currentReconnectInterval = this.reconnectInterval;
           this.isConnectedSubject.next(true);
 
@@ -135,7 +134,12 @@ export class WebSocketService {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.send(payload);
     } else {
+      // Only the latest location/typing matters; keep the queue small while offline.
+      if (event === 'location' || event === 'typing' || event === 'ping') {
+        this.pendingQueue = this.pendingQueue.filter((m) => !m.startsWith(`{"event":"${event}"`));
+      }
       this.pendingQueue.push(payload);
+      if (this.pendingQueue.length > 50) this.pendingQueue.shift();
       if (!this.socket || this.socket.readyState === WebSocket.CLOSED) {
         this.connect();
       }
@@ -157,6 +161,10 @@ export class WebSocketService {
       this.eventSubjects.set(event, new Subject<T>());
     }
     return this.eventSubjects.get(event)!.asObservable();
+  }
+
+  public get connected(): boolean {
+    return this.isConnectedSubject.value;
   }
 
   public disconnect(): void {
