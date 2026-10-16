@@ -2,197 +2,161 @@
   <ion-split-pane contentId="main-content" when="false">
     <ion-menu contentId="main-content" type="overlay" side="end" class="meta-menu">
       <ion-content class="menu-content">
-        <!-- Brand Header -->
         <div class="menu-header">
           <div class="brand-badge">
-            <div class="brand-logo-icon">
-              <ion-icon name="planet"></ion-icon>
-            </div>
+            <div class="brand-logo-icon"><ion-icon name="planet"></ion-icon></div>
             <div class="brand-info">
               <h2 class="brand-title">Flat<span>Meta</span></h2>
-              <span class="meta-badge badge-cyan">2D Metaverse</span>
+              <span class="meta-badge badge-cyan">Shared 2D world</span>
             </div>
           </div>
         </div>
 
-        <!-- Active Identity Card (Works for both Logged-in Citizen & Guest) -->
         <div class="citizen-card">
           <div class="citizen-avatar-wrap">
-            <img [src]="meta.getCurrentAvatar()" class="citizen-avatar" alt="Avatar" />
+            <img [src]="me.avatarUrl" class="citizen-avatar" alt="" />
             <span class="online-indicator"></span>
           </div>
           <div class="citizen-details">
-            <h4 class="citizen-name">{{ meta.getCurrentFullname() }}</h4>
-            <span class="citizen-handle">@{{ meta.getCurrentUsername() }}</span>
+            <h4 class="citizen-name">{{ me.fullname }}</h4>
+            <span class="citizen-handle">@{{ me.username }}</span>
             <div class="citizen-status">
-              <span class="meta-badge badge-emerald" *ngIf="!meta.isGuest()">Verified Citizen</span>
-              <span class="meta-badge badge-cyan" *ngIf="meta.isGuest()">Guest Explorer (Free Mode)</span>
+              <span class="meta-badge badge-emerald" *ngIf="!me.isGuest">Verified · {{ me.clan }}</span>
+              <span class="meta-badge badge-amber" *ngIf="me.isGuest">Guest — not saved yet</span>
             </div>
           </div>
         </div>
 
-        <!-- Portfolio & 100 Free Squares Summary Popup Card (Brief 06/01/23 line 99) -->
-        <div class="menu-stats-card" *ngIf="stats">
+        <!-- What you own, what it's worth, bought and sold -->
+        <div class="menu-stats-card">
           <div class="stats-row">
             <div class="stat-cell">
-              <span class="s-val">{{ stats.totalTilesOwned }}</span>
-              <span class="s-lbl">Owned Tiles</span>
+              <span class="s-val">{{ stats.ownedTiles + stats.draftTiles }}</span>
+              <span class="s-lbl">Squares{{ stats.draftTiles ? ' (' + stats.draftTiles + ' draft)' : '' }}</span>
             </div>
             <div class="stat-cell">
-              <span class="s-val text-emerald">{{ stats.freeQuotaRemaining }}<small>/100</small></span>
-              <span class="s-lbl">Free Left</span>
+              <span class="s-val text-emerald">{{ stats.freeQuotaRemaining }}<small>/{{ FREE_TILE_QUOTA }}</small></span>
+              <span class="s-lbl">Free left</span>
             </div>
             <div class="stat-cell">
-              <span class="s-val text-cyan">${{ stats.estimatedWorth.toFixed(2) }}</span>
-              <span class="s-lbl">Est. Worth</span>
+              <span class="s-val text-cyan">${{ stats.worthUsd.toFixed(2) }}</span>
+              <span class="s-lbl">Worth</span>
             </div>
           </div>
           <div class="stats-sub-row">
-            <span>Bought: <strong>${{ stats.totalBoughtUsd.toFixed(2) }}</strong></span>
-            <span>Sold: <strong>${{ stats.totalSoldUsd.toFixed(2) }}</strong></span>
+            <span>Bought <strong>${{ stats.boughtUsd.toFixed(2) }}</strong></span>
+            <span>Sold <strong>${{ stats.soldUsd.toFixed(2) }}</strong></span>
+            <span *ngIf="stats.monthlyUsd">Billing <strong>${{ stats.monthlyUsd.toFixed(2) }}/mo</strong></span>
           </div>
         </div>
 
-        <!-- Guest Save Prompt (Email-Only Verification per Brief 06/01/23) -->
-        <div class="guest-card" *ngIf="meta.isGuest()">
+        <div class="guest-card" *ngIf="me.isGuest">
           <div class="guest-card-content">
-            <h4>Save Your World Changes</h4>
-            <p>
-              Use everything without login! When you're ready to permanently save your land, avatar, and pins, just verify your email.
-            </p>
+            <h4>Keep what you make</h4>
+            <p>Everything works without an account. Verify your email to save your land, avatar and pins — no password needed.</p>
             <div class="guest-actions">
-              <ion-menu-toggle [autoHide]="true">
-                <ion-button expand="block" class="meta-btn-gradient" (click)="openQuickSaveModal('email-quick', 'Save your guest land, avatar & pins permanently')">
-                  <ion-icon name="mail-outline" slot="start"></ion-icon>
-                  Save with Email
-                </ion-button>
-                <ion-button expand="block" fill="outline" color="light" class="btn-signup-outline" (click)="openQuickSaveModal('login')">
-                  Password Login
-                </ion-button>
-              </ion-menu-toggle>
+              <ion-button expand="block" class="meta-btn-gradient" (click)="openAuth('email', 'Save your land, avatar and pins.')">
+                <ion-icon name="mail-outline" slot="start"></ion-icon>Save with email
+              </ion-button>
+              <ion-button expand="block" fill="outline" (click)="openAuth('password')">I have a password</ion-button>
             </div>
           </div>
         </div>
 
-        <!-- Navigation Menu Items -->
-        <div class="menu-section-label">Metaverse Hub</div>
+        <div class="menu-section-label">Menu</div>
         <ion-list class="menu-nav-list" lines="none">
-          <ion-menu-toggle autoHide="true" *ngFor="let p of pages">
-            <div class="nav-item-wrapper" (click)="goTo(p)">
-              <div class="nav-icon-box">
-                <ion-icon [name]="p.icon || 'chevron-forward-outline'"></ion-icon>
-              </div>
-              <div class="nav-title">{{ p.title }}</div>
-              <ion-icon name="chevron-forward-outline" class="nav-arrow"></ion-icon>
-            </div>
-          </ion-menu-toggle>
-
-          <!-- Logout Item -->
-          <div class="nav-item-wrapper nav-logout" (click)="logOut()" *ngIf="!meta.isGuest()">
-            <div class="nav-icon-box logout-icon">
-              <ion-icon name="log-out-outline"></ion-icon>
-            </div>
-            <div class="nav-title">Switch to Guest / Logout</div>
+          <div class="nav-item-wrapper" *ngFor="let p of pages" (click)="goTo(p.url)">
+            <div class="nav-icon-box"><ion-icon [name]="p.icon"></ion-icon></div>
+            <div class="nav-title">{{ p.title }}</div>
+            <span class="meta-badge badge-amber" *ngIf="p.url === 'friendrequest' && friends.incomingCount">{{ friends.incomingCount }}</span>
+            <ion-icon name="chevron-forward-outline" class="nav-arrow"></ion-icon>
+          </div>
+          <div class="nav-item-wrapper nav-logout" (click)="signOut()" *ngIf="!me.isGuest">
+            <div class="nav-icon-box logout-icon"><ion-icon name="log-out-outline"></ion-icon></div>
+            <div class="nav-title">Sign out</div>
           </div>
         </ion-list>
       </ion-content>
 
-      <!-- Menu Footer: Theme Toggle & Info -->
       <ion-footer class="menu-footer ion-no-border">
         <div class="theme-toggle-container">
-          <div class="theme-label-group" (click)="toggleThemeDirect()" style="cursor: pointer;">
-            <div class="theme-icon-wrap" [class.dark]="darkMode">
-              <ion-icon [name]="darkMode ? 'moon' : 'sunny'"></ion-icon>
-            </div>
+          <div class="theme-label-group" (click)="toggleTheme()">
+            <div class="theme-icon-wrap" [class.dark]="darkMode"><ion-icon [name]="darkMode ? 'moon' : 'sunny'"></ion-icon></div>
             <div class="theme-text">
-              <span class="theme-title">{{ darkMode ? 'Cyber Dark' : 'Daylight' }}</span>
+              <span class="theme-title">{{ darkMode ? 'Dark' : 'Light' }}</span>
               <span class="theme-sub">Theme</span>
             </div>
           </div>
-          <ion-toggle (ionChange)="toggleTheme($event)" color="primary" [checked]="darkMode" mode="ios">
-          </ion-toggle>
+          <ion-toggle [checked]="darkMode" (ionChange)="$any($event).detail.checked !== darkMode && toggleTheme()"></ion-toggle>
         </div>
       </ion-footer>
     </ion-menu>
     <ion-router-outlet id="main-content"></ion-router-outlet>
   </ion-split-pane>
 
-  <!-- Compact Closable Email-Save / Login Popup Overlay (Brief 06/01/23: "When go to Login page, cannot close it, should be a smaller popup, can close, and bottom menu should always show in all cases") -->
-  <div class="quick-auth-backdrop" *ngIf="showAuthModal" (click)="showAuthModal = false">
-    <div class="quick-auth-dialog meta-card-glass" (click)="$event.stopPropagation()">
+  <!-- Sign-in popup: small, closable, the bottom menu stays visible -->
+  <div class="quick-auth-backdrop" *ngIf="showAuth" (click)="closeAuth()">
+    <div class="quick-auth-dialog meta-card-glass" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="auth-title">
       <div class="qa-header">
         <div class="qa-brand">
           <ion-icon name="planet"></ion-icon>
           <div>
-            <h3>{{ authMode === 'email-quick' ? 'Save Changes with Email' : 'Citizen Sign In' }}</h3>
-            <span class="qa-sub">{{ authReason || 'No password required — just validate your email to retain your land & avatar.' }}</span>
+            <h3 id="auth-title">{{ authMode === 'email' ? 'Save with your email' : 'Sign in' }}</h3>
+            <span class="qa-sub">{{ authReason || 'No password needed — we email you a code.' }}</span>
           </div>
         </div>
-        <button type="button" class="qa-close" (click)="showAuthModal = false" aria-label="Close popup">
-          <ion-icon name="close"></ion-icon>
-        </button>
+        <button type="button" class="qa-close" (click)="closeAuth()" aria-label="Close"><ion-icon name="close"></ion-icon></button>
       </div>
 
-      <!-- Mode Switcher Tabs -->
       <div class="qa-tabs">
-        <button type="button" [class.active]="authMode === 'email-quick'" (click)="authMode = 'email-quick'">
-          Instant Email Save
-        </button>
-        <button type="button" [class.active]="authMode === 'login'" (click)="authMode = 'login'">
-          Password Login
-        </button>
+        <button type="button" [class.active]="authMode === 'email'" (click)="authMode = 'email'; authError = ''">Email code</button>
+        <button type="button" [class.active]="authMode === 'password'" (click)="authMode = 'password'; authError = ''">Password</button>
       </div>
 
-      <!-- 1. Email-Only Save / Registration (Brief 06/01/23 lines 67-68) -->
-      <div class="qa-body" *ngIf="authMode === 'email-quick'">
+      <form class="qa-body" *ngIf="authMode === 'email'" (ngSubmit)="codeSent ? verifyCode() : sendCode()">
         <div class="qa-field">
-          <label>Your Email Address</label>
-          <input type="email" [(ngModel)]="quickEmail" placeholder="you@example.com" />
+          <label for="qa-email">Email</label>
+          <input id="qa-email" name="email" type="email" autocomplete="email" [(ngModel)]="email" [disabled]="codeSent" placeholder="you@example.com" required />
         </div>
-        <div class="qa-field">
-          <label>Citizen Username (shown under your avatar)</label>
-          <input type="text" [(ngModel)]="quickUsername" placeholder="e.g. london_explorer" />
+        <div class="qa-field" *ngIf="!codeSent && me.isGuest">
+          <label for="qa-user">Username (shown under your avatar, optional)</label>
+          <input id="qa-user" name="username" type="text" autocomplete="username" [(ngModel)]="username" maxlength="30" placeholder="london_explorer" />
         </div>
-
-        <div class="qa-field" *ngIf="quickCodeSent">
-          <label>6-Digit Email Verification Code</label>
-          <input type="text" [(ngModel)]="quickCodeInput" placeholder="Enter 6-digit code" maxlength="6" />
-          <small class="qa-hint">Code sent to {{ quickEmail }} (demo code auto-filled: {{ generatedDemoCode }})</small>
+        <div class="qa-field" *ngIf="codeSent">
+          <label for="qa-code">6-digit code</label>
+          <input id="qa-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" [(ngModel)]="code" maxlength="6" placeholder="123456" />
+          <small class="qa-hint">We sent it to {{ email }}. It expires in 10 minutes.
+            <a href (click)="$event.preventDefault(); codeSent = false; code = ''">Use a different email</a></small>
         </div>
-
+        <p class="qa-error" *ngIf="authError" role="alert">{{ authError }}</p>
         <div class="qa-actions">
-          <ion-button expand="block" class="meta-btn-gradient" *ngIf="!quickCodeSent" (click)="sendQuickVerificationCode()">
-            <ion-icon name="mail-unread-outline" slot="start"></ion-icon>
-            Send Verification Code
-          </ion-button>
-          <ion-button expand="block" class="meta-btn-gradient" *ngIf="quickCodeSent" (click)="verifyQuickEmailAndSave()">
-            <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
-            Verify & Save Permanently
+          <button type="submit" hidden></button>
+          <ion-button type="submit" expand="block" class="meta-btn-gradient" [disabled]="authBusy">
+            <ion-spinner *ngIf="authBusy" name="crescent" slot="start"></ion-spinner>
+            {{ codeSent ? 'Verify & save' : 'Email me a code' }}
           </ion-button>
         </div>
-      </div>
+      </form>
 
-      <!-- 2. Classic Email + Password Login -->
-      <div class="qa-body" *ngIf="authMode === 'login'">
+      <form class="qa-body" *ngIf="authMode === 'password'" (ngSubmit)="passwordLogin()">
         <div class="qa-field">
-          <label>Email Address</label>
-          <input type="email" [(ngModel)]="loginEmail" placeholder="citizen@flatmeta.io" />
+          <label for="qa-login">Email or username</label>
+          <input id="qa-login" name="login" type="text" autocomplete="username" [(ngModel)]="email" placeholder="you@example.com" />
         </div>
         <div class="qa-field">
-          <label>Password</label>
-          <input type="password" [(ngModel)]="loginPassword" placeholder="Enter password" (keyup.enter)="submitPasswordLogin()" />
+          <label for="qa-pass">Password</label>
+          <input id="qa-pass" name="password" type="password" autocomplete="current-password" [(ngModel)]="password" />
         </div>
+        <p class="qa-error" *ngIf="authError" role="alert">{{ authError }}</p>
         <div class="qa-actions">
-          <ion-button expand="block" class="meta-btn-gradient" (click)="submitPasswordLogin()">
-            <ion-icon name="log-in-outline" slot="start"></ion-icon>
-            Sign In
-          </ion-button>
+          <button type="submit" hidden></button>
+          <ion-button type="submit" expand="block" class="meta-btn-gradient" [disabled]="authBusy">Sign in</ion-button>
         </div>
-      </div>
+      </form>
 
       <div class="qa-footer">
-        <span>Want to keep exploring without saving yet?</span>
-        <button type="button" class="qa-link" (click)="showAuthModal = false">Continue as Guest</button>
+        <span>Not ready to save?</span>
+        <button type="button" class="qa-link" (click)="closeAuth()">Keep exploring as a guest</button>
       </div>
     </div>
   </div>

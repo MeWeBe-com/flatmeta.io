@@ -1,12 +1,12 @@
 import { Component, NgZone } from '@angular/core';
-import { GeneralService } from './providers/general.service';
-import { StorageService } from './providers/storage.service';
-import { Platform, AlertController } from '@ionic/angular';
-import { GlobaldataService } from './providers/globaldata.service';
-import { EventsService } from './providers/events.service';
-import { HttpService } from './providers/http.service';
-import { MetaverseService, PortfolioStats } from './providers/metaverse.service';
+import { AlertController, MenuController, Platform } from '@ionic/angular';
 import { App } from '@capacitor/app';
+import { GeneralService } from './providers/general.service';
+import { SessionService, Identity } from './providers/session.service';
+import { LandService, PortfolioStats, FREE_TILE_QUOTA } from './providers/land.service';
+import { SettingsService } from './providers/settings.service';
+import { FriendsService } from './providers/friends.service';
+import { PaymentService } from './providers/payment.service';
 
 @Component({
   selector: 'app-root',
@@ -14,336 +14,199 @@ import { App } from '@capacitor/app';
   styleUrls: ['app.component.scss'],
 })
 export class AppComponent {
-  darkMode: boolean = false;
-  profile: any = undefined;
+  readonly FREE_TILE_QUOTA = FREE_TILE_QUOTA;
+  me: Identity;
   stats: PortfolioStats;
+  darkMode = true;
 
-  // Quick Email Save / Login Modal State (Brief 06/01/23: smaller closable popup, email-only save)
-  showAuthModal: boolean = false;
-  authMode: 'email-quick' | 'login' | 'signup' = 'email-quick';
-  authReason: string = '';
-  quickEmail: string = '';
-  quickUsername: string = '';
-  quickCodeSent: boolean = false;
-  quickCodeInput: string = '';
-  generatedDemoCode: string = '428619';
-
-  loginEmail: string = '';
-  loginPassword: string = '';
+  // Small closable sign-in popup (the bottom menu always stays visible)
+  showAuth = false;
+  authMode: 'email' | 'password' = 'email';
+  authReason = '';
+  email = '';
+  username = '';
+  code = '';
+  codeSent = false;
+  password = '';
+  authBusy = false;
+  authError = '';
 
   pages = [
-    {
-      title: 'My Land Portfolio',
-      url: 'myplaces',
-      icon: 'cube-outline',
-      goWithoutLogin: true,
-    },
-    {
-      title: 'Avatar & Profile',
-      url: 'profile',
-      icon: 'person-circle-outline',
-      goWithoutLogin: true,
-    },
-    {
-      title: 'Marketplace (On Sale)',
-      url: 'salelist',
-      icon: 'pricetag-outline',
-      goWithoutLogin: true,
-    },
-    {
-      title: 'My Cart & Billing',
-      url: 'cart',
-      icon: 'cart-outline',
-      goWithoutLogin: true,
-    },
-    {
-      title: 'Recent Land Deeds',
-      url: 'recentpurchases',
-      icon: 'receipt-outline',
-      goWithoutLogin: true,
-    },
-    {
-      title: 'Connections & Friends',
-      url: 'friendrequest',
-      icon: 'people-outline',
-      goWithoutLogin: true,
-    },
-    {
-      title: 'Open Source & Community',
-      url: 'opensource',
-      icon: 'code-slash-outline',
-      goWithoutLogin: true,
-    },
+    { title: 'My land', url: 'myplaces', icon: 'cube-outline' },
+    { title: 'Avatar & profile', url: 'profile', icon: 'person-circle-outline' },
+    { title: 'Marketplace (on sale)', url: 'salelist', icon: 'pricetag-outline' },
+    { title: 'Latest land', url: 'recentpurchases', icon: 'time-outline' },
+    { title: 'Connections', url: 'friendrequest', icon: 'people-outline' },
+    { title: 'Open source & community', url: 'opensource', icon: 'code-slash-outline' },
   ];
 
   constructor(
-    public general: GeneralService,
-    public alertController: AlertController,
     private platform: Platform,
-    private storage: StorageService,
-    public events: EventsService,
-    public http: HttpService,
-    public meta: MetaverseService,
-    private zone: NgZone
+    private zone: NgZone,
+    private alerts: AlertController,
+    private menu: MenuController,
+    public general: GeneralService,
+    public session: SessionService,
+    public land: LandService,
+    public friends: FriendsService,
+    private settings: SettingsService,
+    private payments: PaymentService
   ) {
-    this.initializeApp();
-    this.events.receiveLogin().subscribe((res: any) => {
-      this.profile = res;
-      this.meta.recalculateStats();
-    });
-    this.meta.stats$.subscribe((s) => {
-      this.stats = s;
-    });
-    this.meta.openAuthModal$.subscribe((opts) => {
-      this.zone.run(() => {
-        this.authReason = opts?.reason || '';
-        this.authMode = opts?.mode || 'email-quick';
-        this.quickEmail = this.meta.isGuest() ? '' : (GlobaldataService.userObject?.email || '');
-        this.quickUsername = this.meta.getCurrentUsername();
-        this.quickCodeSent = false;
-        this.showAuthModal = true;
-      });
-    });
+    this.me = session.identity;
+    this.stats = land.stats$.value;
+    session.identity$.subscribe((id) => (this.me = id));
+    land.stats$.subscribe((s) => (this.stats = s));
+    session.authRequested$.subscribe((opts) =>
+      this.zone.run(() => this.openAuth(opts?.mode || 'email', opts?.reason || ''))
+    );
+    this.applyTheme(this.initialDarkMode());
+    this.platform.ready().then(() => this.bindNativeEvents());
   }
 
-  initializeApp() {
-    this.platform.ready().then(() => {
-      this.getLoginUser();
-      this.checkdarkMode();
-      App.addListener('backButton', (data) => {
-        if (data.canGoBack) {
-          this.zone.run(() => {
-            this.general.goToPage('home');
-          });
-        }
-      });
-      App.addListener('appUrlOpen', (event) => {
-        this.zone.run(() => {
-          try {
-            const url = new URL(event.url);
-            const path = (url.pathname || '').replace(/^\/+/, '');
-            if (path) {
-              this.general.goToPage(path);
-            }
-          } catch (e) {}
-        });
-      });
-    });
+  // ---------------------------------------------------------------------------
+  // Sign in / save
+  // ---------------------------------------------------------------------------
+
+  openAuth(mode: 'email' | 'password' = 'email', reason = '') {
+    this.authMode = mode;
+    this.authReason = reason;
+    this.authError = '';
+    this.code = '';
+    this.codeSent = false;
+    this.username = this.me.isGuest ? '' : this.me.username;
+    this.showAuth = true;
+    this.menu.close();
   }
 
-  async getLoginUser() {
-    const savedUser: any = await this.storage.getObject('userObject');
-    if (savedUser) {
-      GlobaldataService.userObject = savedUser;
-      this.profile = savedUser;
-      this.meta.recalculateStats();
-    }
-    const res: any = await this.storage.getObject('login_token');
-    if (res != null) {
-      GlobaldataService.loginToken = res;
-      if (String(res).startsWith('flatmeta_verified_')) {
-        if (savedUser) {
-          this.events.publishLogin(savedUser);
-        }
-      } else {
-        this.getUserDetails();
-      }
-    }
+  closeAuth() {
+    this.showAuth = false;
   }
 
-  goTo(p: any) {
-    this.general.goToPage(p.url);
-  }
-
-  openQuickSaveModal(mode: 'email-quick' | 'login' | 'signup' = 'email-quick', reason: string = '') {
-    this.meta.openAuthModal$.next({ mode, reason });
-  }
-
-  sendQuickVerificationCode() {
-    if (!this.general.validateEmail(this.quickEmail)) {
-      this.general.presentToast('Please enter a valid email address.');
+  async sendCode() {
+    if (!this.general.validateEmail(this.email.trim())) {
+      this.authError = 'Please enter a valid email address.';
       return;
     }
-    this.generatedDemoCode = String(Math.floor(100000 + Math.random() * 900000));
-    this.quickCodeSent = true;
-    this.quickCodeInput = this.generatedDemoCode;
-    // Also notify backend if available
-    this.http.post2('ForgetPassword', { email: this.quickEmail }, false).subscribe({
-      next: () => {},
-      error: () => {},
-    });
-    this.general.presentToast(`Verification code sent to ${this.quickEmail}! (Auto-filled for instant verification)`);
+    this.authBusy = true;
+    this.authError = '';
+    const res = await this.session.requestEmailCode(this.email);
+    this.authBusy = false;
+    if (res.ok) {
+      this.codeSent = true;
+    } else {
+      this.authError = res.message;
+    }
   }
 
-  verifyQuickEmailAndSave() {
-    if (!this.quickCodeInput || this.quickCodeInput.trim().length < 4) {
-      this.general.presentToast('Please enter the verification code.');
+  async verifyCode() {
+    if (!/^\d{6}$/.test(this.code.trim())) {
+      this.authError = 'Enter the 6-digit code from the email.';
       return;
     }
-    const userObj = this.meta.verifyEmailAndUpgradeGuest(
-      this.quickEmail,
-      this.quickUsername || this.quickEmail.split('@')[0]
-    );
-    this.profile = userObj;
-    this.storage.setObject('userObject', userObj);
-    this.storage.setObject('login_token', GlobaldataService.loginToken);
-    this.events.publishLogin(userObj);
-    this.showAuthModal = false;
-    this.general.presentToast('Email verified! Your land, avatar, and pins are permanently saved.');
-
-    // Sync with Laravel backend /api/VerifyEmail when online
-    this.http
-      .post2(
-        'VerifyEmail',
-        {
-          email: userObj.email,
-          username: userObj.username,
-          fullname: userObj.fullname,
-          user_image: userObj.user_image,
-        },
-        false
-      )
-      .subscribe({
-        next: (res: any) => {
-          if (res && res.status === true && res.access_token) {
-            GlobaldataService.loginToken = res.access_token;
-            this.storage.setObject('login_token', res.access_token);
-            if (res.data) {
-              const merged = { ...userObj, ...res.data, user_image: userObj.user_image || res.data.user_image };
-              GlobaldataService.userObject = merged;
-              this.profile = merged;
-              this.storage.setObject('userObject', merged);
-              this.events.publishLogin(merged);
-            }
-          }
-        },
-        error: () => {},
-      });
-  }
-
-  submitPasswordLogin() {
-    if (!this.loginEmail || !this.loginPassword) {
-      this.general.presentToast('Please enter your email and password.');
+    this.authBusy = true;
+    this.authError = '';
+    const drafts = this.land.draftCount;
+    const res = await this.session.verifyEmailCode(this.email, this.code, this.username);
+    if (!res.ok) {
+      this.authBusy = false;
+      this.authError = res.message;
       return;
     }
-    this.http.post2('login', { email: this.loginEmail, password: this.loginPassword }, true).subscribe(
-      (res: any) => {
-        this.general.stopLoading();
-        if (res && res.status == true && res.access_token) {
-          GlobaldataService.loginToken = res.access_token;
-          this.storage.setObject('login_token', res.access_token);
-          this.getUserDetails();
-          this.showAuthModal = false;
-        } else {
-          // Fallback to email verification if backend user not found
-          const userObj = this.meta.verifyEmailAndUpgradeGuest(this.loginEmail);
-          this.profile = userObj;
-          this.storage.setObject('userObject', userObj);
-          this.storage.setObject('login_token', GlobaldataService.loginToken);
-          this.events.publishLogin(userObj);
-          this.showAuthModal = false;
-          this.general.presentToast('Signed in and synced your FlatMeta profile!');
-        }
-      },
-      () => {
-        this.general.stopLoading();
-        const userObj = this.meta.verifyEmailAndUpgradeGuest(this.loginEmail);
-        this.profile = userObj;
-        this.storage.setObject('userObject', userObj);
-        this.storage.setObject('login_token', GlobaldataService.loginToken);
-        this.events.publishLogin(userObj);
-        this.showAuthModal = false;
-        this.general.presentToast('Signed in (offline-ready session) and synced your profile!');
-      }
+    await this.afterSignIn(drafts > 0);
+  }
+
+  async passwordLogin() {
+    if (!this.email.trim() || !this.password) {
+      this.authError = 'Enter your email (or username) and password.';
+      return;
+    }
+    this.authBusy = true;
+    this.authError = '';
+    const drafts = this.land.draftCount;
+    const res = await this.session.loginWithPassword(this.email, this.password);
+    if (!res.ok) {
+      this.authBusy = false;
+      this.authError = res.message;
+      return;
+    }
+    await this.afterSignIn(drafts > 0);
+  }
+
+  private async afterSignIn(hadDrafts: boolean) {
+    const saved = await this.land.saveDraftsToServer();
+    this.authBusy = false;
+    this.showAuth = false;
+    this.password = '';
+    this.code = '';
+    this.general.presentToast(
+      hadDrafts ? saved.message : `Welcome, ${this.me.fullname}! Your changes are now saved to your account.`,
+      4000
     );
-  }
-
-  getUserDetails() {
-    this.http.get('getuserbytoken', false).subscribe(
-      (res: any) => {
-        if (res.status == true) {
-          GlobaldataService.userObject = res.data;
-          this.profile = res.data;
-          this.storage.setObject('userObject', res.data);
-          this.events.publishLogin(res.data);
-          this.meta.recalculateStats();
-        }
-      },
-      () => {}
-    );
-  }
-
-  checkdarkMode() {
-    this.storage
-      .getObject('darkMode')
-      .then((res) => {
-        let isDark = true;
-        if (res !== null && res !== undefined) {
-          isDark = !!res;
-        } else if (window.matchMedia) {
-          isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        }
-        this.applyTheme(isDark);
-      })
-      .catch(() => {
-        this.applyTheme(true);
-      });
-  }
-
-  applyTheme(isDark: boolean) {
-    this.zone.run(() => {
-      this.darkMode = isDark;
-      GlobaldataService.darkMode = isDark;
-      this.storage.setObject('darkMode', isDark);
-      document.body.classList.toggle('dark', isDark);
-      document.documentElement.classList.toggle('dark', isDark);
-      if (isDark) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        document.body.setAttribute('data-theme', 'dark');
-      } else {
-        document.documentElement.setAttribute('data-theme', 'light');
-        document.body.setAttribute('data-theme', 'light');
-      }
-    });
-  }
-
-  toggleTheme(e: any) {
-    if (e && e.detail && e.detail.checked !== undefined) {
-      if (this.darkMode !== !!e.detail.checked) {
-        this.applyTheme(!!e.detail.checked);
-      }
+    if (saved.paymentUrl) {
+      // Drafts went over the free quota: finish the PayPal subscription for the extra squares.
+      this.payments.open(saved.paymentUrl);
     }
   }
 
-  toggleThemeDirect() {
-    this.applyTheme(!this.darkMode);
-  }
-
-  async logOut() {
-    const alert = await this.alertController.create({
-      header: 'Switch to Guest Mode?',
-      message: 'You can continue exploring as a Guest at any time.',
+  async signOut() {
+    const alert = await this.alerts.create({
+      header: 'Sign out?',
+      message: 'You can keep exploring as a guest. Your saved land stays in your account.',
       buttons: [
+        { text: 'Cancel', role: 'cancel' },
         {
-          text: 'Cancel',
-          role: 'cancel',
-          cssClass: 'secondary',
-        },
-        {
-          text: 'Disconnect',
+          text: 'Sign out',
           handler: () => {
-            this.storage.removeItem('userObject');
-            this.storage.removeItem('login_token');
-            GlobaldataService.clearGobal();
-            this.profile = undefined;
-            this.meta.recalculateStats();
-            this.general.toggleMenu();
-            this.general.presentToast('Switched to Guest Mode.');
+            this.session.signOut();
+            this.menu.close();
+            this.general.presentToast('Signed out. You are exploring as a guest.');
           },
         },
       ],
     });
-
     await alert.present();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Navigation & theme
+  // ---------------------------------------------------------------------------
+
+  goTo(url: string) {
+    this.menu.close();
+    this.general.goToPage(url);
+  }
+
+  toggleTheme() {
+    this.applyTheme(!this.darkMode);
+    this.settings.update({ darkMode: this.darkMode });
+  }
+
+  private initialDarkMode(): boolean {
+    const saved = this.settings.value.darkMode;
+    if (saved !== null && saved !== undefined) return saved;
+    return window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : true;
+  }
+
+  private applyTheme(dark: boolean) {
+    this.darkMode = dark;
+    document.body.classList.toggle('dark', dark);
+    document.documentElement.classList.toggle('dark', dark);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    document.body.setAttribute('data-theme', dark ? 'dark' : 'light');
+  }
+
+  private bindNativeEvents() {
+    App.addListener('backButton', ({ canGoBack }) => {
+      if (canGoBack) this.zone.run(() => this.general.goToPage(''));
+    });
+    // Opening a flatmeta.io link on the phone goes straight to that place in the app.
+    App.addListener('appUrlOpen', (event) =>
+      this.zone.run(() => {
+        try {
+          const url = new URL(event.url);
+          this.general.goToPage(`${url.pathname.replace(/^\/+/, '')}${url.search}`);
+        } catch {}
+      })
+    );
   }
 }

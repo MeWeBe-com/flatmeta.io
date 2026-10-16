@@ -1,10 +1,10 @@
 <ion-header class="ion-no-border meta-page-header">
   <ion-toolbar class="meta-page-toolbar">
     <ion-title class="meta-page-title">
-      <span class="gradient-text">My Land Portfolio</span>
+      <span class="gradient-text">My land</span>
     </ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="getList()" fill="clear" color="primary" title="Refresh Portfolio">
+      <ion-button (click)="refresh()" fill="clear" color="primary" title="Refresh">
         <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
       </ion-button>
     </ion-buttons>
@@ -17,63 +17,68 @@
     <div class="portfolio-hero">
       <div class="hero-left">
         <div class="hero-badge">
-          <span class="meta-badge badge-emerald">100 Free Squares / Citizen</span>
+          <span class="meta-badge badge-emerald">{{ FREE_TILE_QUOTA }} free squares each</span>
         </div>
-        <h2>Your <span class="gradient-text-accent">Land Holdings</span></h2>
-        <p>Every citizen enjoys 100 free squares ($0.10/sq/month beyond 100). Customize your areas, assign custom URLs, or list them on the Marketplace.</p>
+        <h2>Your <span class="gradient-text-accent">land</span></h2>
+        <p>Your first {{ FREE_TILE_QUOTA }} squares are free; after that each square is $0.10 a month. Name your land, give it a link, or sell it on the marketplace.</p>
+        <p class="draft-note" *ngIf="stats.draftTiles">
+          {{ stats.draftTiles }} square{{ stats.draftTiles === 1 ? ' is a draft' : 's are drafts' }} on this device.
+          <a href (click)="$event.preventDefault(); session.requestAuth('Save your draft land to your account.')">Verify your email to keep {{ stats.draftTiles === 1 ? 'it' : 'them' }}.</a>
+        </p>
       </div>
     </div>
 
     <!-- Live Portfolio Stats Strip -->
     <div class="portfolio-stats-strip">
       <div class="p-stat-card meta-card">
-        <span class="p-stat-lbl">Owned Squares</span>
-        <strong class="p-stat-val">{{ stats.ownedTilesCount }}</strong>
+        <span class="p-stat-lbl">Squares</span>
+        <strong class="p-stat-val">{{ stats.ownedTiles + stats.draftTiles }}</strong>
       </div>
       <div class="p-stat-card meta-card">
-        <span class="p-stat-lbl">Free Quota Left</span>
-        <strong class="p-stat-val" style="color: #34d399;">{{ stats.freeSquaresRemaining }} / 100</strong>
+        <span class="p-stat-lbl">Free left</span>
+        <strong class="p-stat-val" style="color: #34d399;">{{ stats.freeQuotaRemaining }} / {{ FREE_TILE_QUOTA }}</strong>
       </div>
       <div class="p-stat-card meta-card">
-        <span class="p-stat-lbl">Est. Portfolio Worth</span>
+        <span class="p-stat-lbl">Worth</span>
         <strong class="p-stat-val" style="color: #38bdf8;">${{ stats.worthUsd.toFixed(2) }}</strong>
       </div>
       <div class="p-stat-card meta-card">
         <span class="p-stat-lbl">Bought / Sold</span>
-        <strong class="p-stat-val">${{ stats.boughtTotalUsd.toFixed(2) }} / ${{ stats.soldTotalUsd.toFixed(2) }}</strong>
+        <strong class="p-stat-val">${{ stats.boughtUsd.toFixed(2) }} / ${{ stats.soldUsd.toFixed(2) }}</strong>
       </div>
     </div>
 
     <!-- Empty State -->
-    <div class="empty-state-wrap meta-card-glass" *ngIf="tilesList?.length === 0">
+    <div class="empty-state-wrap meta-card-glass" *ngIf="!areas.length">
       <div class="empty-icon-box">
         <ion-icon name="cube-outline"></ion-icon>
       </div>
-      <h3>No Land Areas Claimed Yet</h3>
-      <p>You have <strong>{{ stats.freeSquaresRemaining }} free squares</strong> ready to claim! Head to the map at 15x zoom, click "Buy Land", and select any squares to upload your image.</p>
+      <h3>No land yet</h3>
+      <p>You have <strong>{{ stats.freeQuotaRemaining }} free squares</strong> to claim. On the map, press <b>Buy land</b>, tap the squares you want, then <b>Claim</b>.</p>
       <ion-button [routerLink]="['/']" class="meta-btn-gradient">
         <ion-icon name="planet-outline" slot="start"></ion-icon>
-        Explore World &amp; Claim Free Land
+        Go to the map
       </ion-button>
     </div>
 
     <!-- Portfolio Grid -->
-    <div class="portfolio-grid" *ngIf="tilesList?.length > 0">
-      <div class="portfolio-card meta-card" *ngFor="let c of tilesList; let i = index">
+    <div class="portfolio-grid" *ngIf="areas.length">
+      <div class="portfolio-card meta-card" *ngFor="let c of areas; let i = index">
         <!-- Thumbnail Wrap -->
-        <div class="card-thumb-wrap" (click)="flyToArea(c)" style="cursor: pointer;">
-          <img [src]="c?.image || 'assets/def.jpeg'" class="card-image" alt="Parcel" />
+        <div class="card-thumb-wrap" (click)="flyTo(c)" style="cursor: pointer;">
+          <img [src]="c.image || 'assets/icon/placeholder-land.svg'" class="card-image" alt="" />
           <div class="thumb-badge">
-            <span class="meta-badge badge-purple">{{ c?.tiles?.length || 1 }} Squares</span>
+            <span class="meta-badge badge-purple">{{ c.no_of_tiles }} square{{ c.no_of_tiles === 1 ? '' : 's' }}</span>
           </div>
           <div class="status-badge">
             <span class="meta-badge badge-emerald" *ngIf="c?.on_sale">
               <ion-icon name="pricetag-outline"></ion-icon>
-              On Sale (${{ c?.sale_price }}/sq)
+              For sale (${{ c.sale_price }}/square)
             </span>
-            <span class="meta-badge badge-cyan" *ngIf="!c?.on_sale">
+            <span class="meta-badge badge-amber" *ngIf="c.draft">Draft</span>
+            <span class="meta-badge badge-cyan" *ngIf="!c.on_sale && !c.draft">
               <ion-icon name="shield-checkmark-outline"></ion-icon>
-              Personal Area
+              Not for sale
             </span>
           </div>
         </div>
@@ -81,31 +86,31 @@
         <!-- Body -->
         <div class="card-body">
           <div class="card-header-row">
-            <h4 class="card-title">{{ c?.title || ('Area #' + (i + 1)) }}</h4>
+            <h4 class="card-title">{{ c.title }}</h4>
             <span class="val-pill" *ngIf="c?.slug">/u/{{ c?.slug }}</span>
           </div>
 
           <div class="pricing-metrics">
             <div class="metric-item" *ngIf="c?.three_words">
-              <span class="m-lbl">3-Word Address:</span>
+              <span class="m-lbl">3-word address</span>
               <span class="m-val" style="color: #38bdf8;">///{{ c?.three_words }}</span>
             </div>
             <div class="metric-item">
-              <span class="m-lbl">Coordinates:</span>
-              <span class="m-val">{{ c?.center_lat?.toFixed(4) }}, {{ c?.center_lng?.toFixed(4) }}</span>
+              <span class="m-lbl">Location</span>
+              <span class="m-val">{{ c.lat.toFixed(4) }}, {{ c.lng.toFixed(4) }}</span>
             </div>
             <div class="metric-item">
-              <span class="m-lbl">Market Asking:</span>
-              <span class="m-val highlight">{{ c?.on_sale ? ('$' + c?.sale_price + ' / sq ($' + c?.total_sale_value?.toFixed(2) + ')') : 'Not Listed' }}</span>
+              <span class="m-lbl">Asking price</span>
+              <span class="m-val highlight">{{ c.on_sale ? ('$' + c.total_sale_value.toFixed(2) + ' total') : 'Not listed' }}</span>
             </div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto;">
-            <ion-button fill="outline" color="primary" class="btn-manage" (click)="flyToArea(c)">
+            <ion-button fill="outline" color="primary" class="btn-manage" (click)="flyTo(c)">
               <ion-icon name="locate-outline" slot="start"></ion-icon>
-              Fly To
+              Show on map
             </ion-button>
-            <ion-button class="meta-btn-gradient btn-manage" (click)="showPriceModal(c)">
+            <ion-button class="meta-btn-gradient btn-manage" (click)="manage(c)">
               <ion-icon name="create-outline" slot="start"></ion-icon>
               Manage
             </ion-button>
@@ -116,14 +121,13 @@
   </div>
 
   <!-- Manage Area & Marketplace Listing Modal -->
-  <ion-modal [isOpen]="showSellModal" [swipeToClose]="true" [presentingElement]="routerOutlet.nativeEl" mode="ios"
-    (didDismiss)="showSellModal = false" class="meta-modal">
+  <ion-modal [isOpen]="!!selected" (didDismiss)="selected = null" class="meta-modal">
     <ng-template>
       <ion-header class="ion-no-border meta-page-header">
         <ion-toolbar class="meta-page-toolbar">
-          <ion-title class="meta-page-title">Manage Land Area</ion-title>
+          <ion-title class="meta-page-title">Manage land</ion-title>
           <ion-buttons slot="end">
-            <ion-button (click)="showSellModal = false" fill="clear" color="light">
+            <ion-button (click)="selected = null" fill="clear" aria-label="Close">
               <ion-icon name="close-outline" slot="icon-only"></ion-icon>
             </ion-button>
           </ion-buttons>
@@ -131,80 +135,80 @@
       </ion-header>
 
       <ion-content class="modal-content-wrap ion-padding">
-        <div class="modal-card meta-card-glass" *ngIf="selectedGroup">
+        <div class="modal-card meta-card-glass" *ngIf="selected">
           <div class="preview-wrap">
-            <img [src]="selectedGroup?.image || 'assets/def.jpeg'" class="modal-preview-img" alt="Selected Parcel" />
+            <img [src]="selected.image || 'assets/icon/placeholder-land.svg'" class="modal-preview-img" alt="" />
             <div class="preview-tag">
-              <span class="meta-badge badge-purple">{{ selectedGroup?.tiles?.length || 1 }} Squares</span>
+              <span class="meta-badge badge-purple">{{ selected.no_of_tiles }} squares</span>
             </div>
           </div>
 
           <div class="input-group">
-            <label class="input-label">Area Title</label>
+            <label class="input-label">Name</label>
             <div class="input-field-wrap">
-              <ion-input type="text" [(ngModel)]="areaTitle" placeholder="e.g. Cyber Art Plaza"></ion-input>
+              <ion-input type="text" [(ngModel)]="form.area_title" maxlength="120" placeholder="e.g. Cyber Art Plaza"></ion-input>
             </div>
           </div>
 
           <div class="input-group">
-            <label class="input-label">Custom Share URL (/u/your-slug)</label>
+            <label class="input-label">Your link (flatmeta.io/u/…)</label>
             <div class="input-field-wrap">
               <span class="currency-prefix" style="font-size: 13px;">/u/</span>
-              <ion-input type="text" [(ngModel)]="areaSlug" placeholder="pepsi-land"></ion-input>
+              <ion-input type="text" [(ngModel)]="form.slug" maxlength="60" placeholder="pepsi-land"></ion-input>
             </div>
           </div>
 
           <div class="input-group">
-            <label class="input-label">Custom 3-Word Address (word1.word2.word3)</label>
+            <label class="input-label">3-word address (word.word.word)</label>
             <div class="input-field-wrap">
               <span class="currency-prefix" style="font-size: 13px;">///</span>
-              <ion-input type="text" [(ngModel)]="areaThreeWords" placeholder="pepsi.drink.land"></ion-input>
+              <ion-input type="text" [(ngModel)]="form.three_words" maxlength="60" placeholder="pepsi.drink.land"></ion-input>
             </div>
           </div>
 
           <div class="input-group">
-            <label class="input-label">Description / HTML Info</label>
+            <label class="input-label">Description</label>
             <div class="input-field-wrap">
-              <ion-textarea rows="3" [(ngModel)]="areaDescription" placeholder="Describe your area, add links or promos..."></ion-textarea>
+              <ion-textarea rows="3" [(ngModel)]="form.custom_details" placeholder="Tell visitors about your land"></ion-textarea>
             </div>
           </div>
 
           <div class="toggle-card">
             <div class="toggle-info">
-              <span class="t-title">List on Public Marketplace</span>
-              <span class="t-sub">Allow other citizens to buy &amp; take control of this area</span>
+              <span class="t-title">Sell on the marketplace</span>
+              <span class="t-sub">Anyone can buy it with PayPal</span>
             </div>
-            <ion-toggle [(ngModel)]="onSale" (ionChange)="putOnSale($event)" color="primary" mode="ios"></ion-toggle>
+            <ion-toggle [(ngModel)]="form.on_sale" color="primary"></ion-toggle>
           </div>
 
-          <div class="input-group" *ngIf="onSale">
-            <label class="input-label">Asking Price per Square (USD)</label>
+          <div class="input-group" *ngIf="form.on_sale">
+            <label class="input-label">Price per square (USD)</label>
             <div class="input-field-wrap">
               <span class="currency-prefix">$</span>
-              <ion-input type="number" [(ngModel)]="tilePrice" placeholder="e.g. 1.50" min="0.1" step="0.1"></ion-input>
+              <ion-input type="number" [(ngModel)]="form.sale_price" placeholder="e.g. 1.50" min="0.1" step="0.1"></ion-input>
             </div>
           </div>
 
-          <div class="modal-notice" *ngIf="onSale">
+          <div class="modal-notice" *ngIf="form.on_sale">
             <ion-icon name="information-circle-outline"></ion-icon>
             <span>
-              Total Buyout Price: <strong>${{ ((tilePrice || 0) * (selectedGroup?.tiles?.length || 1)).toFixed(2) }} USD</strong>.
-              FlatMeta deducts a 10% platform commission upon sale.
+              Buyer pays <strong>${{ ((form.sale_price || 0) * selected.no_of_tiles).toFixed(2) }}</strong>;
+              you receive ${{ ((form.sale_price || 0) * selected.no_of_tiles * (1 - COMMISSION)).toFixed(2) }} after FlatMeta's {{ COMMISSION * 100 }}% fee.
             </span>
           </div>
 
-          <ion-button expand="block" fill="outline" color="danger" class="ion-margin-top" (click)="releaseArea(selectedGroup)">
+          <ion-button expand="block" fill="outline" color="danger" class="ion-margin-top" (click)="release(selected)">
             <ion-icon name="trash-outline" slot="start"></ion-icon>
-            Release Land Back to Open Map
+            Release back to the open map
           </ion-button>
         </div>
       </ion-content>
 
       <ion-footer class="modal-footer ion-no-border">
         <ion-toolbar class="modal-footer-toolbar">
-          <ion-button expand="block" class="meta-btn-gradient btn-modal-submit" (click)="submitPrice()">
+          <ion-button expand="block" class="meta-btn-gradient btn-modal-submit" [disabled]="busy" (click)="save()">
             <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
-            Save Area &amp; Listing
+            Save
           </ion-button>
         </ion-toolbar>
       </ion-footer>

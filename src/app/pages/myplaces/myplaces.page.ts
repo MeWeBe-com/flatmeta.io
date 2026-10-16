@@ -1,160 +1,101 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { IonRouterOutlet, AlertController } from '@ionic/angular';
+import { AlertController, IonRouterOutlet } from '@ionic/angular';
+import { Subscription } from 'rxjs';
 import { GeneralService } from 'src/app/providers/general.service';
-import { HttpService } from 'src/app/providers/http.service';
 import { EventsService } from 'src/app/providers/events.service';
-import { MetaverseService, LandAreaGroup, PortfolioStats } from 'src/app/providers/metaverse.service';
+import { LandArea, LandService, PortfolioStats, FREE_TILE_QUOTA, PLATFORM_COMMISSION_RATE } from 'src/app/providers/land.service';
+import { SessionService } from 'src/app/providers/session.service';
 
 @Component({
   selector: 'app-myplaces',
   templateUrl: './myplaces.page.html',
   styleUrls: ['./myplaces.page.scss'],
 })
-export class MyplacesPage implements OnInit {
-  tilesList: LandAreaGroup[] = [];
+export class MyplacesPage implements OnInit, OnDestroy {
+  readonly FREE_TILE_QUOTA = FREE_TILE_QUOTA;
+  readonly COMMISSION = PLATFORM_COMMISSION_RATE;
+  areas: LandArea[] = [];
   stats: PortfolioStats;
 
-  tilePrice: number = 0.5;
-  areaTitle: string = '';
-  areaSlug: string = '';
-  areaThreeWords: string = '';
-  areaDescription: string = '';
-  selectedGroup: LandAreaGroup | null = null;
-  showSellModal: boolean = false;
-  onSale: boolean = false;
+  selected: LandArea | null = null;
+  form = { area_title: '', slug: '', three_words: '', custom_details: '', on_sale: false, sale_price: 1 };
+  busy = false;
+  private subs = new Subscription();
 
   constructor(
     public routerOutlet: IonRouterOutlet,
     public general: GeneralService,
-    public http: HttpService,
-    public events: EventsService,
-    public meta: MetaverseService,
+    public session: SessionService,
+    private events: EventsService,
+    private land: LandService,
     private router: Router,
-    private alertController: AlertController
+    private alerts: AlertController
   ) {
-    this.stats = this.meta.getPortfolioStats();
+    this.stats = land.stats$.value;
   }
 
   ngOnInit() {
-    this.refreshPortfolio();
-    this.meta.tiles$.subscribe(() => {
-      this.refreshPortfolio();
-    });
+    this.subs.add(this.land.tiles$.subscribe(() => (this.areas = this.land.myAreas())));
+    this.subs.add(this.land.stats$.subscribe((s) => (this.stats = s)));
+  }
+
+  ngOnDestroy() {
+    this.subs.unsubscribe();
   }
 
   ionViewWillEnter() {
-    this.refreshPortfolio();
-    this.fetchBackendPortfolio();
+    this.land.refresh();
   }
 
-  refreshPortfolio() {
-    this.tilesList = this.meta.getMyAreas();
-    this.stats = this.meta.getPortfolioStats();
+  refresh() {
+    this.land.refresh();
+    this.general.presentToast('Refreshing your land…', 1200);
   }
 
-  fetchBackendPortfolio() {
-    this.http.get('MyPlaces', false).subscribe(
-      (res: any) => {
-        if (res && res.status === true && Array.isArray(res.data?.tiles)) {
-          this.meta.mergeBackendTiles(res.data.tiles);
-          this.refreshPortfolio();
-        }
-      },
-      () => {}
-    );
+  flyTo(area: LandArea) {
+    this.router.navigateByUrl('/').then(() => setTimeout(() => this.events.publishToUser(area), 150));
   }
 
-  getList() {
-    this.refreshPortfolio();
-    this.fetchBackendPortfolio();
-    this.general.presentToast('Portfolio updated');
-  }
-
-  flyToArea(c: LandAreaGroup) {
-    this.router.navigate(['/']);
-    setTimeout(() => {
-      this.events.publishToUser({
-        tile_lat: c.center_lat,
-        tile_lng: c.center_lng,
-        area_id: c.area_id,
-      });
-    }, 150);
-  }
-
-  showPriceModal(item: LandAreaGroup) {
-    this.selectedGroup = item;
-    this.tilePrice = item.sale_price || 0.5;
-    this.onSale = item.on_sale;
-    this.areaTitle = item.title || '';
-    this.areaSlug = item.slug || '';
-    this.areaThreeWords = item.three_words || '';
-    this.areaDescription = item.description || '';
-    this.showSellModal = true;
-  }
-
-  putOnSale(e: any) {
-    this.onSale = e.detail.checked;
-  }
-
-  submitPrice() {
-    if (!this.selectedGroup) return;
-    if (this.onSale && (!this.tilePrice || this.tilePrice <= 0)) {
-      this.general.presentToast('Please enter a valid asking price per square.');
-      return;
-    }
-
-    const result = this.meta.updateAreaDetails(this.selectedGroup.area_id, {
-      title: this.areaTitle,
-      slug: this.areaSlug,
-      three_words: this.areaThreeWords,
-      description: this.areaDescription,
-      on_sale: this.onSale,
-      sale_price: Number(this.tilePrice) || 0,
-    });
-
-    if (!result.ok) {
-      this.general.presentToast(result.message);
-      return;
-    }
-
-    this.showSellModal = false;
-    this.refreshPortfolio();
-    this.general.presentToast(result.message);
-
-    // Best-effort sync with backend if logged in
-    const d = {
-      order_id: this.selectedGroup.area_id,
-      sale_price: this.tilePrice,
-      on_sale: this.onSale,
-      custom_details: this.areaDescription,
+  manage(area: LandArea) {
+    this.selected = area;
+    this.form = {
+      area_title: area.title,
+      slug: area.slug,
+      three_words: area.three_words,
+      custom_details: area.custom_details,
+      on_sale: area.on_sale,
+      sale_price: area.sale_price || 1,
     };
-    this.http.post('UpdateSalePrice', d, false).subscribe(
-      () => {},
-      () => {}
-    );
   }
 
-  async releaseArea(item: LandAreaGroup) {
-    const alert = await this.alertController.create({
-      header: 'Release Land Area?',
-      message: `Release "${item.title}" (${item.tiles.length} squares) back to the open Earth? This frees up your 100-square quota.`,
+  async save() {
+    if (!this.selected) return;
+    if (this.form.on_sale && !(Number(this.form.sale_price) > 0)) {
+      this.general.presentToast('Enter a price per square above $0.');
+      return;
+    }
+    this.busy = true;
+    const res = await this.land.updateDetails(this.selected.order_id, this.form);
+    this.busy = false;
+    this.general.presentToast(res.message);
+    if (res.needsAuth) this.session.requestAuth('Verify your email to list land for sale.');
+    if (res.ok) this.selected = null;
+  }
+
+  async release(area: LandArea) {
+    const alert = await this.alerts.create({
+      header: 'Release this land?',
+      message: `"${area.title}" (${area.no_of_tiles} squares) goes back to the open map and its billing stops.`,
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         {
-          text: 'Release Land',
+          text: 'Release',
           role: 'destructive',
-          handler: () => {
-            const count = this.meta.releaseTiles(item.tiles.map((t) => ({ gx: t.gx, gy: t.gy })));
-            if (!this.meta.isGuest()) {
-              this.http.post('ReleaseOrder', { order_id: item.area_id }, false).subscribe({
-                next: () => {},
-                error: () => {},
-              });
-            }
-            this.showSellModal = false;
-            this.refreshPortfolio();
-            this.general.presentToast(`Released ${count} square(s).`);
+          handler: async () => {
+            const res = await this.land.release(area.order_id);
+            this.selected = null;
+            this.general.presentToast(res.message);
           },
         },
       ],

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 360" width="360" height="360">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#0369a1"/>
+    </linearGradient>
+  </defs>
+  <rect width="360" height="360" fill="url(#bg)"/>
+  <g fill="none" stroke="#38bdf8" stroke-opacity="0.25" stroke-width="2">
+    <path d="M120 0V360M240 0V360M0 120H360M0 240H360"/>
+  </g>
+  <circle cx="180" cy="118" r="52" fill="#38bdf8"/>
+  <path d="M152 126 L180 98 L208 126 V150 H190 V132 H170 V150 H152 Z" fill="#0f172a"/>
+  <text x="180" y="222" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="44" font-weight="800" fill="#ffffff">FlatMeta</text>
+  <text x="180" y="266" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="30" font-weight="700" fill="#bae6fd">HOME</text>
+  <rect x="96" y="290" width="168" height="40" rx="20" fill="#f8fafc"/>
+  <text x="180" y="318" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#0f172a">Tap to start</text>
+</svg>

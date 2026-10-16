@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { GeneralService } from 'src/app/providers/general.service';
 import { HttpService } from 'src/app/providers/http.service';
-import { MetaverseService } from 'src/app/providers/metaverse.service';
+import { SessionService } from 'src/app/providers/session.service';
 
 export interface CodeProposal {
   id: string;
@@ -11,7 +11,7 @@ export interface CodeProposal {
   code: string;
   votes: number;
   votedByMe: boolean;
-  status: 'Approved & Live' | 'Community Voting' | 'Pending Admin Review';
+  status: string;
   createdAt: string;
 }
 
@@ -68,36 +68,22 @@ export const SMILEY_EXPRESSIONS: Record<string, string> = {
   };
 
   roadmapFeatures = [
-    {
-      title: 'Interactive HTML/JS Land Sandboxes',
-      status: 'Active',
-      desc: 'Embed custom mini-games, interactive web apps, and Rich HTML inside your owned multi-tile land areas.',
-    },
-    {
-      title: 'Multi-Tile Seamless Image Spanning',
-      status: 'Active',
-      desc: 'Select any NxM block of squares and slice 1 high-res banner or animated GIF seamlessly with zero grid borders.',
-    },
-    {
-      title: 'Custom 3-Word & /u/ Area URLs',
-      status: 'Active',
-      desc: 'Assign custom 3-word coordinates (e.g. flatmeta.welcome.home) and shareable /u/slug links to any land parcel.',
-    },
-    {
-      title: 'Clans, Alliances & Territory Mini-Games',
-      status: 'Open for PRs',
-      desc: 'Build neighbour alliances, property walls, leaderboards, and mini-game challenges on the 2D grid.',
-    },
-    {
-      title: 'Web3 / NFT Land Deed Bridge',
-      status: 'Open for PRs',
-      desc: 'Optional on-chain minting and smart-contract verification for FlatMeta land deeds.',
-    },
+    { title: 'Your own HTML/JS on your land', status: 'Live', desc: 'Owners can add sandboxed HTML/JS or embed a page that visitors see when they open the land.' },
+    { title: 'One image across many squares', status: 'Live', desc: 'Select a block of your squares and stretch one picture or GIF across all of them, edge to edge.' },
+    { title: 'Custom land links & 3-word addresses', status: 'Live', desc: 'Give land a link like flatmeta.io/u/your-name and a 3-word address people can search for.' },
+    { title: 'Clans, territory & mini-games', status: 'Open for contributions', desc: 'Neighbour alliances, property walls and challenges on the grid. Clans exist; the games are waiting for you.' },
+    { title: 'Paint tools on land', status: 'Open for contributions', desc: 'Draw markers, lines, shapes and text boxes on top of your squares.' },
+    { title: 'Replay past scenarios', status: 'Idea', desc: 'Record and play back events that happened on the map.' },
   ];
 
   proposals: CodeProposal[] = [];
+  private voted = new Set<string>();
 
-  constructor(public general: GeneralService, public meta: MetaverseService, public http: HttpService) {}
+  constructor(public general: GeneralService, public session: SessionService, public http: HttpService) {
+    try {
+      this.voted = new Set(JSON.parse(localStorage.getItem('flatmeta_votes_v1') || '[]'));
+    } catch {}
+  }
 
   ngOnInit() {
     this.loadTemplate('land-widget.js');
@@ -115,135 +101,87 @@ export const SMILEY_EXPRESSIONS: Record<string, string> = {
   }
 
   onFileUpload(ev: any) {
-    const file = ev?.target?.files?.[0];
+    const file: File | undefined = ev?.target?.files?.[0];
     if (!file) return;
+    if (file.size > 200 * 1024) {
+      this.general.presentToast('Files must be 200 KB or smaller.');
+      return;
+    }
     this.customFileName = file.name;
     const reader = new FileReader();
     reader.onload = () => {
       this.editorCode = String(reader.result || '');
-      this.general.presentToast(`Loaded "${file.name}" into the Public Code Editor!`);
+      this.general.presentToast(`Loaded "${file.name}".`);
     };
     reader.readAsText(file);
   }
 
-  loadProposals() {
-    try {
-      const raw = localStorage.getItem('flatmeta_code_proposals_v1');
-      if (raw) {
-        this.proposals = JSON.parse(raw);
-      }
-    } catch (e) {}
-
-    if (!this.proposals || this.proposals.length === 0) {
-      this.proposals = [
-        {
-          id: 'prop_1',
-          fileName: 'multi-tile-seamless-spanner.ts',
-          title: 'Zero-gap NxM Canvas Image Slicer for Joined Land Squares',
-          author: 'flatmeta_core',
-          code: '// Slices 1 uploaded image across selected contiguous squares at zoom 15',
-          votes: 42,
-          votedByMe: true,
-          status: 'Approved & Live',
-          createdAt: '2026-10-10',
-        },
-        {
-          id: 'prop_2',
-          fileName: 'clan-leaderboard-widget.js',
-          title: 'Top Landowners & Friendly Citizens Live Leaderboard Widget',
-          author: 'aria_meta',
-          code: '// Renders real-time leaderboard of top citizens by squares & connections',
-          votes: 19,
-          votedByMe: false,
-          status: 'Community Voting',
-          createdAt: '2026-10-13',
-        },
-      ];
-      this.saveProposals();
+  async loadProposals() {
+    const res = await this.http.getAsync('CommunityProposals');
+    if (res?.status === true && Array.isArray(res.data?.proposals)) {
+      this.proposals = res.data.proposals.map((bp: any) => this.fromApi(bp));
     }
-
-    // Also fetch latest community proposals from backend Mini-Git-Lab API
-    this.http.get2('CommunityProposals', false).subscribe(
-      (res: any) => {
-        if (res?.status === true && Array.isArray(res.data?.proposals)) {
-          res.data.proposals.forEach((bp: any) => {
-            if (!this.proposals.some((lp) => lp.id === bp.id)) {
-              this.proposals.push({
-                id: bp.id,
-                fileName: (bp.category || 'module').toLowerCase().replace(/\s+/g, '-') + '.js',
-                title: bp.title,
-                author: bp.author || 'citizen',
-                code: bp.codeSnippet || bp.description || '',
-                votes: Number(bp.votes || 1),
-                votedByMe: false,
-                status: bp.status === 'Approved' ? 'Approved & Live' : 'Community Voting',
-                createdAt: (bp.created_at || new Date().toISOString()).slice(0, 10),
-              });
-            }
-          });
-          this.saveProposals();
-        }
-      },
-      () => {}
-    );
   }
 
-  saveProposals() {
-    try {
-      localStorage.setItem('flatmeta_code_proposals_v1', JSON.stringify(this.proposals));
-    } catch (e) {}
-  }
-
-  submitProposal() {
-    if (!this.editorCode || !this.editorCode.trim()) {
-      this.general.presentToast('Please write or upload code before committing your proposal.');
+  async submitProposal() {
+    if (this.session.isGuest) {
+      this.session.requestAuth('Verify your email to submit code to the community.');
       return;
     }
-    const prop: CodeProposal = {
-      id: 'prop_' + Date.now(),
-      fileName: (this.customFileName || 'custom-module.js').trim(),
-      title: (this.proposalTitle || 'Community Feature Enhancement').trim(),
-      author: this.meta.getCurrentUsername(),
-      code: this.editorCode,
-      votes: 1,
-      votedByMe: true,
-      status: 'Community Voting',
-      createdAt: new Date().toISOString().slice(0, 10),
-    };
-    this.proposals = [prop, ...this.proposals];
-    this.saveProposals();
-
-    this.http
-      .post(
-        'SubmitCommunityProposal',
-        {
-          title: prop.title,
-          author: prop.author,
-          category: prop.fileName,
-          description: prop.title,
-          codeSnippet: prop.code,
-        },
-        false
-      )
-      .subscribe({ next: () => {}, error: () => {} });
-
-    this.general.presentToast('Committed to Community Code Proposals! Once voted & approved by Admin, it goes live.');
+    if (!this.editorCode.trim()) {
+      this.general.presentToast('Write or upload some code first.');
+      return;
+    }
+    const res = await this.http.postAsync('SubmitCommunityProposal', {
+      title: (this.proposalTitle || 'Community feature').trim().slice(0, 150),
+      category: (this.customFileName || 'module.js').trim().slice(0, 80),
+      description: this.proposalTitle.trim().slice(0, 500),
+      codeSnippet: this.editorCode.slice(0, 20000),
+    });
+    if (res?.status === true) {
+      this.voted.add(String(res.data?.proposal?.id));
+      this.saveVotes();
+      if (Array.isArray(res.data?.proposals)) this.proposals = res.data.proposals.map((bp: any) => this.fromApi(bp));
+      this.general.presentToast('Submitted. When the community votes it up, an admin reviews it for the live site.');
+    } else {
+      this.general.presentToast(res?.data?.message || res?.message || 'Could not submit.');
+    }
   }
 
-  toggleVote(p: CodeProposal) {
-    const delta = p.votedByMe ? -1 : 1;
-    if (p.votedByMe) {
-      p.votes = Math.max(0, p.votes - 1);
-      p.votedByMe = false;
-    } else {
-      p.votes += 1;
-      p.votedByMe = true;
+  async toggleVote(p: CodeProposal) {
+    if (this.session.isGuest) {
+      this.session.requestAuth('Verify your email to vote.');
+      return;
     }
-    this.saveProposals();
+    // 1 = vote, 0 = take my vote back (the server keeps one vote per person).
+    const delta = p.votedByMe ? 0 : 1;
+    const res = await this.http.postAsync('VoteCommunityProposal', { id: p.id, delta });
+    if (res?.status === true) {
+      delta > 0 ? this.voted.add(p.id) : this.voted.delete(p.id);
+      this.saveVotes();
+      if (Array.isArray(res.data?.proposals)) this.proposals = res.data.proposals.map((bp: any) => this.fromApi(bp));
+    } else {
+      this.general.presentToast(res?.data?.message || res?.message || 'Could not record your vote.');
+    }
+  }
 
-    this.http.post('VoteCommunityProposal', { id: p.id, delta }, false).subscribe({
-      next: () => {},
-      error: () => {},
-    });
+  private fromApi(bp: any): CodeProposal {
+    return {
+      id: String(bp.id),
+      fileName: String(bp.category || 'module.js'),
+      title: String(bp.title || 'Untitled'),
+      author: String(bp.author || 'citizen'),
+      code: String(bp.codeSnippet || bp.description || ''),
+      votes: Number(bp.votes || 0),
+      votedByMe: this.voted.has(String(bp.id)),
+      status: String(bp.status || 'Voting'),
+      createdAt: String(bp.created_at || '').slice(0, 10),
+    };
+  }
+
+  private saveVotes() {
+    try {
+      localStorage.setItem('flatmeta_votes_v1', JSON.stringify(Array.from(this.voted)));
+    } catch {}
   }
 }

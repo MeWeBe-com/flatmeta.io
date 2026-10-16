@@ -4,7 +4,7 @@
       <ion-back-button defaultHref="/" text="" icon="arrow-back-outline"></ion-back-button>
     </ion-buttons>
     <ion-title class="meta-page-title">
-      <span class="gradient-text">Transaction Complete</span>
+      <span class="gradient-text">Payment complete</span>
     </ion-title>
   </ion-toolbar>
 </ion-header>
@@ -17,30 +17,30 @@
         <span class="pulse-ring"></span>
       </div>
 
-      <h2 class="thankyou-title">Deed <span class="gradient-text">Acquired!</span></h2>
+      <h2 class="thankyou-title">Thank <span class="gradient-text">you!</span></h2>
       <p class="thankyou-subtitle">
-        Your land parcels have been transferred to your citizen profile and registered in the FlatMeta database.
+        Your PayPal payment went through and the land is now yours. It can take a few seconds to appear on the map.
       </p>
 
       <div class="deed-status-card">
         <div class="status-row">
-          <span class="s-lbl">Transaction Status:</span>
-          <span class="meta-badge badge-emerald">Settled & Confirmed</span>
+          <span class="s-lbl">Billing</span>
+          <span class="s-val">Monthly via PayPal — cancel any time in PayPal before the next payment</span>
         </div>
         <div class="status-row">
-          <span class="s-lbl">Access Privileges:</span>
-          <span class="s-val">Custom Artwork, Multi-Tile Span & Custom URL</span>
+          <span class="s-lbl">Next</span>
+          <span class="s-val">Add an image, a name and your own link to your new land</span>
         </div>
       </div>
 
       <div class="thankyou-actions">
         <ion-button expand="block" class="meta-btn-gradient btn-return-world" [routerLink]="['/']">
           <ion-icon name="planet-outline" slot="start"></ion-icon>
-          Return to Metaverse Map
+          Back to the map
         </ion-button>
         <ion-button expand="block" fill="outline" class="btn-view-portfolio" [routerLink]="['/myplaces']">
           <ion-icon name="cube-outline" slot="start"></ion-icon>
-          View in My Land Portfolio
+          See my land
         </ion-button>
       </div>
     </div>

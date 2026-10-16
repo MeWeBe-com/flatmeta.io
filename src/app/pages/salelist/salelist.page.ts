@@ -1,154 +1,101 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AlertController } from '@ionic/angular';
+import { Subscription } from 'rxjs';
 import { GeneralService } from 'src/app/providers/general.service';
-import { HttpService } from 'src/app/providers/http.service';
 import { EventsService } from 'src/app/providers/events.service';
-import { GlobaldataService } from 'src/app/providers/globaldata.service';
-import { MetaverseService, LandAreaGroup } from 'src/app/providers/metaverse.service';
-import { InAppBrowser, InAppBrowserOptions } from '@awesome-cordova-plugins/in-app-browser/ngx';
+import { LandArea, LandService, PLATFORM_COMMISSION_RATE } from 'src/app/providers/land.service';
+import { SessionService } from 'src/app/providers/session.service';
+import { PaymentService } from 'src/app/providers/payment.service';
+
+type Filter = 'recent' | 'popular' | 'promoted';
 
 @Component({
   selector: 'app-salelist',
   templateUrl: './salelist.page.html',
   styleUrls: ['./salelist.page.scss'],
 })
-export class SalelistPage implements OnInit {
-  tilesList: LandAreaGroup[] = [];
-  activeFilter: 'all' | 'recent' | 'popular' | 'promoted' = 'all';
+export class SalelistPage implements OnInit, OnDestroy {
+  listings: LandArea[] = [];
+  filter: Filter = 'recent';
+  busyId = '';
+  private subs = new Subscription();
 
   constructor(
     public general: GeneralService,
-    public http: HttpService,
-    public events: EventsService,
-    public meta: MetaverseService,
+    private events: EventsService,
+    private land: LandService,
+    private session: SessionService,
+    private payments: PaymentService,
     private router: Router,
-    private alertController: AlertController,
-    private iab: InAppBrowser
+    private alerts: AlertController
   ) {}
 
   ngOnInit() {
-    this.loadListings();
-    this.meta.tiles$.subscribe(() => {
-      this.loadListings();
-    });
+    this.subs.add(this.land.tiles$.subscribe(() => this.load()));
+  }
+
+  ngOnDestroy() {
+    this.subs.unsubscribe();
   }
 
   ionViewWillEnter() {
-    this.loadListings();
-    this.fetchBackendListings();
+    this.land.refresh();
   }
 
-  setFilter(filter: 'all' | 'recent' | 'popular' | 'promoted') {
-    this.activeFilter = filter;
-    this.loadListings();
+  setFilter(f: Filter) {
+    this.filter = f;
+    this.load();
   }
 
-  loadListings() {
-    this.tilesList = this.meta.getMarketplaceAreas(this.activeFilter);
+  refresh() {
+    this.land.refresh();
+    this.general.presentToast('Refreshing the marketplace…', 1200);
   }
 
-  fetchBackendListings() {
-    this.http.get('SaleList?filter=' + this.activeFilter, false).subscribe(
-      (res: any) => {
-        if (res && res.status === true && Array.isArray(res.data?.tiles)) {
-          this.meta.mergeBackendTiles(res.data.tiles);
-          this.loadListings();
-        }
-      },
-      () => {
-        // Offline or guest mode: local marketplace listings remain active
-      }
-    );
+  /** Plain-text preview of the seller's description. */
+  summary(area: LandArea): string {
+    const div = document.createElement('div');
+    div.innerHTML = area.custom_details || '';
+    const text = (div.textContent || '').replace(/\s+/g, ' ').trim();
+    return text.length > 140 ? text.slice(0, 137) + '…' : text;
   }
 
-  getList() {
-    this.loadListings();
-    this.fetchBackendListings();
-    this.general.presentToast('Marketplace refreshed');
+  showOnMap(area: LandArea) {
+    this.router.navigateByUrl('/').then(() => setTimeout(() => this.events.publishToUser(area), 150));
   }
 
-  toUserPlace(c: LandAreaGroup) {
-    this.router.navigate(['/']);
-    setTimeout(() => {
-      this.events.publishToUser({
-        tile_lat: c.center_lat,
-        tile_lng: c.center_lng,
-        area_id: c.area_id,
-      });
-    }, 150);
-  }
-
-  async buyListing(c: LandAreaGroup) {
-    if (c.is_mine) {
-      this.general.presentToast('You already own this land area!');
+  async buy(area: LandArea) {
+    if (area.is_mine) return;
+    if (this.session.isGuest) {
+      this.session.requestAuth('Verify your email to buy land.');
       return;
     }
-
-    const totalCost = c.total_sale_value.toFixed(2);
-    const fee = (c.total_sale_value * 0.1).toFixed(2);
-    const alert = await this.alertController.create({
-      header: `Acquire "${c.title}"`,
-      subHeader: `${c.tiles.length} Squares • $${totalCost} USD`,
-      message: `Seller: @${c.username}\nLocation: ${c.center_lat.toFixed(4)}, ${c.center_lng.toFixed(4)}\nIncludes 10% FlatMeta platform commission ($${fee}).\n\nTake immediate ownership and customize this area?`,
+    const total = area.total_sale_value.toFixed(2);
+    const alert = await this.alerts.create({
+      header: `Buy "${area.title}"?`,
+      subHeader: `${area.no_of_tiles} squares from @${area.username} · $${total}`,
+      message: `You'll pay with PayPal. The land becomes yours as soon as payment completes. FlatMeta keeps ${PLATFORM_COMMISSION_RATE * 100}% of the price.`,
       buttons: [
         { text: 'Cancel', role: 'cancel' },
-        {
-          text: `Buy Now ($${totalCost})`,
-          handler: () => {
-            const result = this.meta.buyMarketplaceListing(c.area_id);
-            this.general.presentToast(result.message);
-            if (result.ok) {
-              if (!this.meta.isGuest()) {
-                this.http.post('BuyMarketplaceOrder', { order_id: c.area_id }, false).subscribe({
-                  next: () => {},
-                  error: () => {},
-                });
-              }
-              this.loadListings();
-              this.toUserPlace(c);
-            }
-          },
-        },
+        { text: `Continue to PayPal`, handler: () => this.startPurchase(area) },
       ],
     });
     await alert.present();
   }
 
-  makePayment(url: string) {
-    if (!url) return;
-    if (GlobaldataService.userObject == undefined) {
-      this.general.presentToast('Please verify your email first to use external checkout.');
-      return;
+  private async startPurchase(area: LandArea) {
+    this.busyId = area.order_id;
+    const res = await this.land.buy(area.order_id);
+    this.busyId = '';
+    if (res.ok && res.paymentUrl) {
+      this.payments.open(res.paymentUrl);
+    } else {
+      this.general.presentToast(res.message);
     }
-    const options: InAppBrowserOptions = {
-      zoom: 'no',
-      location: 'no',
-      toolbar: 'no',
-      fullscreen: 'yes',
-      clearcache: 'no',
-      clearsessioncache: 'no',
-      cleardata: 'no',
-      hardwareback: 'yes',
-      useWideViewPort: 'no',
-      enableViewportScale: 'yes',
-      presentationstyle: 'fullscreen',
-    };
+  }
 
-    const browser = this.iab.create(url + '/' + GlobaldataService.userObject.user_id, '_blank', options);
-    browser.on('loadstart').subscribe(
-      (res) => {
-        if (res.url.includes('TransactionCompleted')) {
-          setTimeout(() => {
-            this.general.presentToast('Payment Successful!');
-            browser.close();
-            this.general.goToPage('thankyou');
-          }, 250);
-        }
-      },
-      (err) => {
-        console.error(err);
-      }
-    );
+  private load() {
+    this.listings = this.land.marketplace(this.filter);
   }
 }

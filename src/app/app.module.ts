@@ -11,13 +11,9 @@ import { ServiceWorkerModule } from '@angular/service-worker';
 import { environment } from '../environments/environment';
 import { InAppBrowser } from '@awesome-cordova-plugins/in-app-browser/ngx';
 import { QuillModule } from 'ngx-quill'
-import { LocationAccuracy } from '@awesome-cordova-plugins/location-accuracy/ngx';
-
-import { ChatComponent } from './components/chat/chat.component';
-import { ForgetpasswordComponent } from './components/forgetpassword/forgetpassword.component';
 
 @NgModule({
-    declarations: [AppComponent, ChatComponent, ForgetpasswordComponent],
+    declarations: [AppComponent],
     imports: [
         BrowserModule,
         IonicModule.forRoot(),
@@ -35,7 +31,6 @@ import { ForgetpasswordComponent } from './components/forgetpassword/forgetpassw
     ],
     providers: [
         InAppBrowser,
-        LocationAccuracy,
         { provide: RouteReuseStrategy, useClass: IonicRouteStrategy }
     ],
     bootstrap: [AppComponent]

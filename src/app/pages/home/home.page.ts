@@ -1,2269 +1,1224 @@
-import {
-  Component,
-  OnInit,
-  OnDestroy,
-  ViewChild,
-  ElementRef,
-  Renderer2,
-  NgZone,
-  ChangeDetectorRef,
-  HostListener,
-} from '@angular/core';
-import { IonRouterOutlet, ModalController } from '@ionic/angular';
-import { Geolocation } from '@capacitor/geolocation';
-import { LocationAccuracy } from '@awesome-cordova-plugins/location-accuracy/ngx';
-import { StorageService } from 'src/app/providers/storage.service';
-import { GeneralService } from 'src/app/providers/general.service';
-import { HttpService } from 'src/app/providers/http.service';
-import { GlobaldataService } from 'src/app/providers/globaldata.service';
-import { EventsService } from 'src/app/providers/events.service';
-import { Capacitor } from '@capacitor/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ChangeDetectorRef, Component, HostListener, NgZone, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
-import { environment } from 'src/environments/environment';
-
+import { Geolocation } from '@capacitor/geolocation';
+import { Subscription, combineLatest } from 'rxjs';
+import { filter, first } from 'rxjs/operators';
 import * as Leaflet from 'leaflet';
 import * as GeoSearch from 'leaflet-geosearch';
 import DriftMarker from 'leaflet-drift-marker';
 
-import { ChatComponent } from 'src/app/components/chat/chat.component';
+import { GridPoint, ZOOM_LEVELS, ALLOWED_ZOOMS, gridToLatLng, gridToThreeWords, latLngToGrid, snapToAllowedZoom } from 'src/app/core/grid';
+import { avatarDataUrl } from 'src/app/core/avatar';
+import { isHttpUrl } from 'src/app/core/html';
+import { GeneralService } from 'src/app/providers/general.service';
+import { HttpService } from 'src/app/providers/http.service';
+import { EventsService } from 'src/app/providers/events.service';
+import { SessionService, Identity } from 'src/app/providers/session.service';
 import {
-  MetaverseService,
+  LandService,
+  LandArea,
   LandTile,
-  LandAreaSummary,
-  SavedPin,
-  LiveChatMessage,
   PortfolioStats,
-  UserSettings,
-} from 'src/app/providers/metaverse.service';
-import { Subscription } from 'rxjs';
+  FLATMETA_HOME,
+  FREE_TILE_QUOTA,
+  PRICE_PER_TILE_MONTH,
+  PLATFORM_COMMISSION_RATE,
+} from 'src/app/providers/land.service';
+import { PresenceService, Citizen, ChatMessage, Conversation } from 'src/app/providers/presence.service';
+import { PinsService, SavedPin } from 'src/app/providers/pins.service';
+import { SettingsService, UserSettings } from 'src/app/providers/settings.service';
+import { FriendsService } from 'src/app/providers/friends.service';
+import { PaymentService } from 'src/app/providers/payment.service';
+import { LandLayer } from './map/land-layer';
+import { areaBadgeIcon, avatarIcon, citizenCard, ownCard, speechBubbleIcon } from './map/avatar-markers';
+import { attachZoomSteps } from './map/zoom-steps';
+import { environment } from 'src/environments/environment';
 
-const osmProvider = new GeoSearch.OpenStreetMapProvider();
+type SearchResult = {
+  type: 'area' | 'pin' | 'place' | 'citizen';
+  title: string;
+  subtitle: string;
+  lat: number;
+  lng: number;
+  zoom: number;
+  orderId?: string;
+};
+
+const LAST_POSITION_KEY = 'flatmeta_last_position';
+const geocoder = new GeoSearch.OpenStreetMapProvider();
 
 @Component({
   selector: 'app-home',
   templateUrl: './home.page.html',
   styleUrls: ['./home.page.scss'],
 })
-export class HomePage implements OnInit, OnDestroy {
-  @ViewChild('fileInput', { static: false }) fileInput: ElementRef;
-  @ViewChild('hangoutsScroll', { static: false }) hangoutsScroll: ElementRef;
+export class HomePage implements OnDestroy {
+  @ViewChild('mapEl', { static: true }) mapEl: ElementRef<HTMLElement>;
+  @ViewChild('fileInput') fileInput: ElementRef<HTMLInputElement>;
+  @ViewChild('chatScroll') chatScroll: ElementRef<HTMLElement>;
 
-  // Onboarding top-left popup (OSM style)
-  ShowtopPop: boolean = true;
+  readonly ZOOM = ZOOM_LEVELS;
+  readonly FREE_TILE_QUOTA = FREE_TILE_QUOTA;
+  readonly COMMISSION = PLATFORM_COMMISSION_RATE;
+  readonly videoUrl = environment.howToVideoUrl;
 
-  // Map & Custom Canvas Layers
-  map: Leaflet.Map;
-  landCanvasLayer: Leaflet.GridLayer = undefined;
-  zoomOutMarkersLayer: Leaflet.LayerGroup = undefined;
-
-  // Strictly 3 zoom levels: 15 (Buy/Edit), 10 (Roam/City), 5 (Planet)
-  public static readonly ALLOWED_ZOOMS = [5, 10, 15];
-  currentZoomLevel: number = 15;
-  private lastZoomStepTime: number = 0;
-
-  // Grid, Scan & Peek Underlying Map Toggles
-  buyGridActive: boolean = false;
-  scanModeActive: boolean = false;
-  peekUnderlyingMap: boolean = false;
-  isAvatarOffScreen: boolean = false;
-
-  // Selections & Land Data
-  selectedBoxs: Array<{ gx: number; gy: number; lat: number; lng: number }> = [];
-  soldBoxes: LandTile[] = [];
-  myBoxs: LandTile[] = [];
-  spanImageAcrossSelection: boolean = true;
-
-  // Modals & Popovers
-  imgSelection: boolean = false;
-  boxImgs: any[] = [];
-  boxImgs2: any[] = [];
-  selectedImg: any = undefined;
-  showUplaodedImage: boolean = false;
-
-  showEditor: boolean = false;
-  qEditor: string = '';
-  areaTitleInput: string = '';
-  areaSlugInput: string = '';
-  areaThreeWordsInput: string = '';
-  areaEmbedUrlInput: string = '';
-  areaCustomCodeInput: string = '';
-  areaOnSaleInput: boolean = false;
-  areaSalePriceInput: number = 1.0;
-
-  // Inspected Land Area Callout Modal
-  inspectedArea: LandAreaSummary | null = null;
-  showAreaInspectModal: boolean = false;
-  safeEmbedUrl: SafeResourceUrl | null = null;
-  safeCustomCodeHtml: SafeHtml | null = null;
-  challengeResultText: string = '';
-
-  // Leaderboard & Clans Modal (Brief #15 & Gamification)
-  showLeaderboardModal: boolean = false;
-  leaderboardTab: 'landowners' | 'friendly' | 'clans' = 'landowners';
-  leaderboardData: any = null;
-
-  // Pins Modal / Drawer
-  showPinsModal: boolean = false;
-  savedPins: SavedPin[] = [];
-  newPinName: string = '';
-
-  // Omni-Search Bar (World Places + Custom Land Slugs + 3-Word Addresses + Pins)
-  searchQuery: string = '';
-  searchResults: Array<{
-    type: 'area' | 'pin' | 'place' | 'citizen';
-    title: string;
-    subtitle: string;
-    lat: number;
-    lng: number;
-    zoom?: number;
-    slug?: string;
-  }> = [];
-  showSearchDropdown: boolean = false;
-  private searchDebounce: any = null;
-
-  // Avatars & Presence
-  user_id: string = null;
-  avatar: string = environment.fallbackAvatar;
-  myExpression: string | undefined = undefined;
-  myMarker: any = null;
-  otherUsers: any[] = [];
-  otherMarkers: any[] = [];
-  private imageCache = new Map<string, HTMLImageElement>();
-
-  // Hangouts-Style Docked Chat Window
-  chatDrawerOpen: boolean = false;
-  chatMinimized: boolean = false;
-  chatMessages: LiveChatMessage[] = [];
-  hangoutsInput: string = '';
-  unreadChatCount: number = 0;
-  private typingTimeout: any = null;
-
-  // User Settings & Portfolio Stats
-  settings: UserSettings;
+  me: Identity;
   stats: PortfolioStats;
+  settings: UserSettings;
 
-  // Report User Popover
-  reportPopover: boolean = false;
-  reportList: any[] = [
-    { id: 1, text: 'Inappropriate avatar or land graphic' },
-    { id: 2, text: 'Spam or abusive chat messages' },
-    { id: 3, text: 'Impersonation or trademark infringement' },
+  // Map
+  private map: Leaflet.Map;
+  private landLayer: LandLayer;
+  private areaBadges: Leaflet.LayerGroup;
+  private myMarker: any;
+  private otherMarkers = new Map<string, any>();
+  private bubbles = new Map<string, Leaflet.Marker>();
+  private detachZoom: () => void;
+  zoom: number = ZOOM_LEVELS.BUY;
+  avatarOffScreen = false;
+
+  // Land tools
+  buyMode = false;
+  scanMode = false;
+  peekMap = false;
+  newSelection: GridPoint[] = [];
+  ownedSelection: LandTile[] = [];
+  busy = false;
+
+  // Welcome popup (OpenStreetMap-style, top left)
+  showWelcome = true;
+
+  // Artwork picker
+  showArtwork = false;
+  presets: Array<{ name: string; url: string; label: string }> = [];
+  presetFilter = '';
+  pickedImage = '';
+  pasteUrl = '';
+  spanImage = true;
+
+  // Area editor
+  showEditor = false;
+  editor = {
+    orderId: '',
+    area_title: '',
+    slug: '',
+    three_words: '',
+    custom_details: '',
+    embed_url: '',
+    custom_code: '',
+    on_sale: false,
+    sale_price: 1,
+    tiles: 0,
+  };
+
+  // Area details popup
+  inspected: LandArea | null = null;
+  safeEmbedUrl: SafeResourceUrl | null = null;
+  safeCode: SafeHtml | null = null;
+
+  // Pins
+  showPins = false;
+  pins: SavedPin[] = [];
+  newPinName = '';
+
+  // Leaderboard
+  showRanks = false;
+  ranksTab: 'landowners' | 'clans' = 'landowners';
+  ranks: { landowners: any[]; clans: any[] } = { landowners: [], clans: [] };
+
+  // Search
+  searchQuery = '';
+  searchResults: SearchResult[] = [];
+  showSearch = false;
+  private searchTimer: any;
+
+  // Chat (Hangouts-style dock)
+  chatOpen = false;
+  chatInput = '';
+  conversations: Conversation[] = [];
+  activeConversation = 'nearby';
+  visibleMessages: ChatMessage[] = [];
+  citizensNearby = 0;
+  private allMessages: ChatMessage[] = [];
+
+  // Report
+  showReport = false;
+  reportTarget: Citizen | null = null;
+  reportReasons: Array<{ id: number | string; text: string }> = [
+    { id: 1, text: 'Inappropriate avatar or land artwork' },
+    { id: 2, text: 'Spam or abusive messages' },
+    { id: 3, text: 'Impersonation' },
   ];
-  toReportUser: any = undefined;
 
-  private subscriptions: Subscription = new Subscription();
-  private speechBubbleMarkers: any[] = [];
-
-  // Default start coordinate: FlatMeta Home Showcase District (London Prime)
-  private currentCenter: [number, number] = [...MetaverseService.FLATMETA_HOME_COORDS];
-
-  get isGuest(): boolean {
-    return this.meta.isGuest();
-  }
-
-  get currentUser(): any {
-    return GlobaldataService.userObject;
-  }
-
-  get claimCostPreview(): { freeCount: number; paidCount: number; monthlyUsd: number } {
-    const rem = this.stats ? this.stats.freeQuotaRemaining : 100;
-    const count = this.selectedBoxs.length;
-    const freeCount = Math.min(rem, count);
-    const paidCount = Math.max(0, count - freeCount);
-    return {
-      freeCount,
-      paidCount,
-      monthlyUsd: Number((paidCount * MetaverseService.PRICE_PER_TILE_MONTH).toFixed(2)),
-    };
-  }
+  private subs = new Subscription();
+  private positionResolved = false;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    public routerOutlet: IonRouterOutlet,
-    public storage: StorageService,
-    public general: GeneralService,
-    public http: HttpService,
-    private locationAccuracy: LocationAccuracy,
-    public meta: MetaverseService,
-    private renderer: Renderer2,
-    public modalController: ModalController,
-    public events: EventsService,
     private sanitizer: DomSanitizer,
     private zone: NgZone,
-    private cdr: ChangeDetectorRef
-  ) {}
-
-  ngOnInit() {
-    this.refreshUser();
-
-    // Dismiss welcome popup automatically if user closed it earlier in this session
-    if (sessionStorage.getItem('flatmeta_welcome_closed') === '1') {
-      this.ShowtopPop = false;
-    }
-
-    // Subscribe to reactive Metaverse stores
-    this.subscriptions.add(
-      this.meta.tiles$.subscribe((tiles) => {
-        this.soldBoxes = tiles;
-        this.redrawLandLayers();
-      })
-    );
-
-    this.subscriptions.add(
-      this.meta.pins$.subscribe((pins) => {
-        this.savedPins = pins;
-      })
-    );
-
-    this.subscriptions.add(
-      this.meta.settings$.subscribe((s) => {
-        this.settings = s;
-        this.syncOtherMarkersVisibility();
-      })
-    );
-
-    this.subscriptions.add(
-      this.meta.stats$.subscribe((st) => {
-        this.stats = st;
-      })
-    );
-
-    this.subscriptions.add(
-      this.meta.chatMessages$.subscribe((msgs) => {
-        this.chatMessages = msgs;
-        if (!this.chatDrawerOpen || this.chatMinimized) {
-          this.unreadChatCount = Math.min(99, this.unreadChatCount + 1);
-        }
-        setTimeout(() => this.scrollToBottomHangouts(), 80);
-      })
-    );
-
-    // Cross-component navigation: Fly to FlatMeta Home showcase plaza
-    this.subscriptions.add(
-      this.events.receiveToHome().subscribe((res: boolean) => {
-        if (res) {
-          this.flyToFlatMetaHome();
-        }
-      })
-    );
-
-    // Cross-component navigation: Fly to a specific user/order land parcel
-    this.subscriptions.add(
-      this.events.receiveToUser().subscribe((res: any) => {
-        if (res) {
-          this.teleportToLandItem(res);
-        }
-      })
-    );
-
-    // Login state updates
-    this.subscriptions.add(
-      this.events.receiveLogin().subscribe(() => {
-        this.refreshUser();
-        this.updateMyAvatarMarker();
-        this.redrawLandLayers();
-      })
-    );
-
-    // Live remote avatar movement (from WebSocket or BroadcastChannel)
-    this.subscriptions.add(
-      this.meta.remoteLocation$.subscribe((payload: any) => {
-        if (payload) {
-          this.addOtherMarkers(payload);
-        }
-      })
-    );
-
-    // Live typing callouts over avatars (Brief 28/4/22 #9: "see others text in their callouts as they type")
-    this.subscriptions.add(
-      this.meta.remoteTyping$.subscribe((typing) => {
-        if (typing && typing.userId) {
-          this.displaySpeechBubble(
-            typing.userId,
-            typing.text ? `✍️ ${typing.text}` : '...',
-            this.meta.detectSmileyExpression(typing.text),
-            2200
-          );
-        }
-      })
-    );
-
-    // Clean up disconnected browser windows (Brief 28/4/22: no ghost avatars after window close)
-    this.subscriptions.add(
-      this.meta.remoteDisconnect$.subscribe((userId: string) => {
-        this.removeOtherMarkerByUserId(userId);
-      })
-    );
-
-    // Speech bubbles from chat messages
-    this.subscriptions.add(
-      this.meta.speechBubble$.subscribe((ev) => {
-        if (ev) {
-          if (ev.expression && String(ev.senderId) === String(this.getSessionUserId())) {
-            this.myExpression = ev.expression;
-            this.updateMyAvatarMarker();
-          }
-          this.displaySpeechBubble(ev.senderId, ev.text, ev.expression);
-        }
-      })
-    );
+    private cdr: ChangeDetectorRef,
+    private general: GeneralService,
+    private http: HttpService,
+    private events: EventsService,
+    public session: SessionService,
+    public land: LandService,
+    public presence: PresenceService,
+    public pinsService: PinsService,
+    public settingsService: SettingsService,
+    public friends: FriendsService,
+    private payments: PaymentService
+  ) {
+    this.me = session.identity;
+    this.stats = land.stats$.value;
+    this.settings = settingsService.value;
+    this.showWelcome = !this.settings.welcomeDismissed;
   }
 
-  /**
-   * Keyboard Arrow Keys / WASD Avatar Walking (like Google I/O Adventure & Gather.town)
-   */
-  @HostListener('window:keydown', ['$event'])
-  handleKeyboardWalk(event: KeyboardEvent) {
-    if (!this.map || !this.myMarker) return;
-    const activeTag = (document.activeElement?.tagName || '').toLowerCase();
-    if (
-      activeTag === 'input' ||
-      activeTag === 'textarea' ||
-      (document.activeElement as HTMLElement)?.isContentEditable
-    ) {
-      return;
-    }
-
-    const step = this.currentZoomLevel === 15 ? 0.00035 : this.currentZoomLevel === 10 ? 0.008 : 0.25;
-    const pos = this.myMarker.getLatLng();
-    let dLat = 0;
-    let dLng = 0;
-
-    if (event.key === 'ArrowUp' || event.key === 'w' || event.key === 'W') {
-      dLat = step;
-    } else if (event.key === 'ArrowDown' || event.key === 's' || event.key === 'S') {
-      dLat = -step;
-    } else if (event.key === 'ArrowLeft' || event.key === 'a' || event.key === 'A') {
-      dLng = -step;
-    } else if (event.key === 'ArrowRight' || event.key === 'd' || event.key === 'D') {
-      dLng = step;
-    } else {
-      return;
-    }
-
-    event.preventDefault();
-    const nextLatLng = Leaflet.latLng(pos.lat + dLat, pos.lng + dLng);
-    this.myMarker.slideTo(nextLatLng, { duration: 220 });
-    this.emitLocation(nextLatLng);
-
-    // Smoothly pan map if avatar walks near the edge of the screen
-    if (!this.map.getBounds().pad(-0.15).contains(nextLatLng)) {
-      this.map.panTo(nextLatLng, { animate: true, duration: 0.25 });
-    }
-    this.checkAvatarOffScreen();
+  get isGuest() {
+    return this.me.isGuest;
   }
 
-  refreshUser() {
-    this.user_id = this.meta.getCurrentUserId();
-    this.avatar = this.meta.getCurrentAvatar();
+  get claimPreview() {
+    const free = Math.min(this.stats.freeQuotaRemaining, this.newSelection.length);
+    const paid = this.newSelection.length - free;
+    return { free, paid, monthly: Number((paid * PRICE_PER_TILE_MONTH).toFixed(2)) };
   }
 
-  closeWelcomePop() {
-    this.ShowtopPop = false;
-    sessionStorage.setItem('flatmeta_welcome_closed', '1');
+  get filteredPresets() {
+    const q = this.presetFilter.trim().toLowerCase();
+    return q ? this.presets.filter((p) => p.label.toLowerCase().includes(q)) : this.presets;
   }
 
-  openWelcomePop() {
-    this.ShowtopPop = true;
-  }
-
-  ionViewWillEnter() {
-    this.refreshUser();
-  }
+  // ===========================================================================
+  // Lifecycle
+  // ===========================================================================
 
   ionViewDidEnter() {
-    this.loadMap();
-    this.getSoldBox();
-    this.getBoxImgs();
-    this.getReportList();
-    this.handleRouteDeepLinks();
-
-    setTimeout(() => {
-      if (this.map) {
-        this.map.invalidateSize();
-      }
-      this.getMapUser();
-      this.spawnAmbientCitizensIfNeeded();
-    }, 350);
-  }
-
-  ionViewWillLeave() {}
-
-  ngOnDestroy() {
-    this.subscriptions.unsubscribe();
-    if (this.map) {
-      this.map.remove();
-      this.map = undefined;
-    }
-  }
-
-  // ============================================================================
-  // 1. DEEP LINKS: /u/:slug, /p/:pinId, /at/:coords, ?area=..., ?lat=...&lng=...
-  // ============================================================================
-
-  private handleRouteDeepLinks() {
-    const paramMap = this.route.snapshot.paramMap;
-    const queryMap = this.route.snapshot.queryParamMap;
-
-    const slug = paramMap.get('slug') || queryMap.get('area') || queryMap.get('u');
-    const pinId = paramMap.get('pinId') || queryMap.get('pin');
-    const coordsStr = paramMap.get('coords') || queryMap.get('at');
-    const qLat = queryMap.get('lat');
-    const qLng = queryMap.get('lng');
-
-    if (slug) {
-      if (slug.toLowerCase() === 'flatmeta-home' || slug.toLowerCase() === 'home') {
-        setTimeout(() => this.flyToFlatMetaHome(), 250);
-        return;
-      }
-      // Support coordinate strings passed directly in root URL (e.g. /51.5097,-0.1043)
-      const cleanedCoord = slug.replace(/^@/, '');
-      const coordParts = cleanedCoord.split(',').map(Number);
-      if (coordParts.length >= 2 && !isNaN(coordParts[0]) && !isNaN(coordParts[1])) {
-        const z = coordParts[2] ? this.snapToAllowedZoom(coordParts[2]) : 15;
-        setTimeout(() => this.flyToAndMoveAvatar(coordParts[0], coordParts[1], z), 250);
-        return;
-      }
-
-      const area = this.meta.findAreaBySlugOrThreeWords(slug);
-      if (area) {
-        setTimeout(() => {
-          this.flyToAndMoveAvatar(area.lat, area.lng, 15);
-          this.openAreaInspection(area);
-        }, 250);
-        return;
-      }
-    }
-
-    if (pinId) {
-      const pin = this.meta.findPinById(pinId);
-      if (pin) {
-        setTimeout(() => {
-          this.flyToAndMoveAvatar(pin.lat, pin.lng, pin.zoom || 15);
-          this.general.presentToast(`Arrived at Saved Pin: ${pin.name}`);
-        }, 250);
-        return;
-      }
-    }
-
-    if (coordsStr) {
-      const cleaned = coordsStr.replace(/^@/, '');
-      const parts = cleaned.split(',').map(Number);
-      if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        const z = parts[2] ? this.snapToAllowedZoom(parts[2]) : 15;
-        setTimeout(() => this.flyToAndMoveAvatar(parts[0], parts[1], z), 250);
-        return;
-      }
-    }
-
-    if (qLat && qLng && !isNaN(Number(qLat)) && !isNaN(Number(qLng))) {
-      setTimeout(() => this.flyToAndMoveAvatar(Number(qLat), Number(qLng), 15), 250);
-    }
-  }
-
-  // ============================================================================
-  // 2. INSTANT MAP LOAD & STRICT 3-LEVEL AVATAR-CENTERED ZOOM (15, 10, 5)
-  // ============================================================================
-
-  loadMap() {
     if (this.map) {
       this.map.invalidateSize();
       return;
     }
+    this.createMap();
+    this.bindStreams();
+    this.loadPresets();
+    this.loadReportReasons();
+    // The same page serves every map URL, so react to each new link.
+    this.subs.add(
+      combineLatest([this.route.paramMap, this.route.queryParamMap]).subscribe(([p, q]) => this.handleDeepLink(p, q))
+    );
+  }
 
-    // Restore cached last position immediately so first paint is instant (<100ms)
-    try {
-      const cached = localStorage.getItem('flatmeta_last_coords');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length === 2 && !isNaN(parsed[0])) {
-          this.currentCenter = [Number(parsed[0]), Number(parsed[1])];
+  ngOnDestroy() {
+    this.subs.unsubscribe();
+    this.detachZoom?.();
+    this.map?.remove();
+  }
+
+  private bindStreams() {
+    this.subs.add(
+      this.session.identity$.subscribe((id) => {
+        const changed = this.me.id !== id.id;
+        this.me = id;
+        this.drawMyAvatar();
+        if (changed) {
+          this.clearSelection();
+          this.presence.moveTo(this.myPos().lat, this.myPos().lng);
         }
-      }
-    } catch (e) {}
+      })
+    );
+    this.subs.add(this.land.tiles$.subscribe(() => this.redrawLand()));
+    this.subs.add(this.land.stats$.subscribe((s) => (this.stats = s)));
+    this.subs.add(this.pinsService.pins$.subscribe((p) => (this.pins = p)));
+    this.subs.add(
+      this.settingsService.settings$.subscribe((s) => {
+        const gridChanged = this.settings.showGridOnImages !== s.showGridOnImages;
+        this.settings = s;
+        this.syncCitizenVisibility();
+        if (gridChanged) this.redrawLand();
+      })
+    );
+    this.subs.add(this.presence.citizens$.subscribe((list) => this.drawCitizens(list)));
+    this.subs.add(this.presence.tilesChanged$.subscribe(() => this.land.refresh()));
+    this.subs.add(this.presence.bubble$.subscribe((b) => this.showBubble(b.userId, b.text, 4500)));
+    this.subs.add(this.presence.typing$.subscribe((t) => this.showBubble(t.userId, t.text ? `✍️ ${t.text}` : '…', 2200, true)));
+    this.subs.add(
+      this.presence.conversations$.subscribe((c) => {
+        this.conversations = c;
+        if (!c.some((x) => x.id === this.activeConversation)) this.activeConversation = 'nearby';
+      })
+    );
+    this.subs.add(
+      this.presence.messages$.subscribe((m) => {
+        this.allMessages = m;
+        this.refreshVisibleMessages();
+      })
+    );
+    this.subs.add(this.friends.friends$.subscribe(() => this.syncCitizenVisibility()));
+    this.subs.add(this.events.receiveToHome().subscribe((go) => go && this.goFlatMetaHome()));
+    this.subs.add(this.events.receiveToUser().subscribe((item) => item && this.goToLand(item)));
+  }
 
-    // Initialize Leaflet map with native scrollWheelZoom/touchZoom disabled so our
-    // strict 3-level [5, 10, 15] avatar-centered zoom controller governs all zoom gestures!
-    this.map = Leaflet.map('mapId', {
-      center: this.currentCenter,
-      zoom: 15,
-      minZoom: 5,
-      maxZoom: 15,
+  // ===========================================================================
+  // Map setup, the three zoom levels and positioning
+  // ===========================================================================
+
+  private createMap() {
+    const start = this.readLastPosition();
+    this.map = Leaflet.map(this.mapEl.nativeElement, {
+      center: [start.lat, start.lng],
+      zoom: ZOOM_LEVELS.BUY,
+      minZoom: ZOOM_LEVELS.PLANET,
+      maxZoom: ZOOM_LEVELS.BUY,
       zoomSnap: 5,
       zoomDelta: 5,
       doubleClickZoom: false,
       scrollWheelZoom: false,
       touchZoom: false,
       boxZoom: false,
+      keyboard: false,
       zoomControl: false,
+      worldCopyJump: true,
     });
 
-    // Primary Tile Layer: OpenStreetMap (instant load like openstreetmap.org) + Mapbox fallback support
-    const osmLayer = Leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: 'Buy / Customise Land | <a href="https://flatmeta.io">FlatMeta.io</a>',
-      maxZoom: 15,
-      minZoom: 5,
+    Leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: ZOOM_LEVELS.BUY,
+      minZoom: ZOOM_LEVELS.PLANET,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      className: 'fm-base-tiles',
+    }).addTo(this.map);
+    // Land gets its own pane above the street map so the dark-mode filter never touches artwork.
+    this.map.createPane('fmLand').style.zIndex = '250';
+    this.map.attributionControl.setPrefix('Buy / customise land | <a href="https://flatmeta.io">flatmeta.io</a>');
+
+    this.landLayer = new LandLayer({
+      tileAt: (gx, gy) => this.land.tileAt(gx, gy),
+      isMine: (t) => this.land.isMine(t, this.me),
+      isSelectedNew: (gx, gy) => this.newSelection.some((p) => p.gx === gx && p.gy === gy),
+      isSelectedOwned: (gx, gy) => this.ownedSelection.some((p) => p.gx === gx && p.gy === gy),
+      mode: () => ({ buyGrid: this.buyMode, scan: this.scanMode, showGridOnImages: this.settings.showGridOnImages }),
     });
-    osmLayer.addTo(this.map);
-    this.map.attributionControl.setPrefix('FlatMeta.io');
+    this.landLayer.layer.addTo(this.map);
+    this.areaBadges = Leaflet.layerGroup().addTo(this.map);
 
-    // Initialize Always-Visible Land Parcel Layer & Zoomed-Out Area Markers Layer
-    this.zoomOutMarkersLayer = Leaflet.layerGroup().addTo(this.map);
-    this.initLandCanvasLayer();
+    this.drawMyAvatar(start.lat, start.lng);
+    this.presence.moveTo(start.lat, start.lng);
+    this.detachZoom = attachZoomSteps(this.map, (dir) => this.zone.run(() => this.stepZoom(dir)));
 
-    // Place user's Avatar immediately at center (no waiting for GPS timeout!)
-    this.addMarker(this.currentCenter[0], this.currentCenter[1]);
-
-    // Attach Strict 3-Level Wheel & Touch-Pinch Zoom Centered on Avatar
-    this.attachStrictThreeLevelZoomHandlers();
-
-    // Map move/zoom listeners
-    this.map.on('moveend', () => {
-      this.checkAvatarOffScreen();
-    });
-
-    this.map.on('zoomend', () => {
-      const rawZ = this.map.getZoom();
-      const snappedZ = this.snapToAllowedZoom(rawZ);
-      if (rawZ !== snappedZ) {
-        this.map.setZoom(snappedZ, { animate: false });
-      }
-      this.currentZoomLevel = snappedZ;
-      if (this.currentZoomLevel !== 15 && this.buyGridActive) {
-        this.buyGridActive = false;
-      }
-      this.syncOtherMarkersVisibility();
-      this.redrawLandLayers();
-      this.checkAvatarOffScreen();
-    });
-
-    // Double-click on map smoothly walks the avatar to the clicked location
-    // (Brief 06/01/23: "When double click, Avatar should go to where mouse is")
-    this.map.on('dblclick', (e: Leaflet.LeafletMouseEvent) => {
-      if (this.myMarker) {
-        this.myMarker.slideTo(e.latlng, { duration: 950 });
-        this.emitLocation(e.latlng);
-        this.saveLastCoords(e.latlng.lat, e.latlng.lng);
-        this.checkAvatarOffScreen();
-      }
-    });
-
-    // Right-click (contextmenu) anywhere on map inspects owned land or offers to drop a pin
-    this.map.on('contextmenu', (e: Leaflet.LeafletMouseEvent) => {
-      const { gx, gy } = this.meta.latLngToGrid(e.latlng.lat, e.latlng.lng);
-      const tile = this.meta.getTileAtGrid(gx, gy);
-      if (tile) {
-        const area = this.meta.getGroupedAreas().find((a) => String(a.order_id) === String(tile.order_id));
-        if (area) {
-          this.zone.run(() => this.openAreaInspection(area));
-        }
-      }
-    });
-
-    // Request real-world GPS / IP geolocation asynchronously in background on first visit
-    if (!localStorage.getItem('flatmeta_last_coords')) {
-      this.resolveInitialRealWorldLocationAsync();
-    }
-  }
-
-  public snapToAllowedZoom(z: number): number {
-    if (z <= 7) return 5;
-    if (z <= 12) return 10;
-    return 15;
-  }
-
-  /**
-   * Enforces strictly 3 zoom levels [5, 10, 15] across mouse wheel, trackpad, and mobile pinch,
-   * always centering the zoom on the user's Avatar so zooming never jumps across the world!
-   */
-  private attachStrictThreeLevelZoomHandlers() {
-    const container = this.map.getContainer();
-
-    // 1. Mouse wheel / trackpad zoom -> steps strictly 15 <-> 10 <-> 5 around Avatar
-    container.addEventListener(
-      'wheel',
-      (e: WheelEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const now = Date.now();
-        if (now - this.lastZoomStepTime < 360) return;
-        if (Math.abs(e.deltaY) < 6) return;
-
-        this.lastZoomStepTime = now;
-        const dir = e.deltaY < 0 ? 1 : -1;
-        this.zone.run(() => {
-          this.stepZoomLevel(dir);
-        });
-      },
-      { passive: false }
-    );
-
-    // 2. Mobile pinch-zoom -> steps strictly 15 <-> 10 <-> 5 around Avatar
-    let startDist = 0;
-    container.addEventListener(
-      'touchstart',
-      (e: TouchEvent) => {
-        if (e.touches.length === 2) {
-          const dx = e.touches[0].clientX - e.touches[1].clientX;
-          const dy = e.touches[0].clientY - e.touches[1].clientY;
-          startDist = Math.hypot(dx, dy);
-        }
-      },
-      { passive: true }
-    );
-
-    container.addEventListener(
-      'touchend',
-      (e: TouchEvent) => {
-        if (startDist > 0 && e.changedTouches.length > 0) {
-          const touch = e.changedTouches[0];
-          const other = e.touches[0];
-          if (other) {
-            const dx = touch.clientX - other.clientX;
-            const dy = touch.clientY - other.clientY;
-            const endDist = Math.hypot(dx, dy);
-            const delta = endDist - startDist;
-            if (Math.abs(delta) > 35) {
-              this.zone.run(() => {
-                this.stepZoomLevel(delta > 0 ? 1 : -1);
-              });
-            }
-          }
-          startDist = 0;
-        }
-      },
-      { passive: true }
-    );
-  }
-
-  public stepZoomLevel(direction: 1 | -1) {
-    const idx = HomePage.ALLOWED_ZOOMS.indexOf(this.currentZoomLevel);
-    const nextIdx = Math.max(0, Math.min(HomePage.ALLOWED_ZOOMS.length - 1, idx + direction));
-    const targetZoom = HomePage.ALLOWED_ZOOMS[nextIdx];
-    this.setZoomLevel(targetZoom);
-  }
-
-  public setZoomLevel(level: number) {
-    if (!this.map) return;
-    const targetZoom = this.snapToAllowedZoom(level);
-    this.currentZoomLevel = targetZoom;
-
-    // Brief 06/01/23 lines 46-47: "it should zoom only where avatar is"
-    const anchor = this.myMarker ? this.myMarker.getLatLng() : this.map.getCenter();
-    this.map.setView(anchor, targetZoom, { animate: true });
-  }
-
-  private saveLastCoords(lat: number, lng: number) {
-    try {
-      localStorage.setItem('flatmeta_last_coords', JSON.stringify([lat, lng]));
-    } catch (e) {}
-  }
-
-  private checkAvatarOffScreen() {
-    if (!this.map || !this.myMarker) {
-      this.isAvatarOffScreen = false;
-      return;
-    }
-    const bounds = this.map.getBounds();
-    const pos = this.myMarker.getLatLng();
-    this.isAvatarOffScreen = !bounds.contains(pos);
-  }
-
-  // ============================================================================
-  // 3. LOCATION CONTROLS: GPS HOME, FLATMETA HOME, LOCATE AVATAR
-  // ============================================================================
-
-  private async resolveInitialRealWorldLocationAsync() {
-    try {
-      const pos = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: false,
-        timeout: 3500,
-      });
-      if (pos?.coords) {
-        this.saveLastCoords(pos.coords.latitude, pos.coords.longitude);
-      }
-    } catch (e) {
-      // Quietly keep FlatMeta Home showcase coordinates if GPS permission is not granted
-    }
-  }
-
-  /**
-   * Brief 06/01/23 line 76 & 85:
-   * "If they click home, then it moves avatar and map to their current real-world location or country they are in based on IP"
-   */
-  async getCurrentLocation() {
-    try {
-      if (Capacitor.isNativePlatform()) {
-        const canRequest = await this.locationAccuracy.canRequest();
-        if (canRequest) {
-          await this.locationAccuracy.request(this.locationAccuracy.REQUEST_PRIORITY_HIGH_ACCURACY);
-        }
-      }
-      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 4500 });
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      this.flyToAndMoveAvatar(lat, lng, 15);
-      this.general.presentToast('Moved to your real-world GPS location!');
-      return;
-    } catch (e) {
-      // Fallback to IP geolocation if browser GPS is blocked/unavailable
-      try {
-        const res = await fetch('https://ipapi.co/json/');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.latitude && data.longitude) {
-            this.flyToAndMoveAvatar(Number(data.latitude), Number(data.longitude), 15);
-            this.general.presentToast(`Moved to ${data.city || data.country_name || 'your location'}!`);
-            return;
-          }
-        }
-      } catch (ipErr) {}
-    }
-
-    // Ultimate fallback: FlatMeta Home Showcase District
-    this.flyToFlatMetaHome();
-  }
-
-  /**
-   * Brief 28/4/22 #11:
-   * "Flatmeta Home, takes to a customised tiled page that shows our details and instructions on how to use the site."
-   */
-  public flyToFlatMetaHome() {
-    const [lat, lng] = MetaverseService.FLATMETA_HOME_COORDS;
-    this.flyToAndMoveAvatar(lat, lng, 15);
-    this.general.presentToast('Welcome to FlatMeta Home Showcase Plaza!');
-  }
-
-  /**
-   * Brief 06/01/23 line 77 & 84:
-   * "If they click locate, the map will go to where the avatar is."
-   */
-  public toAvatarLocation() {
-    if (this.myMarker && this.map) {
-      const pos = this.myMarker.getLatLng();
-      this.map.flyTo(pos, this.currentZoomLevel === 5 ? 15 : this.currentZoomLevel, { duration: 0.7 });
-      this.isAvatarOffScreen = false;
-      this.displaySpeechBubble(this.getSessionUserId(), 'Here I am!');
-    }
-  }
-
-  public flyToAndMoveAvatar(lat: number, lng: number, zoom: number = 15) {
-    if (!this.map) return;
-    const targetZoom = this.snapToAllowedZoom(zoom);
-    this.currentCenter = [lat, lng];
-    this.saveLastCoords(lat, lng);
-    this.map.flyTo([lat, lng], targetZoom, { duration: 0.85 });
-    this.currentZoomLevel = targetZoom;
-
-    if (this.myMarker) {
-      this.myMarker.slideTo({ lat, lng }, { duration: 750 });
-    } else {
-      this.addMarker(lat, lng);
-    }
-    this.emitLocation({ lat, lng });
-    this.isAvatarOffScreen = false;
-  }
-
-  // ============================================================================
-  // 4. ALWAYS-VISIBLE SEAMLESS LAND LAYER + TOGGLEABLE BUY GRID & SCAN MODE
-  // ============================================================================
-
-  /**
-   * Toggles the Buy/Select Land Grid at zoom 15
-   */
-  public toggleBuyGrid() {
-    if (this.currentZoomLevel !== 15) {
-      this.setZoomLevel(15);
-      this.buyGridActive = true;
-      this.redrawLandLayers();
-      this.general.presentToast('Zoomed to 15x Buy Level & activated Land Grid!');
-      return;
-    }
-
-    this.buyGridActive = !this.buyGridActive;
-    if (!this.buyGridActive) {
-      this.selectedBoxs = [];
-      this.myBoxs = [];
-    }
-    this.redrawLandLayers();
-  }
-
-  /**
-   * Toggles Scan Mode (Brief 15/4/22 line 288: highlight owned squares & click to inspect)
-   */
-  public toggleScanMode() {
-    this.scanModeActive = !this.scanModeActive;
-    this.redrawLandLayers();
-    this.general.presentToast(
-      this.scanModeActive
-        ? 'Scan Mode ON: Owned parcels highlighted. Click any owned parcel to inspect!'
-        : 'Scan Mode OFF: Seamless custom artwork view.'
-    );
-  }
-
-  /**
-   * Brief 25/4/22 & 18/4/22 (lines 251 & 273):
-   * "they can maybe switch and see which area the new content squares are covering or have replaced"
-   */
-  public togglePeekUnderlyingMap() {
-    this.peekUnderlyingMap = !this.peekUnderlyingMap;
-    if (this.landCanvasLayer) {
-      this.landCanvasLayer.setOpacity(this.peekUnderlyingMap ? 0.25 : 1);
-    }
-    this.general.presentToast(
-      this.peekUnderlyingMap
-        ? 'Peek Map ON: Custom land graphics set to 25% opacity so you can see the underlying real-world map!'
-        : 'Peek Map OFF: Full custom land artwork restored.'
-    );
-  }
-
-  /**
-   * Initializes the persistent Canvas GridLayer that renders:
-   * - Owned land images SEAMLESSLY (zero border/space between adjacent tiles!)
-   * - Multi-tile spanned images (1 image sliced across NxM selected squares!)
-   * - Optional Scan Mode outlines & Buy Mode half-thickness grid lines at zoom 15
-   */
-  private initLandCanvasLayer() {
-    if (!this.map) return;
-    const that = this;
-
-    const CustomLandLayer = Leaflet.GridLayer.extend({
-      createTile: function (coords: Leaflet.Coords, done: Leaflet.DoneCallback) {
-        const tile = Leaflet.DomUtil.create('canvas', 'leaflet-tile flatmeta-parcel-tile') as HTMLCanvasElement;
-        const size = this.getTileSize();
-        tile.width = size.x;
-        tile.height = size.y;
-
-        that.drawParcelTileCanvas(tile, coords, size);
-
-        tile.addEventListener('click', (ev: MouseEvent) => {
-          ev.stopPropagation();
-          that.zone.run(() => {
-            that.onParcelTileClick(coords, ev);
-          });
-        });
-
-        setTimeout(() => done(null, tile), 0);
-        return tile;
-      },
-    });
-
-    this.landCanvasLayer = new (CustomLandLayer as any)({
-      tileSize: MetaverseService.TILE_PIXEL_SIZE,
-      opacity: 1,
-      updateWhenZooming: false,
-      updateWhenIdle: false,
-      zIndex: 400,
-    });
-
-    this.landCanvasLayer.addTo(this.map);
-    this.renderZoomedOutAreaMarkers();
-  }
-
-  public redrawLandLayers() {
-    if (this.landCanvasLayer) {
-      this.landCanvasLayer.redraw();
-    }
-    this.renderZoomedOutAreaMarkers();
-    this.cdr.detectChanges();
-  }
-
-  private drawParcelTileCanvas(tile: HTMLCanvasElement, coords: Leaflet.Coords, size: Leaflet.Point) {
-    const ctx = tile.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, size.x, size.y);
-
-    // At zoom 10 and 5, zoomed-out area markers represent custom land so the 40px grid doesn't clutter the world
-    if (coords.z !== MetaverseService.GRID_ZOOM) {
-      return;
-    }
-
-    const gx = coords.x;
-    const gy = coords.y;
-    const currentUserId = this.getSessionUserId();
-
-    const matchingBox = this.soldBoxes.find((b) => b.gx === gx && b.gy === gy);
-    const isSelectedToClaim = this.selectedBoxs.some((b) => b.gx === gx && b.gy === gy);
-    const isSelectedOwned = this.myBoxs.some((b) => b.gx === gx && b.gy === gy);
-
-    if (matchingBox) {
-      const isMine = String(matchingBox.user_id) === String(currentUserId);
-
-      if (matchingBox.image) {
-        this.drawTileOrSpannedImage(ctx, matchingBox, gx, gy, size.x, size.y, () => {
-          // Overlay selection or scan outline AFTER image draws if active
-          this.drawParcelOverlayBorder(ctx, matchingBox, isMine, isSelectedOwned, size.x, size.y);
-        });
-      } else {
-        // Owned parcel without an image yet
-        ctx.fillStyle = isMine ? 'rgba(16, 185, 129, 0.24)' : 'rgba(244, 63, 94, 0.22)';
-        ctx.fillRect(0, 0, size.x, size.y);
-      }
-
-      // Draw border ONLY if no custom image is set OR Scan Mode is ON OR tile is actively selected
-      // (Brief 28/4/22 #1 & line 157: "touches (no space) with other images next to it... will not show square-edges if image has been replaced")
-      this.drawParcelOverlayBorder(ctx, matchingBox, isMine, isSelectedOwned, size.x, size.y);
-    } else if (isSelectedToClaim) {
-      // Unowned square currently selected for claiming
-      ctx.fillStyle = 'rgba(56, 189, 248, 0.32)';
-      ctx.fillRect(0, 0, size.x, size.y);
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 1.8;
-      ctx.strokeRect(0.9, 0.9, size.x - 1.8, size.y - 1.8);
-    } else if (this.buyGridActive) {
-      // Unowned square in Buy Mode: half-thickness, transparent edge (Brief 28/4/22 line 157)
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.32)';
-      ctx.lineWidth = 0.5;
-      ctx.strokeRect(0.25, 0.25, size.x - 0.5, size.y - 0.5);
-    }
-  }
-
-  private drawParcelOverlayBorder(
-    ctx: CanvasRenderingContext2D,
-    box: LandTile,
-    isMine: boolean,
-    isSelectedOwned: boolean,
-    w: number,
-    h: number
-  ) {
-    if (isSelectedOwned) {
-      ctx.strokeStyle = '#fbbf24';
-      ctx.lineWidth = 2.2;
-      ctx.strokeRect(1.1, 1.1, w - 2.2, h - 2.2);
-      return;
-    }
-
-    if (this.scanModeActive || !box.image) {
-      ctx.strokeStyle = isMine
-        ? '#10b981'
-        : box.on_sale
-        ? '#f59e0b'
-        : box.user_id === 'flatmeta_official'
-        ? '#38bdf8'
-        : '#f43f5e';
-      ctx.lineWidth = this.scanModeActive ? 1.5 : 0.8;
-      ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
-    }
-  }
-
-  /**
-   * Draws either a single-tile image OR slices the corresponding sub-region of a
-   * multi-tile spanned image (`span_bounds`), ensuring zero gap between adjacent tiles!
-   */
-  private drawTileOrSpannedImage(
-    ctx: CanvasRenderingContext2D,
-    box: LandTile,
-    gx: number,
-    gy: number,
-    w: number,
-    h: number,
-    onDrawn?: () => void
-  ) {
-    const src = box.image;
-    if (!src) return;
-
-    const renderFromImg = (img: HTMLImageElement) => {
-      try {
-        ctx.imageSmoothingEnabled = true;
-        if (
-          box.span_bounds &&
-          box.span_bounds.maxGx >= box.span_bounds.minGx &&
-          box.span_bounds.maxGy >= box.span_bounds.minGy
-        ) {
-          const cols = box.span_bounds.maxGx - box.span_bounds.minGx + 1;
-          const rows = box.span_bounds.maxGy - box.span_bounds.minGy + 1;
-          const colIdx = gx - box.span_bounds.minGx;
-          const rowIdx = gy - box.span_bounds.minGy;
-
-          const sx = (colIdx / cols) * img.naturalWidth;
-          const sy = (rowIdx / rows) * img.naturalHeight;
-          const sw = img.naturalWidth / cols;
-          const sh = img.naturalHeight / rows;
-
-          ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
-        } else {
-          ctx.drawImage(img, 0, 0, w, h);
-        }
-        if (onDrawn) onDrawn();
-      } catch (e) {}
-    };
-
-    if (this.imageCache.has(src)) {
-      const cached = this.imageCache.get(src)!;
-      if (cached.complete && cached.naturalWidth > 0) {
-        renderFromImg(cached);
-        return;
-      }
-    }
-
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      this.imageCache.set(src, img);
-      renderFromImg(img);
-    };
-    img.src = src;
-  }
-
-  /**
-   * Brief 25/4/22 line 203: "When zoom out should be able to see the newly added squares zoomed out."
-   * Renders interactive thumbnail badges for customized land areas at zoom levels 10 and 5.
-   */
-  private renderZoomedOutAreaMarkers() {
-    if (!this.map || !this.zoomOutMarkersLayer) return;
-    this.zoomOutMarkersLayer.clearLayers();
-
-    if (this.currentZoomLevel === 15) return;
-
-    const areas = this.meta.getGroupedAreas();
-    areas.forEach((area) => {
-      const sizePx = this.currentZoomLevel === 10 ? 38 : 26;
-      const badgeIcon = Leaflet.divIcon({
-        className: 'zoomed-out-area-marker',
-        iconSize: [sizePx, sizePx],
-        iconAnchor: [sizePx / 2, sizePx / 2],
-        html: `
-          <div class="zoomed-area-thumb ${area.on_sale ? 'on-sale' : ''}" title="${area.title} (${area.no_of_tiles} tiles)">
-            <img src="${area.image}" alt="${area.title}" onerror="this.src='assets/icon/placeholder-land.svg'"/>
-            <span class="tile-count-dot">${area.no_of_tiles}</span>
-          </div>
-        `,
-      });
-
-      const m = Leaflet.marker([area.lat, area.lng], { icon: badgeIcon });
-      m.on('click', () => {
-        this.zone.run(() => {
-          this.flyToAndMoveAvatar(area.lat, area.lng, 15);
-          this.openAreaInspection(area);
-        });
-      });
-      this.zoomOutMarkersLayer.addLayer(m);
-    });
-  }
-
-  /**
-   * Handles clicking a 40x40 parcel square at zoom 15
-   */
-  private onParcelTileClick(coords: Leaflet.Coords, ev: MouseEvent) {
-    if (coords.z !== MetaverseService.GRID_ZOOM) return;
-
-    const gx = coords.x;
-    const gy = coords.y;
-    const nw = this.meta.gridToLatLng(gx, gy);
-    const currentUserId = this.getSessionUserId();
-    const matchingBox = this.soldBoxes.find((b) => b.gx === gx && b.gy === gy);
-
-    if (matchingBox) {
-      const isMine = String(matchingBox.user_id) === String(currentUserId);
-      if (isMine && !this.scanModeActive) {
-        // Toggle or multi-select owned parcel so user can group-edit or span 1 image across multiple owned squares!
-        this.selectedBoxs = [];
-        const idx = this.myBoxs.findIndex((b) => b.gx === gx && b.gy === gy);
-        if (idx > -1) {
-          this.myBoxs.splice(idx, 1);
-        } else {
-          this.myBoxs.push(matchingBox);
-        }
-        this.populateEditorFromSelection();
-        this.redrawLandLayers();
-      } else {
-        // Owned by someone else (or Scan Mode is active): open rich Area Callout Modal!
-        const area = this.meta.getGroupedAreas().find((a) => String(a.order_id) === String(matchingBox.order_id));
-        if (area) {
-          this.openAreaInspection(area);
-        }
-      }
-      return;
-    }
-
-    // Clicked an UNOWNED square: only select if Buy Grid is active
-    if (!this.buyGridActive) {
-      return;
-    }
-
-    this.myBoxs = [];
-    const existingIdx = this.selectedBoxs.findIndex((b) => b.gx === gx && b.gy === gy);
-    if (existingIdx > -1) {
-      this.selectedBoxs.splice(existingIdx, 1);
-    } else {
-      this.selectedBoxs.push({ gx, gy, lat: nw.lat, lng: nw.lng });
-    }
-    this.redrawLandLayers();
-  }
-
-  /**
-   * Quick multi-tile block selector (2x2 or 3x3 around Avatar/Map center)
-   * Makes selecting multiple boxes to span 1 image effortless on both mobile and desktop!
-   */
-  public selectBlockAroundAvatar(size: 2 | 3 = 2) {
-    if (this.currentZoomLevel !== 15) {
-      this.setZoomLevel(15);
-    }
-    this.buyGridActive = true;
-    this.myBoxs = [];
-    this.selectedBoxs = [];
-
-    const center = this.myMarker ? this.myMarker.getLatLng() : this.map.getCenter();
-    const { gx, gy } = this.meta.latLngToGrid(center.lat, center.lng);
-    const offset = size === 3 ? -1 : 0;
-
-    for (let dx = offset; dx < offset + size; dx++) {
-      for (let dy = offset; dy < offset + size; dy++) {
-        const tx = gx + dx;
-        const ty = gy + dy;
-        const existing = this.meta.getTileAtGrid(tx, ty);
-        if (!existing) {
-          const ll = this.meta.gridToLatLng(tx, ty);
-          this.selectedBoxs.push({ gx: tx, gy: ty, lat: ll.lat, lng: ll.lng });
-        }
-      }
-    }
-
-    this.redrawLandLayers();
-    if (this.selectedBoxs.length > 0) {
-      this.general.presentToast(`Selected ${this.selectedBoxs.length} available squares around your avatar!`);
-    } else {
-      this.general.presentToast('Squares right under your avatar are already owned — move to an open spot or tap squares.');
-    }
-  }
-
-  /**
-   * Selects all owned squares belonging to the same area/order so user can span 1 image or edit the whole area at once
-   */
-  public selectAllInMyArea() {
-    if (this.myBoxs.length === 0) return;
-    const orderId = this.myBoxs[0].order_id;
-    const uid = this.getSessionUserId();
-    this.myBoxs = this.soldBoxes.filter(
-      (b) => String(b.order_id) === String(orderId) && String(b.user_id) === String(uid)
-    );
-    this.populateEditorFromSelection();
-    this.redrawLandLayers();
-    this.general.presentToast(`Selected all ${this.myBoxs.length} squares in this area!`);
-  }
-
-  private populateEditorFromSelection() {
-    if (this.myBoxs.length === 0) return;
-    const first = this.myBoxs[0];
-    this.areaTitleInput = first.area_title || '';
-    this.areaSlugInput = first.slug || '';
-    this.areaThreeWordsInput = first.three_words || this.meta.gridToThreeWords(first.gx, first.gy);
-    this.qEditor = first.custom_details || '';
-    this.areaEmbedUrlInput = first.embed_url || '';
-    this.areaCustomCodeInput = first.custom_code || '';
-    this.areaOnSaleInput = Boolean(first.on_sale);
-    this.areaSalePriceInput = Number(first.sale_price || 1.0);
-  }
-
-  public applyCodeTemplate(type: 'counter' | 'game' | 'banner') {
-    if (type === 'counter') {
-      this.areaCustomCodeInput = `<div style="font-family:sans-serif;background:#0f172a;color:#f8fafc;padding:12px;border-radius:10px;text-align:center;border:1px solid #38bdf8;">
-  <div style="font-size:11px;color:#38bdf8;font-weight:700;">INTERACTIVE VISITOR COUNTER</div>
-  <p style="margin:6px 0;font-size:13px;">Welcome to ${this.areaTitleInput || 'My Land Area'}!</p>
-  <button onclick="const c=document.getElementById('vc');c.textContent=Number(c.textContent)+1;" style="background:#0284c7;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:700;">👋 Leave a High-Five (<span id="vc">1</span>)</button>
-</div>`;
-    } else if (type === 'game') {
-      this.areaCustomCodeInput = `<div style="font-family:sans-serif;background:#064e3b;color:#ecfdf5;padding:12px;border-radius:10px;text-align:center;border:1px solid #34d399;">
-  <div style="font-size:11px;color:#34d399;font-weight:700;">MINI-GAME: METAVERSE COIN MINER</div>
-  <p style="margin:6px 0;font-size:13px;">Coins Mined: <strong id="coins" style="color:#fbbf24;">0</strong></p>
-  <button onclick="const el=document.getElementById('coins');el.textContent=Number(el.textContent)+Math.floor(Math.random()*5+1);" style="background:#10b981;color:#052e16;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:800;">⛏️ Mine Land Block</button>
-</div>`;
-    } else {
-      this.areaCustomCodeInput = `<div style="font-family:sans-serif;background:linear-gradient(135deg,#2e1065,#7c3aed);color:#fff;padding:14px;border-radius:10px;text-align:center;">
-  <h4 style="margin:0 0 4px 0;">✨ ${this.areaTitleInput || 'Custom Land Showcase'}</h4>
-  <p style="margin:0;font-size:12px;opacity:0.9;">Powered by FlatMeta.io Open-Source 2D Metaverse</p>
-</div>`;
-    }
-    this.general.presentToast('Loaded interactive HTML/JS template into Land Sandbox!');
-  }
-
-  public clearSelection() {
-    this.selectedBoxs = [];
-    this.myBoxs = [];
-    this.redrawLandLayers();
-  }
-
-  // ============================================================================
-  // 5. CLAIMING LAND (100 FREE SQUARES QUOTA) & PERSONALIZING ARTWORK / DETAILS
-  // ============================================================================
-
-  /**
-   * Instant Claim button (uses the 100 Free Squares quota first, works without login!)
-   */
-  public claimSelectedNow() {
-    if (this.selectedBoxs.length === 0) return;
-
-    const tilesPayload = this.selectedBoxs.map((e) => ({
-      lat: e.lat.toString(),
-      lng: e.lng.toString(),
-    }));
-
-    const result = this.meta.claimSelectedSquares(this.selectedBoxs);
-    if (result.claimed.length === 0) {
-      this.general.presentToast('Those squares are already claimed.');
-      return;
-    }
-
-    // Automatically select the newly claimed squares so the user can immediately upload an image or customize!
-    this.selectedBoxs = [];
-    this.myBoxs = [...result.claimed];
-    this.populateEditorFromSelection();
-    this.redrawLandLayers();
-
-    if (!this.isGuest) {
-      const firstClaimed = result.claimed[0];
-      this.http
-        .post(
-          'ClaimTiles',
-          {
-            tiles: tilesPayload,
-            area_title: firstClaimed?.area_title || '',
-            slug: firstClaimed?.slug || '',
-            three_words: firstClaimed?.three_words || '',
-            span_bounds: firstClaimed?.span_bounds || null,
-            custom_details: firstClaimed?.custom_details || '',
-            image: firstClaimed?.image || '',
-          },
-          false
-        )
-        .subscribe({ next: () => {}, error: () => {} });
-    }
-
-    if (result.billableAdded === 0) {
-      this.general.presentToast(
-        `Claimed ${result.claimed.length} square${result.claimed.length > 1 ? 's' : ''} for FREE! Customize your artwork or URL below.`
-      );
-    } else {
-      this.general.presentToast(
-        `Claimed ${result.claimed.length} squares (${result.usedFreeQuota} free + ${result.billableAdded} at $0.10/mo subscription).`
-      );
-    }
-  }
-
-  public addToCart() {
-    if (this.selectedBoxs.length === 0) return;
-
-    const tilesPayload = this.selectedBoxs.map((e) => ({
-      lat: e.lat.toString(),
-      lng: e.lng.toString(),
-    }));
-
-    // Also claim locally into user's portfolio / cart
-    this.claimSelectedNow();
-
-    this.http.post('AddToCart', { tiles: tilesPayload }, false).subscribe({
-      next: () => {},
-      error: () => {},
-    });
-  }
-
-  public confirmImg() {
-    if (!this.selectedImg || this.myBoxs.length === 0) return;
-    const imgUrl = this.selectedImg.url || this.selectedImg.name || this.selectedImg;
-
-    this.meta.updateTilesArtwork(
-      this.myBoxs.map((b) => ({ gx: b.gx, gy: b.gy })),
-      imgUrl,
-      this.spanImageAcrossSelection
-    );
-
-    // Sync with backend if logged in
-    if (!this.isGuest && this.myBoxs[0]?.order_id) {
-      this.http
-        .post(
-          'UpdateBoxImage',
-          {
-            order_id: this.myBoxs[0].order_id,
-            image: imgUrl,
-          },
-          false
-        )
-        .subscribe({ next: () => {}, error: () => {} });
-    }
-
-    this.imgSelection = false;
-    this.redrawLandLayers();
-    this.general.presentToast(
-      this.myBoxs.length > 1 && this.spanImageAcrossSelection
-        ? `Spanned 1 image seamlessly across ${this.myBoxs.length} squares!`
-        : 'Land artwork updated!'
-    );
-  }
-
-  public revertMySelectionArtwork(toDefaultMap: boolean = false) {
-    if (this.myBoxs.length === 0) return;
-    const orderId = this.myBoxs[0]?.order_id;
-    this.meta.revertTilesArtwork(
-      this.myBoxs.map((b) => ({ gx: b.gx, gy: b.gy })),
-      toDefaultMap
-    );
-    if (!this.isGuest && orderId) {
-      this.http.post('RevertBoxImage', { order_id: orderId }, false).subscribe({
-        next: () => {},
-        error: () => {},
-      });
-    }
-    this.imgSelection = false;
-    this.redrawLandLayers();
-    this.general.presentToast(toDefaultMap ? 'Reverted squares to default map view.' : 'Reverted to previous image.');
-  }
-
-  public chooseFile() {
-    this.fileInput.nativeElement.click();
-  }
-
-  public choosePhoto = (e: any) => {
-    const files = e?.target?.files;
-    if (!files || files.length === 0) return;
-
-    const file = files[0];
-    const reader = new FileReader();
-    reader.onload = () => {
+    this.map.on('zoomend', () =>
       this.zone.run(() => {
-        const dataUrl = reader.result as string;
-        const item = { name: file.name, url: dataUrl, country: 'Custom Upload' };
-        this.boxImgs = [item, ...this.boxImgs];
-        this.selectedImg = item;
-        this.showUplaodedImage = true;
-        this.general.presentToast('Custom image loaded! Click "Confirm Image" to apply.');
-      });
-    };
-    reader.readAsDataURL(file);
-
-    // Also upload to backend if reachable
-    this.http.uploadImages(file, 'UploadBoxesImage').subscribe({
-      next: (res: any) => {
-        if (res?.status === true && res.data?.url) {
-          this.selectedImg = res.data;
+        this.zoom = snapToAllowedZoom(this.map.getZoom());
+        if (this.zoom !== ZOOM_LEVELS.BUY) {
+          this.buyMode = false;
+          this.newSelection = [];
         }
-      },
-      error: () => {},
+        this.redrawBadges();
+        this.syncCitizenVisibility();
+        this.checkAvatarOnScreen();
+      })
+    );
+    this.map.on('moveend', () => this.zone.run(() => this.checkAvatarOnScreen()));
+    this.map.on('click', (e: Leaflet.LeafletMouseEvent) => this.zone.run(() => this.onMapClick(e)));
+    // "When double click, avatar should go to where mouse is."
+    this.map.on('dblclick', (e: Leaflet.LeafletMouseEvent) => this.zone.run(() => this.walkTo(e.latlng.lat, e.latlng.lng)));
+    this.map.on('contextmenu', (e: Leaflet.LeafletMouseEvent) => this.zone.run(() => this.inspectAt(e.latlng)));
+
+    this.redrawBadges();
+    if (!this.hasStartOverride()) this.locateOnFirstVisit();
+    setTimeout(() => this.map.invalidateSize(), 200);
+  }
+
+  stepZoom(direction: 1 | -1) {
+    const idx = ALLOWED_ZOOMS.indexOf(this.zoom as any);
+    this.setZoom(ALLOWED_ZOOMS[Math.max(0, Math.min(ALLOWED_ZOOMS.length - 1, idx + direction))]);
+  }
+
+  /** Zooming always centres on the avatar, so the map never jumps elsewhere. */
+  setZoom(level: number) {
+    if (!this.map) return;
+    const target = snapToAllowedZoom(level);
+    this.map.setView(this.myMarker ? this.myMarker.getLatLng() : this.map.getCenter(), target, { animate: true });
+  }
+
+  private myPos(): { lat: number; lng: number } {
+    if (this.myMarker) {
+      const p = this.myMarker.getLatLng();
+      return { lat: p.lat, lng: p.lng };
+    }
+    return this.readLastPosition();
+  }
+
+  private readLastPosition(): { lat: number; lng: number } {
+    try {
+      const p = JSON.parse(localStorage.getItem(LAST_POSITION_KEY) || 'null');
+      if (p && Number.isFinite(p.lat) && Number.isFinite(p.lng)) return p;
+    } catch {}
+    return { lat: FLATMETA_HOME[0], lng: FLATMETA_HOME[1] };
+  }
+
+  private savePosition(lat: number, lng: number) {
+    try {
+      localStorage.setItem(LAST_POSITION_KEY, JSON.stringify({ lat, lng }));
+    } catch {}
+  }
+
+  /** First visit: go to the visitor's real location (GPS, else country by IP). */
+  private async locateOnFirstVisit() {
+    if (localStorage.getItem(LAST_POSITION_KEY)) return;
+    const pos = await this.realWorldPosition(false);
+    if (pos && !this.positionResolved) {
+      this.flyTo(pos.lat, pos.lng, ZOOM_LEVELS.BUY, true);
+    }
+  }
+
+  private async realWorldPosition(precise: boolean): Promise<{ lat: number; lng: number; label?: string } | null> {
+    try {
+      const p = await Geolocation.getCurrentPosition({ enableHighAccuracy: precise, timeout: precise ? 6000 : 4000 });
+      if (p?.coords) return { lat: p.coords.latitude, lng: p.coords.longitude, label: 'your location' };
+    } catch {}
+    // No GPS: fall back to the visitor's country/city from their IP address.
+    const providers: Array<[string, (d: any) => { lat: number; lng: number; label: string }]> = [
+      ['https://get.geojs.io/v1/ip/geo.json', (d) => ({ lat: Number(d.latitude), lng: Number(d.longitude), label: d.city || d.country })],
+      ['https://ipapi.co/json/', (d) => ({ lat: Number(d.latitude), lng: Number(d.longitude), label: d.city || d.country_name })],
+    ];
+    for (const [url, map] of providers) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const pos = map(await res.json());
+        if (Number.isFinite(pos.lat) && Number.isFinite(pos.lng)) return { ...pos, label: pos.label || 'your area' };
+      } catch {}
+    }
+    return null;
+  }
+
+  /** HOME: move the avatar and map to my real-world location (or my country by IP). */
+  async goMyLocation() {
+    const pos = await this.realWorldPosition(true);
+    if (!pos) {
+      this.general.presentToast("Couldn't find your location. Check location permissions.");
+      return;
+    }
+    this.flyTo(pos.lat, pos.lng, ZOOM_LEVELS.BUY, true);
+    this.general.presentToast(`Moved to ${pos.label}.`);
+  }
+
+  goFlatMetaHome() {
+    this.flyTo(FLATMETA_HOME[0], FLATMETA_HOME[1], ZOOM_LEVELS.BUY, true);
+    const home = this.land.area('flatmeta-home');
+    if (home) setTimeout(() => this.openArea(home), 900);
+  }
+
+  /** LOCATE: bring the map back to my avatar. */
+  locateAvatar() {
+    if (!this.myMarker) return;
+    this.map.flyTo(this.myMarker.getLatLng(), this.zoom === ZOOM_LEVELS.PLANET ? ZOOM_LEVELS.ROAM : this.zoom, { duration: 0.6 });
+    this.showBubble(this.me.id, 'Here I am!', 1800);
+  }
+
+  flyTo(lat: number, lng: number, zoom: number, moveAvatar: boolean) {
+    if (!this.map) return;
+    this.positionResolved = true;
+    this.map.flyTo([lat, lng], snapToAllowedZoom(zoom), { duration: 0.8 });
+    if (moveAvatar) this.placeAvatar(lat, lng, true);
+  }
+
+  private walkTo(lat: number, lng: number) {
+    this.placeAvatar(lat, lng, true);
+  }
+
+  private placeAvatar(lat: number, lng: number, animate: boolean) {
+    if (!this.myMarker) {
+      this.drawMyAvatar(lat, lng);
+    } else if (animate && this.myMarker.slideTo) {
+      this.myMarker.slideTo([lat, lng], { duration: 700 });
+    } else {
+      this.myMarker.setLatLng([lat, lng]);
+    }
+    this.savePosition(lat, lng);
+    this.presence.moveTo(lat, lng);
+    setTimeout(() => this.checkAvatarOnScreen(), 750);
+  }
+
+  private checkAvatarOnScreen() {
+    if (!this.map || !this.myMarker) return;
+    this.avatarOffScreen = !this.map.getBounds().contains(this.myMarker.getLatLng());
+  }
+
+  /** Arrow keys / WASD walk the avatar (like gather.town). */
+  @HostListener('window:keydown', ['$event'])
+  onKey(e: KeyboardEvent) {
+    if (!this.map || !this.myMarker) return;
+    const target = e.target as HTMLElement;
+    if (target && (/^(input|textarea|select)$/i.test(target.tagName) || target.isContentEditable)) return;
+    const moves: Record<string, [number, number]> = {
+      ArrowUp: [1, 0], w: [1, 0], W: [1, 0],
+      ArrowDown: [-1, 0], s: [-1, 0], S: [-1, 0],
+      ArrowLeft: [0, -1], a: [0, -1], A: [0, -1],
+      ArrowRight: [0, 1], d: [0, 1], D: [0, 1],
+    };
+    const m = moves[e.key];
+    if (!m) return;
+    e.preventDefault();
+    const step = this.zoom === ZOOM_LEVELS.BUY ? 0.0004 : this.zoom === ZOOM_LEVELS.ROAM ? 0.01 : 0.3;
+    const p = this.myMarker.getLatLng();
+    const next = Leaflet.latLng(p.lat + m[0] * step, p.lng + m[1] * step * 1.4);
+    this.placeAvatar(next.lat, next.lng, true);
+    if (!this.map.getBounds().pad(-0.15).contains(next)) this.map.panTo(next, { animate: true, duration: 0.25 });
+  }
+
+  // ===========================================================================
+  // Deep links: /u/:slug, /uri/:slug, /:slug, /at/lat,lng,zoom, /p/:pinId
+  // ===========================================================================
+
+  private hasStartOverride(): boolean {
+    const p = this.route.snapshot.paramMap;
+    return !!(p.get('slug') || p.get('coords') || p.get('pinId') || this.route.snapshot.queryParamMap.get('lat'));
+  }
+
+  private handleDeepLink(p: ParamMap, q: ParamMap) {
+    const coords = p.get('coords') || q.get('at') || (q.get('lat') && q.get('lng') ? `${q.get('lat')},${q.get('lng')}` : null);
+    if (coords) {
+      const [lat, lng, z] = coords.replace(/^@/, '').split(',').map(Number);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        this.flyTo(lat, lng, Number.isFinite(z) ? z : ZOOM_LEVELS.BUY, true);
+        const name = q.get('name');
+        if (name) this.general.presentToast(`📍 ${name.slice(0, 60)}`);
+      }
+      return;
+    }
+    const pinId = p.get('pinId');
+    if (pinId) {
+      const pin = this.pinsService.find(pinId);
+      if (pin) this.flyTo(pin.lat, pin.lng, pin.zoom, true);
+      else this.general.presentToast('That pin is not saved on this device.');
+      return;
+    }
+    const slug = p.get('slug') || q.get('u') || q.get('area');
+    if (!slug) return;
+    if (/^(flatmeta-)?home$/i.test(slug)) {
+      this.goFlatMetaHome();
+      return;
+    }
+    const tryOpen = () => {
+      const area = this.land.findArea(slug);
+      if (area) {
+        this.flyTo(area.lat, area.lng, ZOOM_LEVELS.BUY, true);
+        setTimeout(() => this.openArea(area), 900);
+      }
+      return !!area;
+    };
+    if (!tryOpen()) {
+      this.land.loaded$.pipe(filter(Boolean), first()).subscribe(() => {
+        if (!tryOpen()) this.general.presentToast(`No land found at flatmeta.io/u/${slug}`);
+      });
+    }
+  }
+
+  // ===========================================================================
+  // Land: drawing, selecting, claiming, personalising
+  // ===========================================================================
+
+  private redrawLand() {
+    this.landLayer?.redraw();
+    this.redrawBadges();
+    // Keep the owned selection in sync with fresh data (e.g. after a save).
+    if (this.ownedSelection.length) {
+      this.ownedSelection = this.ownedSelection
+        .map((t) => this.land.tileAt(t.gx, t.gy))
+        .filter((t): t is LandTile => !!t && this.land.isMine(t, this.me));
+    }
+    this.cdr.markForCheck();
+  }
+
+  /** "When zoomed out should be able to see the newly added squares." */
+  private redrawBadges() {
+    if (!this.areaBadges) return;
+    this.areaBadges.clearLayers();
+    if (this.zoom === ZOOM_LEVELS.BUY) return;
+    const size = this.zoom === ZOOM_LEVELS.ROAM ? 38 : 26;
+    for (const area of this.land.areas()) {
+      const m = Leaflet.marker([area.lat, area.lng], {
+        icon: areaBadgeIcon({ image: area.image, title: area.title, tiles: area.no_of_tiles, onSale: area.on_sale, size }),
+        keyboard: false,
+      });
+      m.on('click', () =>
+        this.zone.run(() => {
+          this.flyTo(area.lat, area.lng, ZOOM_LEVELS.BUY, false);
+          this.openArea(area);
+        })
+      );
+      this.areaBadges.addLayer(m);
+    }
+  }
+
+  toggleBuyMode() {
+    if (this.zoom !== ZOOM_LEVELS.BUY) {
+      this.setZoom(ZOOM_LEVELS.BUY);
+      this.buyMode = true;
+    } else {
+      this.buyMode = !this.buyMode;
+    }
+    if (!this.buyMode) this.newSelection = [];
+    this.ownedSelection = [];
+    this.landLayer.redraw();
+    if (this.buyMode) this.general.presentToast('Tap free squares to select them, then press Claim.', 2500);
+  }
+
+  toggleScan() {
+    this.scanMode = !this.scanMode;
+    this.landLayer.redraw();
+  }
+
+  togglePeek() {
+    this.peekMap = !this.peekMap;
+    this.landLayer.setOpacity(this.peekMap ? 0.25 : 1);
+  }
+
+  private onMapClick(e: Leaflet.LeafletMouseEvent) {
+    this.showSearch = false;
+    if (this.zoom !== ZOOM_LEVELS.BUY) return;
+    const { gx, gy } = latLngToGrid(e.latlng.lat, e.latlng.lng);
+    const tile = this.land.tileAt(gx, gy);
+
+    if (tile) {
+      if (this.land.isMine(tile, this.me) && !this.scanMode) {
+        this.newSelection = [];
+        const idx = this.ownedSelection.findIndex((t) => t.gx === gx && t.gy === gy);
+        if (idx > -1) this.ownedSelection.splice(idx, 1);
+        else this.ownedSelection.push(tile);
+        this.ownedSelection = [...this.ownedSelection];
+      } else {
+        const area = this.land.area(tile.order_id);
+        if (area) this.openArea(area);
+      }
+      this.landLayer.redraw();
+      return;
+    }
+
+    if (!this.buyMode) return;
+    this.ownedSelection = [];
+    const idx = this.newSelection.findIndex((p) => p.gx === gx && p.gy === gy);
+    if (idx > -1) this.newSelection.splice(idx, 1);
+    else this.newSelection.push({ gx, gy });
+    this.newSelection = [...this.newSelection];
+    this.landLayer.redraw();
+  }
+
+  private inspectAt(latlng: Leaflet.LatLng) {
+    const { gx, gy } = latLngToGrid(latlng.lat, latlng.lng);
+    const tile = this.land.tileAt(gx, gy);
+    const area = tile && this.land.area(tile.order_id);
+    if (area) this.openArea(area);
+  }
+
+  /** Quick 2x2 / 3x3 block under the avatar: the easiest way to start on mobile. */
+  selectBlock(size: 2 | 3) {
+    if (this.zoom !== ZOOM_LEVELS.BUY) this.setZoom(ZOOM_LEVELS.BUY);
+    this.buyMode = true;
+    this.ownedSelection = [];
+    const { gx, gy } = latLngToGrid(this.myPos().lat, this.myPos().lng);
+    const offset = size === 3 ? -1 : 0;
+    const block: GridPoint[] = [];
+    for (let dx = offset; dx < offset + size; dx++) {
+      for (let dy = offset; dy < offset + size; dy++) block.push({ gx: gx + dx, gy: gy + dy });
+    }
+    this.newSelection = this.land.available(block);
+    this.landLayer.redraw();
+    if (!this.newSelection.length) {
+      this.general.presentToast('The squares under your avatar are taken. Walk to an open spot.');
+    }
+  }
+
+  selectWholeArea() {
+    const first = this.ownedSelection[0];
+    if (!first) return;
+    this.ownedSelection = this.land.tiles.filter((t) => t.order_id === first.order_id && this.land.isMine(t, this.me));
+    this.landLayer.redraw();
+  }
+
+  clearSelection() {
+    this.newSelection = [];
+    this.ownedSelection = [];
+    this.landLayer?.redraw();
+  }
+
+  async claimSelection() {
+    if (!this.newSelection.length || this.busy) return;
+    this.busy = true;
+    const res = await this.land.claim(this.newSelection);
+    this.busy = false;
+    if (!res.ok) {
+      this.general.presentToast(res.message);
+      if (res.needsAuth) this.session.requestAuth('Verify your email to claim more than 100 squares.');
+      return;
+    }
+    this.presence.announceTilesChanged();
+    this.newSelection = [];
+    this.buyMode = false;
+    if (res.paymentUrl) {
+      this.general.presentToast(res.message, 4000);
+      this.openPayment(res.paymentUrl);
+      return;
+    }
+    // Select what was just claimed so the user can add an image straight away.
+    setTimeout(() => {
+      this.ownedSelection = res.claimed.map((p) => this.land.tileAt(p.gx, p.gy)).filter((t): t is LandTile => !!t);
+      this.landLayer.redraw();
+    }, 400);
+    this.general.presentToast(res.message, 3500);
+  }
+
+  // --- Artwork ---------------------------------------------------------------
+
+  openArtwork() {
+    this.pickedImage = '';
+    this.pasteUrl = '';
+    this.spanImage = this.ownedSelection.length > 1;
+    this.showArtwork = true;
+  }
+
+  chooseFile() {
+    this.fileInput?.nativeElement.click();
+  }
+
+  async onFileChosen(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    this.busy = true;
+    const res = await this.land.uploadArtwork(file);
+    this.busy = false;
+    if (res.ok && res.url) this.pickedImage = res.url;
+    this.general.presentToast(res.message);
+  }
+
+  usePastedUrl() {
+    if (!isHttpUrl(this.pasteUrl)) {
+      this.general.presentToast('Paste a full image link starting with https://');
+      return;
+    }
+    this.pickedImage = this.pasteUrl.trim();
+  }
+
+  async applyArtwork() {
+    if (!this.pickedImage || !this.ownedSelection.length) return;
+    this.busy = true;
+    const res = await this.land.setImage(this.ownedSelection, this.pickedImage, this.spanImage);
+    this.busy = false;
+    this.general.presentToast(res.message);
+    if (res.ok) {
+      this.showArtwork = false;
+      this.presence.announceTilesChanged();
+    }
+  }
+
+  async revertArtwork() {
+    if (!this.ownedSelection.length) return;
+    const res = await this.land.revertImage(this.ownedSelection);
+    this.general.presentToast(res.message);
+    this.showArtwork = false;
+    this.presence.announceTilesChanged();
+  }
+
+  // --- Details, custom URL, code, selling -----------------------------------
+
+  openEditor() {
+    const first = this.ownedSelection[0];
+    if (!first) return;
+    const area = this.land.area(first.order_id);
+    if (!area) return;
+    this.editor = {
+      orderId: area.order_id,
+      area_title: area.title,
+      slug: area.slug,
+      three_words: area.three_words || gridToThreeWords(first.gx, first.gy),
+      custom_details: area.custom_details,
+      embed_url: area.embed_url,
+      custom_code: area.custom_code,
+      on_sale: area.on_sale,
+      sale_price: area.sale_price || 1,
+      tiles: area.no_of_tiles,
+    };
+    this.showEditor = true;
+  }
+
+  async saveEditor() {
+    this.busy = true;
+    const { orderId, tiles, ...details } = this.editor;
+    const res = await this.land.updateDetails(orderId, details);
+    this.busy = false;
+    this.general.presentToast(res.message);
+    if (res.needsAuth) this.session.requestAuth('Verify your email to list land for sale.');
+    if (res.ok) {
+      this.showEditor = false;
+      this.presence.announceTilesChanged();
+    }
+  }
+
+  applyCodeTemplate(kind: 'counter' | 'banner') {
+    const title = (this.editor.area_title || 'my land').replace(/[<>&"']/g, '');
+    this.editor.custom_code =
+      kind === 'counter'
+        ? `<div style="font-family:sans-serif;padding:12px;text-align:center">\n  <p>Welcome to ${title}!</p>\n  <button onclick="c.textContent=+c.textContent+1">👋 High five (<span id="c">0</span>)</button>\n</div>`
+        : `<div style="font-family:sans-serif;padding:14px;text-align:center;background:linear-gradient(135deg,#2e1065,#7c3aed);color:#fff;border-radius:10px">\n  <h3 style="margin:0">${title}</h3>\n</div>`;
+  }
+
+  shareSelection() {
+    const first = this.ownedSelection[0];
+    const area = first && this.land.area(first.order_id);
+    if (area) this.copyLink(area.slug ? `u/${area.slug}` : this.positionPath(area.lat, area.lng), 'Land link');
+  }
+
+  // --- Area details popup ---------------------------------------------------
+
+  openArea(area: LandArea) {
+    this.inspected = area;
+    this.safeEmbedUrl = /^https:\/\//i.test(area.embed_url || '') ? this.sanitizer.bypassSecurityTrustResourceUrl(area.embed_url) : null;
+    // Owner code only ever runs inside a sandboxed iframe with no access to our origin.
+    this.safeCode = area.custom_code?.trim() ? this.sanitizer.bypassSecurityTrustHtml(area.custom_code) : null;
+  }
+
+  closeArea() {
+    this.inspected = null;
+    this.safeEmbedUrl = null;
+    this.safeCode = null;
+  }
+
+  async buyInspected() {
+    const area = this.inspected;
+    if (!area || this.busy) return;
+    this.busy = true;
+    const res = await this.land.buy(area.order_id);
+    this.busy = false;
+    if (res.needsAuth) {
+      this.session.requestAuth('Verify your email to buy land.');
+      return;
+    }
+    this.general.presentToast(res.message);
+    if (res.ok && res.paymentUrl) this.openPayment(res.paymentUrl);
+  }
+
+  areaLink(area: LandArea): string {
+    return area.slug ? `u/${area.slug}` : this.positionPath(area.lat, area.lng);
+  }
+
+  // ===========================================================================
+  // Avatars
+  // ===========================================================================
+
+  private drawMyAvatar(lat?: number, lng?: number) {
+    if (!this.map) return;
+    const pos = lat !== undefined && lng !== undefined ? { lat, lng } : this.myPos();
+    const icon = avatarIcon({
+      image: avatarDataUrl(this.me.avatarConfig, this.presence.expression),
+      username: this.me.username,
+      fullname: this.me.fullname,
+      own: true,
+      guest: this.me.isGuest,
     });
-  };
+    if (this.myMarker) {
+      this.myMarker.setIcon(icon);
+      this.myMarker.setPopupContent(this.buildOwnCard());
+      return;
+    }
+    this.myMarker = new (DriftMarker as any)([pos.lat, pos.lng], { draggable: true, icon, zIndexOffset: 1000, keyboard: false })
+      .bindPopup(this.buildOwnCard(), { maxWidth: 280, className: 'fm-popup' })
+      .addTo(this.map);
+    // Dragging the avatar moves it without moving the map.
+    this.myMarker.on('dragend', () =>
+      this.zone.run(() => {
+        const p = this.myMarker.getLatLng();
+        this.placeAvatar(p.lat, p.lng, false);
+      })
+    );
+  }
 
-  public editorSubmit() {
-    if (this.myBoxs.length === 0) return;
+  private buildOwnCard() {
+    return ownCard(this.me, {
+      save: () => this.zone.run(() => {
+        this.map.closePopup();
+        this.session.requestAuth('Save your land and avatar with just your email.');
+      }),
+      avatar: () => this.zone.run(() => {
+        this.map.closePopup();
+        this.router.navigateByUrl('/profile');
+      }),
+    });
+  }
 
-    this.meta.updateAreaMetadata(
-      this.myBoxs.map((b) => ({ gx: b.gx, gy: b.gy })),
+  private drawCitizens(list: Citizen[]) {
+    if (!this.map) return;
+    const seen = new Set<string>();
+    const placed: Leaflet.LatLng[] = [this.myMarker?.getLatLng()].filter(Boolean);
+    for (const c of list) {
+      seen.add(c.id);
+      const pos = this.fanOut(Leaflet.latLng(c.lat, c.lng), placed);
+      placed.push(pos);
+      let marker = this.otherMarkers.get(c.id);
+      const icon = avatarIcon({ image: c.avatarUrl, username: c.username, fullname: c.fullname, own: false, guest: c.isGuest });
+      if (!marker) {
+        marker = new (DriftMarker as any)(pos, { icon, keyboard: false }).addTo(this.map);
+        marker.bindPopup(() => this.buildCitizenCard(c.id), { maxWidth: 280, className: 'fm-popup' });
+        this.otherMarkers.set(c.id, marker);
+      } else {
+        marker.setIcon(icon);
+        if (marker.slideTo) marker.slideTo(pos, { duration: 700 });
+        else marker.setLatLng(pos);
+      }
+    }
+    this.otherMarkers.forEach((m, id) => {
+      if (!seen.has(id)) {
+        m.remove();
+        this.otherMarkers.delete(id);
+        this.bubbles.get(id)?.remove();
+        this.bubbles.delete(id);
+      }
+    });
+    this.syncCitizenVisibility();
+  }
+
+  /** "Many avatars on the same place should not overlap": spiral them out. */
+  private fanOut(pos: Leaflet.LatLng, placed: Leaflet.LatLng[]): Leaflet.LatLng {
+    if (!this.map) return pos;
+    const minPx = 66;
+    const p0 = this.map.latLngToLayerPoint(pos);
+    for (let i = 0; i < 60; i++) {
+      const angle = i * 2.39996;
+      const r = i === 0 ? 0 : minPx * Math.sqrt(i) * 0.75;
+      const candidate = Leaflet.point(p0.x + r * Math.cos(angle), p0.y + r * Math.sin(angle));
+      if (placed.every((q) => this.map.latLngToLayerPoint(q).distanceTo(candidate) >= minPx)) {
+        return i === 0 ? pos : this.map.layerPointToLatLng(candidate);
+      }
+    }
+    return pos;
+  }
+
+  private buildCitizenCard(id: string): HTMLElement {
+    const c = this.presence.citizens$.value.find((x) => x.id === id);
+    if (!c) return document.createElement('div');
+    return citizenCard(
+      c,
+      { friend: this.friends.isFriend(c.id), requested: this.friends.isRequested(c.id), canReport: !this.me.isGuest && !c.isGuest },
       {
-        area_title: this.areaTitleInput,
-        slug: this.areaSlugInput,
-        three_words: this.areaThreeWordsInput,
-        custom_details: this.qEditor,
-        embed_url: this.areaEmbedUrlInput,
-        custom_code: this.areaCustomCodeInput,
-        on_sale: this.areaOnSaleInput,
-        sale_price: this.areaSalePriceInput,
+        chat: () => this.zone.run(() => {
+          this.map.closePopup();
+          this.presence.openDirect(c);
+          this.openChat(c.id);
+        }),
+        connect: () => this.zone.run(async () => {
+          this.map.closePopup();
+          const res = await this.friends.sendRequest(c.id);
+          this.general.presentToast(res.message);
+          if (res.needsAuth) this.session.requestAuth('Verify your email to add connections.');
+        }),
+        report: () => this.zone.run(() => {
+          this.map.closePopup();
+          this.reportTarget = c;
+          this.showReport = true;
+        }),
       }
     );
-
-    if (!this.isGuest && this.myBoxs[0]?.order_id) {
-      this.http
-        .post(
-          'UpdateCustomDetails',
-          {
-            order_id: this.myBoxs[0].order_id,
-            area_title: this.areaTitleInput,
-            slug: this.areaSlugInput,
-            three_words: this.areaThreeWordsInput,
-            custom_details: this.qEditor,
-            embed_url: this.areaEmbedUrlInput,
-            custom_code: this.areaCustomCodeInput,
-            on_sale: this.areaOnSaleInput,
-            sale_price: this.areaSalePriceInput,
-          },
-          false
-        )
-        .subscribe({ next: () => {}, error: () => {} });
-    }
-
-    this.showEditor = false;
-    this.redrawLandLayers();
-    this.general.presentToast('Land area details, custom URL, sandbox code, and marketplace settings saved!');
   }
 
-  // ============================================================================
-  // 6. AREA INSPECTION CALLOUT, DIRECT BUY ON MAP, & SHAREABLE LINKS
-  // ============================================================================
-
-  public openAreaInspection(area: LandAreaSummary) {
-    this.inspectedArea = area;
-    this.challengeResultText = '';
-    if (area.embed_url && /^https?:\/\//i.test(area.embed_url)) {
-      this.safeEmbedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(area.embed_url);
-    } else {
-      this.safeEmbedUrl = null;
-    }
-    if (area.custom_code && area.custom_code.trim().length > 0) {
-      this.safeCustomCodeHtml = this.sanitizer.bypassSecurityTrustHtml(area.custom_code);
-    } else {
-      this.safeCustomCodeHtml = null;
-    }
-    this.showAreaInspectModal = true;
+  /** Hidden on the planet view, and filtered by the "show avatars" setting. */
+  private syncCitizenVisibility() {
+    if (!this.map) return;
+    const vis = this.settings.avatarVisibility;
+    const zoomOk = this.zoom >= ZOOM_LEVELS.ROAM;
+    const ownEl = this.myMarker?.getElement?.();
+    if (ownEl) ownEl.style.display = zoomOk ? '' : 'none';
+    let count = 0;
+    this.otherMarkers.forEach((m, id) => {
+      const show = zoomOk && (vis === 'all' || (vis === 'friends' && this.friends.isFriend(id)));
+      const el = m.getElement?.();
+      if (el) el.style.display = show ? '' : 'none';
+      if (show) count++;
+    });
+    this.citizensNearby = count;
   }
 
-  public openLeaderboardModal() {
-    this.leaderboardData = this.meta.getLeaderboardData();
-    this.showLeaderboardModal = true;
-  }
-
-  public selectUserClan(clanName: string) {
-    this.meta.setCurrentClan(clanName);
-    this.leaderboardData = this.meta.getLeaderboardData();
-    this.general.presentToast(`Joined Clan: ${clanName}!`);
-  }
-
-  /**
-   * Brief Gamification (lines 380-395):
-   * "Play mini-games to challenge a neighbour for their land"
-   */
-  public challengeAreaForTerritory(area: LandAreaSummary) {
-    if (!area) return;
-    const myClan = this.meta.getCurrentClan();
-    const myRoll = Math.floor(Math.random() * 60) + 45;
-    const defRoll = Math.floor(Math.random() * 60) + 40;
-    if (myRoll >= defRoll) {
-      this.challengeResultText = `🏆 Victory! Your ${myClan} squad scored ${myRoll} vs @${area.username}'s ${defRoll} defense wall! (+15 Clan Honor)`;
-      this.displaySpeechBubble(this.getSessionUserId(), `Won mini-game challenge at ${area.title}! 🏆`, 'Twinkle');
-    } else {
-      this.challengeResultText = `🛡️ Defended! @${area.username}'s property wall held strong (${defRoll} vs your ${myRoll}). Try again or form a neighbour alliance!`;
-    }
-  }
-
-  public buyInspectedAreaNow(area: LandAreaSummary) {
-    if (!area) return;
-    const res = this.meta.buyMarketplaceListing(area.order_id);
-    if (res.success) {
-      if (!this.isGuest) {
-        this.http.post('BuyMarketplaceOrder', { order_id: area.order_id }, false).subscribe({
-          next: () => {},
-          error: () => {},
-        });
+  private showBubble(userId: string, text: string, ms: number, typing = false) {
+    if (!this.map || !text) return;
+    const marker = userId === this.me.id ? this.myMarker : this.otherMarkers.get(userId);
+    if (!marker) return;
+    if (userId === this.me.id && !typing) this.drawMyAvatar();
+    this.bubbles.get(userId)?.remove();
+    const bubble = Leaflet.marker(marker.getLatLng(), { icon: speechBubbleIcon(text.slice(0, 140), typing), interactive: false, keyboard: false }).addTo(this.map);
+    this.bubbles.set(userId, bubble);
+    setTimeout(() => {
+      if (this.bubbles.get(userId) === bubble) {
+        bubble.remove();
+        this.bubbles.delete(userId);
       }
-      this.showAreaInspectModal = false;
-      this.redrawLandLayers();
-      this.general.presentToast(
-        `Purchased "${area.title}" (${res.tilesTransferred} tiles) for $${res.totalPaid.toFixed(
-          2
-        )} USD (includes 10% FlatMeta fee: $${res.commission.toFixed(2)})! You now own this land.`
-      );
+    }, ms);
+  }
+
+  // ===========================================================================
+  // Chat dock
+  // ===========================================================================
+
+  openChat(conversation = this.activeConversation) {
+    this.chatOpen = true;
+    this.selectConversation(conversation);
+  }
+
+  toggleChat() {
+    this.chatOpen ? (this.chatOpen = false) : this.openChat();
+  }
+
+  selectConversation(id: string) {
+    this.activeConversation = id;
+    this.presence.setActiveConversation(id);
+    this.refreshVisibleMessages();
+  }
+
+  closeConversation(id: string, e?: Event) {
+    e?.stopPropagation();
+    this.presence.closeConversation(id);
+    this.selectConversation('nearby');
+  }
+
+  get unreadTotal(): number {
+    return this.conversations.reduce((s, c) => s + c.unread, 0);
+  }
+
+  onChatInput() {
+    this.presence.typing(this.chatInput);
+    this.drawMyAvatar();
+  }
+
+  sendChat() {
+    if (this.presence.send(this.chatInput, this.activeConversation)) {
+      this.chatInput = '';
+      this.drawMyAvatar();
     }
   }
 
-  public copyShareLink(urlPath: string, label: string = 'Link') {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://flatmeta.io';
-    const fullUrl = `${origin}/${urlPath.replace(/^\/+/, '')}`;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(fullUrl).then(
-        () => this.general.presentToast(`${label} copied: ${fullUrl}`),
-        () => this.general.presentToast(`${label}: ${fullUrl}`)
-      );
-    } else {
-      this.general.presentToast(`${label}: ${fullUrl}`);
-    }
+  private refreshVisibleMessages() {
+    this.visibleMessages = this.allMessages.filter((m) => m.conversation === this.activeConversation);
+    setTimeout(() => {
+      const el = this.chatScroll?.nativeElement;
+      if (el) el.scrollTop = el.scrollHeight;
+    }, 30);
   }
 
-  public shareSelectedAreaLink() {
-    if (this.myBoxs.length === 0) return;
-    const slug = this.myBoxs[0].slug || this.myBoxs[0].order_id;
-    this.copyShareLink(`u/${slug}`, 'Custom Land URL');
+  toggleChatScope() {
+    const next = this.settings.chatScope === 'everyone' ? 'friends' : 'everyone';
+    this.settingsService.update({ chatScope: next });
+    this.general.presentToast(next === 'everyone' ? 'Chat: everyone nearby' : 'Chat: connections only');
   }
 
-  public shareCurrentPositionLink() {
-    const pos = this.myMarker ? this.myMarker.getLatLng() : this.map.getCenter();
-    this.copyShareLink(`at/${pos.lat.toFixed(5)},${pos.lng.toFixed(5)},${this.currentZoomLevel}`, 'Position Link');
+  cycleAvatarVisibility() {
+    const order: UserSettings['avatarVisibility'][] = ['all', 'friends', 'none'];
+    const next = order[(order.indexOf(this.settings.avatarVisibility) + 1) % order.length];
+    this.settingsService.update({ avatarVisibility: next });
+    this.general.presentToast(next === 'all' ? 'Showing all avatars' : next === 'friends' ? 'Showing connections only' : 'Other avatars hidden');
   }
 
-  // ============================================================================
-  // 7. SAVED PINS (Brief 06/01/23 lines 105-106)
-  // ============================================================================
+  // ===========================================================================
+  // Search: places, custom land URLs, 3-word addresses, pins, people online
+  // ===========================================================================
 
-  public saveCurrentLocationPin() {
-    const pos = this.myMarker ? this.myMarker.getLatLng() : this.map.getCenter();
-    const label = this.newPinName.trim() || `Pin @ ${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}`;
-    const pin = this.meta.addPin(label, pos.lat, pos.lng, this.currentZoomLevel);
-    this.newPinName = '';
-    this.general.presentToast(`Saved Pin "${pin.name}" (${pin.three_words})!`);
-  }
-
-  public flyToSavedPin(pin: SavedPin) {
-    this.showPinsModal = false;
-    this.flyToAndMoveAvatar(pin.lat, pin.lng, pin.zoom || 15);
-    this.general.presentToast(`Teleported to Pin: ${pin.name}`);
-  }
-
-  // ============================================================================
-  // 8. OMNI-SEARCH (Places, Custom Land Slugs, 3-Word Addresses, Pins, Citizens)
-  // ============================================================================
-
-  public onSearchInput() {
-    const q = (this.searchQuery || '').trim();
+  onSearchInput() {
+    const q = this.searchQuery.trim();
+    clearTimeout(this.searchTimer);
     if (!q) {
       this.searchResults = [];
-      this.showSearchDropdown = false;
+      this.showSearch = false;
       return;
     }
-
-    const qLower = q.toLowerCase().replace(/^https?:\/\/[^/]+\//, '').replace(/^(u|uri)\//, '');
-    const localMatches: any[] = [];
-
-    // 1. Match Custom Land Areas (by title, slug, or 3-word address)
-    this.meta.getGroupedAreas().forEach((a) => {
-      if (
-        a.title?.toLowerCase().includes(qLower) ||
-        a.slug?.toLowerCase().includes(qLower) ||
-        a.three_words?.toLowerCase().includes(qLower) ||
-        a.username?.toLowerCase().includes(qLower)
-      ) {
-        localMatches.push({
-          type: 'area',
-          title: a.title,
-          subtitle: `flatmeta.io/u/${a.slug} · ${a.three_words} (${a.no_of_tiles} tiles)`,
-          lat: a.lat,
-          lng: a.lng,
-          zoom: 15,
-          slug: a.slug,
-        });
-      }
-    });
-
-    // 2. Match Saved Pins
-    this.savedPins.forEach((p) => {
-      if (p.name.toLowerCase().includes(qLower) || p.three_words.toLowerCase().includes(qLower)) {
-        localMatches.push({
-          type: 'pin',
-          title: p.name,
-          subtitle: `Saved Pin · ${p.three_words}`,
-          lat: p.lat,
-          lng: p.lng,
-          zoom: p.zoom || 15,
-        });
-      }
-    });
-
-    // 3. Match Roaming Citizens
-    this.otherUsers.forEach((u) => {
-      if (
-        u.latLng &&
-        (u.fullname?.toLowerCase().includes(qLower) || u.username?.toLowerCase().includes(qLower))
-      ) {
-        localMatches.push({
-          type: 'citizen',
-          title: u.fullname || u.username,
-          subtitle: `@${u.username} · Online Citizen`,
-          lat: u.latLng.lat,
-          lng: u.latLng.lng,
-          zoom: 15,
-        });
-      }
-    });
-
-    this.searchResults = localMatches;
-    this.showSearchDropdown = true;
-
-    // 4. Geosearch World Places (debounced)
-    if (this.searchDebounce) clearTimeout(this.searchDebounce);
-    this.searchDebounce = setTimeout(async () => {
+    const lower = q.toLowerCase();
+    const local: SearchResult[] = [
+      ...this.land.search(q).map((a) => ({
+        type: 'area' as const,
+        title: a.title,
+        subtitle: `${a.slug ? 'flatmeta.io/u/' + a.slug : a.three_words} · ${a.no_of_tiles} squares`,
+        lat: a.lat,
+        lng: a.lng,
+        zoom: ZOOM_LEVELS.BUY,
+        orderId: a.order_id,
+      })),
+      ...this.pins
+        .filter((p) => p.name.toLowerCase().includes(lower) || p.three_words.includes(lower))
+        .map((p) => ({ type: 'pin' as const, title: p.name, subtitle: `Saved pin · ${p.three_words}`, lat: p.lat, lng: p.lng, zoom: p.zoom })),
+      ...this.presence.citizens$.value
+        .filter((c) => c.username.toLowerCase().includes(lower) || c.fullname.toLowerCase().includes(lower))
+        .map((c) => ({ type: 'citizen' as const, title: c.fullname, subtitle: `@${c.username} · online now`, lat: c.lat, lng: c.lng, zoom: ZOOM_LEVELS.BUY })),
+    ];
+    this.searchResults = local;
+    this.showSearch = local.length > 0;
+    this.searchTimer = setTimeout(async () => {
       try {
-        const places = await osmProvider.search({ query: q });
+        const places = await geocoder.search({ query: q });
         this.zone.run(() => {
-          const placeItems = (places || []).slice(0, 5).map((p: any) => ({
-            type: 'place' as const,
-            title: p.label.split(',')[0],
-            subtitle: p.label,
-            lat: Number(p.y),
-            lng: Number(p.x),
-            zoom: 15,
-          }));
-          this.searchResults = [...localMatches, ...placeItems];
-          this.showSearchDropdown = this.searchResults.length > 0;
+          if (this.searchQuery.trim() !== q) return;
+          this.searchResults = [
+            ...local,
+            ...(places || []).slice(0, 5).map((p: any) => ({
+              type: 'place' as const,
+              title: String(p.label).split(',')[0],
+              subtitle: p.label,
+              lat: Number(p.y),
+              lng: Number(p.x),
+              zoom: ZOOM_LEVELS.BUY,
+            })),
+          ];
+          this.showSearch = this.searchResults.length > 0;
         });
-      } catch (e) {}
-    }, 260);
+      } catch {}
+    }, 300);
   }
 
-  public selectSearchResult(item: (typeof this.searchResults)[0]) {
-    this.showSearchDropdown = false;
-    this.searchQuery = item.title;
-    this.flyToAndMoveAvatar(item.lat, item.lng, item.zoom || 15);
-    if (item.type === 'area' && item.slug) {
-      const area = this.meta.findAreaBySlugOrThreeWords(item.slug);
-      if (area) {
-        this.openAreaInspection(area);
-      }
+  pickSearchResult(r: SearchResult) {
+    this.showSearch = false;
+    this.searchQuery = r.title;
+    this.flyTo(r.lat, r.lng, r.zoom, true);
+    if (r.orderId) {
+      const area = this.land.area(r.orderId);
+      if (area) setTimeout(() => this.openArea(area), 900);
     }
   }
 
-  public clearSearch() {
+  clearSearch() {
     this.searchQuery = '';
     this.searchResults = [];
-    this.showSearchDropdown = false;
+    this.showSearch = false;
   }
 
-  // ============================================================================
-  // 9. AVATARS, DE-OVERLAPPING, & MULTI-USER PRESENCE
-  // ============================================================================
+  // ===========================================================================
+  // Pins & sharing
+  // ===========================================================================
 
-  /**
-   * Adds or updates the user's own circular avatar marker with dark outline + drop-shadow
-   * (Brief 06/01/23 lines 31, 51, 88)
-   */
-  public addMarker(lat: number = this.currentCenter[0], lng: number = this.currentCenter[1]) {
-    if (!this.map) return;
-    this.refreshUser();
+  savePin() {
+    const p = this.myPos();
+    const pin = this.pinsService.add(this.newPinName || `Pin ${p.lat.toFixed(3)}, ${p.lng.toFixed(3)}`, p.lat, p.lng, this.zoom);
+    this.newPinName = '';
+    this.general.presentToast(`Saved "${pin.name}".`);
+  }
 
-    const username = this.meta.getCurrentUsername();
-    const fullname = this.meta.getCurrentFullname();
-    const isGuest = this.meta.isGuest();
-    const avatarSrc = this.myExpression
-      ? this.meta.generateAvatarDataUrl(this.meta.getAvatarConfig(), this.myExpression)
-      : this.avatar;
+  goToPin(pin: SavedPin) {
+    this.showPins = false;
+    this.flyTo(pin.lat, pin.lng, pin.zoom, true);
+  }
 
-    const icon = Leaflet.divIcon({
-      iconSize: [68, 82],
-      iconAnchor: [34, 52],
-      popupAnchor: [0, -46],
-      className: 'avatar-marker-container own-avatar-marker',
-      html: `
-        <div class="avatar-ring-pulse"></div>
-        <div class="avatar-bubble ${isGuest ? 'guest-avatar' : 'user-avatar'}" title="${fullname} (@${username})">
-          <img src="${avatarSrc}" alt="${username}" onerror="this.src='assets/icon/avatar-default.svg'"/>
-        </div>
-        <div class="avatar-nametag own-nametag">@${username} <span class="you-pill">YOU</span></div>
-      `,
-    });
+  sharePin(pin: SavedPin) {
+    this.copyLink(this.pinsService.sharePath(pin), 'Pin link');
+  }
 
-    const popupContainer = document.createElement('div');
-    popupContainer.className = isGuest ? 'guest-popup-card' : 'user-popup-card';
-    if (isGuest) {
-      // Brief 06/01/23 line 31: 'Click icon it says "Hello, Guest!" it should be "Hello Guest!" and also Sign Up should link to signup / login page.'
-      popupContainer.innerHTML = `
-        <h4>Hello Guest!</h4>
-        <p>Roam anywhere, chat live, and claim up to <strong>100 free land squares</strong>! Verify your email anytime to permanently save.</p>
-        <div class="popup-actions">
-          <button type="button" class="btn-pop-login" data-action="save-email">Sign Up / Save</button>
-          <button type="button" class="btn-pop-signup" data-action="customize-avatar">Avatar</button>
-        </div>
-      `;
+  shareMyPosition() {
+    const p = this.myPos();
+    this.copyLink(this.positionPath(p.lat, p.lng), 'Link to your position');
+  }
+
+  private positionPath(lat: number, lng: number) {
+    return `at/${lat.toFixed(5)},${lng.toFixed(5)},${this.zoom}`;
+  }
+
+  copyLink(path: string, label: string) {
+    const url = `${window.location.origin}/${path.replace(/^\/+/, '')}`;
+    const done = () => this.general.presentToast(`${label} copied: ${url}`, 3500);
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).then(done, () => this.general.presentToast(`${label}: ${url}`, 6000));
     } else {
-      popupContainer.innerHTML = `
-        <h4>${fullname}</h4>
-        <p class="role-tag">@${username} · Verified Citizen</p>
-        <p class="coords-info">Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}</p>
-        <div class="popup-actions" style="margin-top:8px;">
-          <button type="button" class="btn-pop-signup" data-action="customize-avatar">Customize Avatar</button>
-        </div>
-      `;
-    }
-
-    popupContainer.addEventListener('click', (ev: MouseEvent) => {
-      const btn = (ev.target as HTMLElement).closest('button');
-      if (!btn) return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      const act = btn.getAttribute('data-action');
-      this.zone.run(() => {
-        this.map.closePopup();
-        if (act === 'save-email') {
-          this.meta.openAuthModal$.next({ mode: 'email-quick', reason: 'Save your Guest land & avatar permanently' });
-        } else if (act === 'customize-avatar') {
-          this.router.navigateByUrl('/profile');
-        }
-      });
-    });
-
-    if (this.myMarker && this.map.hasLayer(this.myMarker)) {
-      this.map.removeLayer(this.myMarker);
-    }
-
-    this.myMarker = new DriftMarker([lat, lng], {
-      draggable: true,
-      icon,
-    })
-      // @ts-ignore
-      .bindPopup(popupContainer, { maxWidth: 300, className: 'flatmeta-custom-popup' })
-      .addTo(this.map);
-
-    // Dragging avatar moves position and broadcasts without panning map (Brief 06/01/23 line 81)
-    this.myMarker.on('dragend', (e: any) => {
-      const newPos = e.target.getLatLng();
-      this.saveLastCoords(newPos.lat, newPos.lng);
-      this.emitLocation(newPos);
-      this.checkAvatarOffScreen();
-    });
-
-    this.syncOtherMarkersVisibility();
-    this.emitLocation({ lat, lng });
-  }
-
-  public updateMyAvatarMarker() {
-    if (this.myMarker) {
-      const pos = this.myMarker.getLatLng();
-      this.addMarker(pos.lat, pos.lng);
+      this.general.presentToast(`${label}: ${url}`, 6000);
     }
   }
 
-  /**
-   * Computes a small golden-angle spiral offset when multiple avatars stand on the exact same spot
-   * (Brief 06/01/23 line 117: "Many avatars on same place should not overlap.")
-   */
-  private getDeOverlappedLatLng(rawLat: number, rawLng: number, targetUserId: string): Leaflet.LatLng {
-    const threshold = 0.00018;
-    const myPos = this.myMarker ? this.myMarker.getLatLng() : { lat: this.currentCenter[0], lng: this.currentCenter[1] };
+  // ===========================================================================
+  // Leaderboard
+  // ===========================================================================
 
-    let collisionIndex = 0;
-    if (Math.abs(rawLat - myPos.lat) < threshold && Math.abs(rawLng - myPos.lng) < threshold) {
-      collisionIndex++;
-    }
-
-    this.otherMarkers.forEach((m) => {
-      if (String(m._userId) !== String(targetUserId)) {
-        const p = m.getLatLng();
-        if (Math.abs(rawLat - p.lat) < threshold && Math.abs(rawLng - p.lng) < threshold) {
-          collisionIndex++;
-        }
-      }
-    });
-
-    if (collisionIndex === 0) {
-      return Leaflet.latLng(rawLat, rawLng);
-    }
-
-    // Golden-angle spiral offset so even 10-100 avatars fan out cleanly around the point
-    const angle = collisionIndex * 2.39996;
-    const radius = 0.00022 * Math.sqrt(collisionIndex);
-    return Leaflet.latLng(rawLat + radius * Math.cos(angle), rawLng + radius * Math.sin(angle));
-  }
-
-  /**
-   * Renders or updates other roaming citizens on the map
-   */
-  public addOtherMarkers(data: any) {
-    if (!data || !data.userId || !data.location || !this.map) return;
-
-    const targetUserId = String(data.userId);
-    const currentUserId = String(this.getSessionUserId());
-    if (targetUserId === currentUserId) return;
-
-    const rawLat = data.location.lat !== undefined ? data.location.lat : data.location[0];
-    const rawLng = data.location.lng !== undefined ? data.location.lng : data.location[1];
-    const lat = Number(rawLat);
-    const lng = Number(rawLng);
-    if (isNaN(lat) || isNaN(lng)) return;
-
-    const destLatLng = this.getDeOverlappedLatLng(lat, lng, targetUserId);
-
-    let user = this.otherUsers.find((item) => String(item.id) === targetUserId);
-    if (!user) {
-      const displayName =
-        data.fullname ||
-        (targetUserId.startsWith('guest_')
-          ? 'Guest #' + targetUserId.replace('guest_', '')
-          : 'Citizen #' + targetUserId);
-      const handle = data.username || displayName.toLowerCase().replace(/\s+/g, '_');
-      user = {
-        id: targetUserId,
-        fullname: displayName,
-        username: handle,
-        image: data.image || this.meta.generateAvatarDataUrl(this.meta.createRandomAvatarConfig()),
-        friends: this.meta.isFriend(targetUserId),
-        latLng: destLatLng,
+  async openRanks() {
+    this.showRanks = true;
+    const res = await this.http.getAsync('Leaderboard');
+    if (res?.status === true) {
+      this.ranks = {
+        landowners: (res.data?.landowners || []).map((o: any) => ({
+          username: o.username || 'citizen',
+          fullname: o.fullname || o.username || 'Citizen',
+          tiles: Number(o.total_tiles || 0),
+          areas: Number(o.total_areas || 0),
+          isMe: String(o.user_id) === this.me.id,
+        })),
+        clans: (res.data?.clans || []).map((c: any) => ({ ...c, isMine: c.name === this.me.clan })),
       };
-      this.otherUsers.push(user);
     } else {
-      user.latLng = destLatLng;
-      if (data.image) user.image = data.image;
-      if (data.username) user.username = data.username;
-      if (data.fullname) user.fullname = data.fullname;
-      user.friends = this.meta.isFriend(targetUserId);
+      this.general.presentToast('Could not load the leaderboard.');
     }
+  }
 
-    const existing = this.otherMarkers.find((m) => String(m._userId) === targetUserId);
-    if (existing) {
-      if (typeof existing.slideTo === 'function') {
-        try {
-          existing.slideTo(destLatLng, { duration: 750 });
-        } catch (e) {
-          existing.setLatLng(destLatLng);
-        }
-      } else {
-        existing.setLatLng(destLatLng);
-      }
-      this.syncOtherMarkersVisibility();
+  async joinClan(name: string) {
+    if (this.me.isGuest) {
+      this.session.requestAuth('Verify your email to join a clan.');
       return;
     }
-
-    const icon = Leaflet.divIcon({
-      iconSize: [58, 72],
-      iconAnchor: [29, 46],
-      popupAnchor: [0, -40],
-      className: 'avatar-marker-container other-user',
-      html: `
-        <div class="avatar-bubble other-avatar" title="${user.fullname} (@${user.username})">
-          <img src="${user.image || environment.fallbackAvatar}" alt="${user.username}" onerror="this.src='assets/icon/avatar-default.svg'"/>
-        </div>
-        <div class="avatar-nametag">@${user.username || 'citizen'}</div>
-      `,
-    });
-
-    const customPopup = this.addCustomPopup(user);
-    const marker = new DriftMarker([destLatLng.lat, destLatLng.lng], {
-      draggable: false,
-      icon,
-    })
-      // @ts-ignore
-      .bindPopup(customPopup, { maxWidth: 300, className: 'flatmeta-custom-popup' })
-      .addTo(this.map);
-
-    marker._userId = targetUserId;
-    this.otherMarkers.push(marker);
-    this.syncOtherMarkersVisibility();
+    const res = await this.session.updateProfile({ clan: name });
+    this.general.presentToast(res.ok ? `You joined ${name}.` : res.message);
+    if (res.ok) this.openRanks();
   }
 
-  private removeOtherMarkerByUserId(userId: string) {
-    this.otherMarkers = this.otherMarkers.filter((m) => {
-      if (String(m._userId) === String(userId)) {
-        if (this.map && this.map.hasLayer(m)) {
-          this.map.removeLayer(m);
-        }
-        return false;
-      }
-      return true;
-    });
+  // ===========================================================================
+  // Misc
+  // ===========================================================================
+
+  dismissWelcome() {
+    this.showWelcome = false;
+    this.settingsService.update({ welcomeDismissed: true });
   }
 
-  /**
-   * Enforces zoom-level visibility (hidden at z5 planet view) and user setting
-   * (All Avatars / Friends Only / Hidden)
-   */
-  public syncOtherMarkersVisibility() {
-    if (!this.map) return;
-    const vis = this.settings?.avatarVisibility || 'all';
-    const showOwn = this.currentZoomLevel >= 10;
-
-    if (this.myMarker) {
-      const el = this.myMarker.getElement?.();
-      if (el) {
-        el.style.display = showOwn ? '' : 'none';
-      }
-    }
-
-    this.otherMarkers.forEach((m) => {
-      const uid = String(m._userId);
-      const isFriend = this.meta.isFriend(uid);
-      const shouldShow =
-        this.currentZoomLevel >= 10 &&
-        (vis === 'all' || (vis === 'friends' && isFriend));
-
-      const el = m.getElement?.();
-      if (el) {
-        el.style.display = shouldShow ? '' : 'none';
-      }
-    });
+  requestSave(reason = 'Save your land, avatar and pins with just your email.') {
+    this.session.requestAuth(reason);
   }
 
-  /**
-   * Spawns 2 friendly ambient citizens around FlatMeta Home so a visitor landing on the site
-   * immediately sees other avatars roaming & can test clicking / chatting with them!
-   */
-  private spawnAmbientCitizensIfNeeded() {
-    const [baseLat, baseLng] = MetaverseService.FLATMETA_HOME_COORDS;
-    const bots = [
-      {
-        userId: 'citizen_aria',
-        fullname: 'Aria Vance',
-        username: 'aria_meta',
-        image: this.meta.generateAvatarDataUrl({
-          ...this.meta.createRandomAvatarConfig(),
-          topType: 'LongHairCurvy',
-          circleBg: '#7c3aed',
-          mouthType: 'Smile',
-        }),
-        location: { lat: baseLat + 0.00042, lng: baseLng + 0.00055 },
-      },
-      {
-        userId: 'citizen_zane',
-        fullname: 'Zane Sterling',
-        username: 'zane_builder',
-        image: this.meta.generateAvatarDataUrl({
-          ...this.meta.createRandomAvatarConfig(),
-          topType: 'ShortHairShortWaved',
-          accessoriesType: 'Sunglasses',
-          circleBg: '#059669',
-          mouthType: 'Twinkle',
-        }),
-        location: { lat: baseLat - 0.00038, lng: baseLng + 0.00048 },
-      },
-    ];
-
-    bots.forEach((b) => this.addOtherMarkers(b));
+  async report(reasonId: number | string) {
+    const target = this.reportTarget;
+    this.showReport = false;
+    this.reportTarget = null;
+    if (!target) return;
+    const res = await this.http.postAsync('AddUserReport', { user_id: Number(target.id), report_id: reasonId, report_text: '' });
+    this.general.presentToast(res?.status === true ? 'Thanks, our moderators will take a look.' : res?.message || 'Could not send report.');
   }
 
-  addCustomPopup(user: any): HTMLElement {
-    const container = document.createElement('div');
-    container.className = 'other-user-card';
-
-    const avatarUrl = user.image || environment.fallbackAvatar;
-    const displayName = user.fullname || user.username || 'Metaverse Citizen';
-    const handle = user.username || 'citizen';
-    const isFriend = this.meta.isFriend(user.id);
-
-    container.innerHTML = `
-      <div class="other-user-header">
-        <div class="other-avatar-wrap">
-          <img src="${avatarUrl}" class="other-avatar-img" alt="${handle}" onerror="this.src='assets/icon/avatar-default.svg'"/>
-          <span class="avatar-status-dot"></span>
-        </div>
-        <div class="other-user-info">
-          <h4 class="other-user-name">${displayName}</h4>
-          <span class="user-handle">@${handle}</span>
-          <span class="user-tag">${isFriend ? 'Friend Connected' : 'Citizen'}</span>
-        </div>
-      </div>
-      <div class="other-user-actions">
-        <button type="button" class="btn-popup-chat" data-act="chat" title="Send direct message">
-          <span>Chat</span>
-        </button>
-        <button type="button" class="btn-popup-friend" data-act="friend" title="Add/Remove Friend">
-          <span>${isFriend ? 'Connected ✓' : '+ Connect'}</span>
-        </button>
-        <button type="button" class="btn-popup-report" data-act="report" title="Report user">
-          <span>Report</span>
-        </button>
-      </div>
-    `;
-
-    container.addEventListener('click', (e: MouseEvent) => {
-      const btn = (e.target as HTMLElement).closest('button');
-      if (!btn) return;
-      e.preventDefault();
-      e.stopPropagation();
-
-      const act = btn.getAttribute('data-act');
-      this.zone.run(() => {
-        if (this.map) this.map.closePopup();
-        if (act === 'chat') {
-          this.showChat(user.id, displayName);
-        } else if (act === 'friend') {
-          const nowFriend = this.meta.toggleFriend(user.id);
-          user.friends = nowFriend;
-          this.sendRequest(user.id);
-          this.general.presentToast(
-            nowFriend ? `Connected with @${handle}!` : `Removed @${handle} from connections.`
-          );
-        } else if (act === 'report') {
-          this.toReportUser = user;
-          this.reportPopover = true;
-          this.cdr.detectChanges();
-        }
-      });
-    });
-
-    return container;
-  }
-
-  /**
-   * Displays an animated speech or live-typing callout bubble above an avatar
-   */
-  public displaySpeechBubble(senderId: any, text: string, expression?: string, durationMs: number = 4500) {
-    if (!text || !this.map) return;
-
-    const strSenderId = String(senderId ?? '');
-    const currentUserId = String(this.getSessionUserId());
-
-    let targetMarker: any = null;
-    if (this.myMarker && (senderId == null || strSenderId === currentUserId)) {
-      targetMarker = this.myMarker;
-    } else {
-      targetMarker = this.otherMarkers.find((m) => String(m._userId) === strSenderId);
-    }
-
-    if (!targetMarker) return;
-
-    // Escape HTML to prevent XSS in speech bubbles
-    const safeText = String(text)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-
-    const pos = targetMarker.getLatLng();
-    const bubbleIcon = Leaflet.divIcon({
-      className: 'speech-bubble-container',
-      html: `<div class="speech-bubble-tail">${safeText}</div>`,
-      iconSize: [180, 44],
-      iconAnchor: [90, 62],
-    });
-
-    const bubble = Leaflet.marker(pos, { icon: bubbleIcon }).addTo(this.map);
-    this.speechBubbleMarkers.push(bubble);
-
-    setTimeout(() => {
-      if (this.map && this.map.hasLayer(bubble)) {
-        this.map.removeLayer(bubble);
-      }
-      const idx = this.speechBubbleMarkers.indexOf(bubble);
-      if (idx > -1) {
-        this.speechBubbleMarkers.splice(idx, 1);
-      }
-    }, durationMs);
-  }
-
-  // ============================================================================
-  // 10. GOOGLE HANGOUTS-STYLE DOCKED CHAT WINDOW & SETTINGS
-  // ============================================================================
-
-  public toggleHangoutsDrawer() {
-    this.chatDrawerOpen = !this.chatDrawerOpen;
-    if (this.chatDrawerOpen) {
-      this.chatMinimized = false;
-      this.unreadChatCount = 0;
-      setTimeout(() => this.scrollToBottomHangouts(), 80);
+  private goToLand(item: any) {
+    const lat = Number(item.lat ?? item.center_lat);
+    const lng = Number(item.lng ?? item.center_lng);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      this.flyTo(lat, lng, ZOOM_LEVELS.BUY, true);
+      const area = item.order_id && this.land.area(String(item.order_id));
+      if (area) setTimeout(() => this.openArea(area), 900);
     }
   }
 
-  public onHangoutsTyping() {
-    if (this.typingTimeout) clearTimeout(this.typingTimeout);
-    this.meta.emitTyping(this.hangoutsInput);
-    const expr = this.meta.detectSmileyExpression(this.hangoutsInput);
-    if (expr && expr !== this.myExpression) {
-      this.myExpression = expr;
-      this.updateMyAvatarMarker();
-    }
-    this.typingTimeout = setTimeout(() => {}, 1000);
+  private openPayment(url: string) {
+    this.payments.open(url);
   }
 
-  public sendHangoutsMessage() {
-    if (!this.hangoutsInput || !this.hangoutsInput.trim()) return;
-    const pos = this.myMarker ? this.myMarker.getLatLng() : { lat: this.currentCenter[0], lng: this.currentCenter[1] };
-    const sent = this.meta.sendChatMessage(this.hangoutsInput, {
-      scope: 'nearby',
-      roomId: 'global_nearby',
-      lat: pos.lat,
-      lng: pos.lng,
-    });
-    this.hangoutsInput = '';
-
-    // If user chats near Aria or Zane bot, give a friendly contextual reply so solo testers see live 2-way chat!
-    if (sent && this.otherMarkers.length > 0) {
-      const aria = this.otherUsers.find((u) => u.id === 'citizen_aria');
-      if (aria && Math.random() < 0.65) {
-        setTimeout(() => {
-          this.meta. broadcastEvent('message', {
-            id: 'bot_' + Date.now(),
-            roomId: 'global_nearby',
-            scope: 'nearby',
-            senderId: aria.id,
-            senderName: aria.fullname,
-            senderUsername: aria.username,
-            senderAvatar: aria.image,
-            message: `Hey @${this.meta.getCurrentUsername()}! Welcome to FlatMeta :) Try selecting squares in Buy Mode!`,
-            expression: 'Smile',
-            created_at: new Date().toISOString(),
-          });
-          this.displaySpeechBubble(
-            aria.id,
-            `Hey @${this.meta.getCurrentUsername()}! Welcome to FlatMeta :)`,
-            'Smile'
-          );
-        }, 1400);
-      }
-    }
-
-    setTimeout(() => this.scrollToBottomHangouts(), 60);
-  }
-
-  private scrollToBottomHangouts() {
-    if (this.hangoutsScroll?.nativeElement) {
-      const el = this.hangoutsScroll.nativeElement;
-      el.scrollTop = el.scrollHeight;
+  private async loadPresets() {
+    const res = await this.http.getAsync('BoxImages');
+    if (res?.status === true && Array.isArray(res.data?.images)) {
+      this.presets = res.data.images.map((i: any) => ({ name: i.name, url: i.url, label: i.country || i.name }));
     }
   }
 
-  public toggleChatScopeSetting() {
-    const next = this.settings.chatScope === 'everyone' ? 'friends' : 'everyone';
-    this.meta.updateSettings({ chatScope: next });
-    this.general.presentToast(
-      next === 'everyone' ? 'Chat set to: Everyone Nearby' : 'Chat set to: Friends Only'
-    );
-  }
-
-  public cycleAvatarVisibilitySetting() {
-    const order: Array<UserSettings['avatarVisibility']> = ['all', 'friends', 'none'];
-    const next = order[(order.indexOf(this.settings.avatarVisibility) + 1) % order.length];
-    this.meta.updateSettings({ avatarVisibility: next });
-    this.general.presentToast(`Show Avatars: ${next.toUpperCase()}`);
-  }
-
-  // ============================================================================
-  // 11. BACKEND API INTEGRATION & FALLBACKS
-  // ============================================================================
-
-  public teleportToLandItem(item: any) {
-    if (!item) return;
-    if (item.lat !== undefined && item.lng !== undefined) {
-      this.flyToAndMoveAvatar(Number(item.lat), Number(item.lng), 15);
-      return;
+  private async loadReportReasons() {
+    const res = await this.http.getAsync('GetAllReportText');
+    const list = res?.data?.reports || res?.data?.report_text || res?.data;
+    if (res?.status === true && Array.isArray(list) && list.length) {
+      this.reportReasons = list.map((r: any) => ({ id: r.id, text: r.text || r.report_text || r.name }));
     }
-    const id = item.order_id || item.id;
-    const localArea = this.meta.getGroupedAreas().find((a) => String(a.order_id) === String(id));
-    if (localArea) {
-      this.flyToAndMoveAvatar(localArea.lat, localArea.lng, 15);
-      return;
-    }
-    this.getUserTilesbyId(id);
   }
 
-  getUserTilesbyId(id: any) {
-    this.http.get2('GetUserTilesByOrderId/' + id, false).subscribe(
-      (res: any) => {
-        if (res.status === true && res.data?.tiles?.length > 0) {
-          const firstTile = res.data.tiles[0];
-          this.flyToAndMoveAvatar(Number(firstTile.lat), Number(firstTile.lng), 15);
-        }
-      },
-      () => {}
-    );
+  trackById(_: number, item: { id: string }) {
+    return item.id;
   }
 
-  getSoldBox() {
-    this.http.get2('PurchasedTiles', false).subscribe(
-      (res: any) => {
-        if (res.status === true && res.data?.tiles) {
-          this.meta.mergeBackendTiles(res.data.tiles);
-        }
-      },
-      () => {}
-    );
-  }
-
-  getBoxImgs() {
-    // Built-in rich preset tile graphics so image picker always has options even offline
-    const builtInPresets = [
-      {
-        name: 'flatmeta_cyber',
-        country: 'Cyber Neon Grid',
-        url: this.meta.generateLandBannerDataUrl('CYBER ZONE', 'FlatMeta District', 'cyan'),
-      },
-      {
-        name: 'flatmeta_emerald',
-        country: 'Emerald Oasis',
-        url: this.meta.generateLandBannerDataUrl('EMERALD PARK', 'Verified Land', 'emerald'),
-      },
-      {
-        name: 'flatmeta_purple',
-        country: 'Creator Studio',
-        url: this.meta.generateLandBannerDataUrl('CREATOR HUB', '2D Metaverse', 'purple'),
-      },
-      {
-        name: 'flatmeta_gold',
-        country: 'Gold Plaza',
-        url: this.meta.generateLandBannerDataUrl('GOLD PLAZA', 'Prime Real Estate', 'amber'),
-      },
-      { name: 'uk_flag', country: 'United Kingdom', url: 'https://flagcdn.com/w320/gb.png' },
-      { name: 'us_flag', country: 'United States', url: 'https://flagcdn.com/w320/us.png' },
-      { name: 'pk_flag', country: 'Pakistan', url: 'https://flagcdn.com/w320/pk.png' },
-      { name: 'ae_flag', country: 'United Arab Emirates', url: 'https://flagcdn.com/w320/ae.png' },
-      { name: 'ca_flag', country: 'Canada', url: 'https://flagcdn.com/w320/ca.png' },
-    ];
-    this.boxImgs = [...builtInPresets];
-    this.boxImgs2 = [...builtInPresets];
-
-    this.http.get2('BoxImages', false).subscribe(
-      (res: any) => {
-        if (res.status === true && Array.isArray(res.data?.images)) {
-          this.boxImgs = [...builtInPresets, ...res.data.images];
-          this.boxImgs2 = [...this.boxImgs];
-        }
-      },
-      () => {}
-    );
-  }
-
-  getReportList() {
-    this.http.get('GetAllReportText', false).subscribe(
-      (res: any) => {
-        if (res.status === true && res.data?.reports?.length) {
-          this.reportList = res.data.reports;
-        }
-      },
-      () => {}
-    );
-  }
-
-  getMapUser() {
-    const currentUserId = this.user_id || 1;
-    this.http.post2('GetAllUser', { user_id: currentUserId }, false).subscribe(
-      (res: any) => {
-        if (res.status === true && res.data?.users) {
-          res.data.users.forEach((u: any) => {
-            if (u.latLng && String(u.id) !== String(this.user_id)) {
-              this.addOtherMarkers({
-                userId: u.id,
-                fullname: u.fullname,
-                username: u.username,
-                image: u.image,
-                location: u.latLng,
-              });
-            }
-          });
-        }
-      },
-      () => {}
-    );
-  }
-
-  async showChat(id: any, name: string) {
-    const modal = await this.modalController.create({
-      component: ChatComponent,
-      mode: 'ios',
-      presentingElement: this.routerOutlet.nativeEl,
-      componentProps: { id, name },
-    });
-    return await modal.present();
-  }
-
-  sendRequest(id: any) {
-    this.http.post('SendFriendRequest', { follower_user_id: id }, false).subscribe({
-      next: () => {},
-      error: () => {},
-    });
-  }
-
-  public getSessionUserId(): string {
-    return this.meta.getCurrentUserId();
-  }
-
-  emitLocation(latLng: any) {
-    if (!latLng) return;
-    const lat = latLng.lat !== undefined ? latLng.lat : latLng[0];
-    const lng = latLng.lng !== undefined ? latLng.lng : latLng[1];
-    this.meta.emitMyLocation(Number(lat), Number(lng), this.myExpression);
-  }
-
-  searchIcon(evt: any) {
-    const searchTerm = evt?.detail?.value;
-    if (!searchTerm) {
-      this.boxImgs = this.boxImgs2;
-      return;
-    }
-    this.boxImgs = this.boxImgs2.filter((currentSer) => {
-      return currentSer.country && currentSer.country.toLowerCase().includes(searchTerm.toLowerCase());
-    });
-  }
-
-  reportUser(id: any) {
-    if (!this.toReportUser) return;
-    const rpt = {
-      user_id: this.toReportUser.id,
-      report_id: id,
-      report_text: '',
-    };
-    this.reportPopover = false;
-    this.toReportUser = undefined;
-    this.general.presentToast('Report submitted. Thank you for keeping FlatMeta safe.');
-    this.http.post('AddUserReport', rpt, false).subscribe({ next: () => {}, error: () => {} });
+  /** Square centre for the editor preview line. */
+  gridLabel(t: LandTile) {
+    const c = gridToLatLng(t.gx, t.gy);
+    return `${c.lat.toFixed(4)}, ${c.lng.toFixed(4)}`;
   }
 }

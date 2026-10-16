@@ -546,3 +546,16 @@
     }
   }
 }
+.qa-error {
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(244, 63, 94, 0.12);
+  color: #f43f5e;
+  font-size: 13px;
+}
+
+.qa-hint a {
+  color: #38bdf8;
+  margin-left: 4px;
+}

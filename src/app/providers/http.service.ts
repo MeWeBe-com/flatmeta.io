@@ -1,79 +1,98 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError, finalize, take } from 'rxjs/operators';
+import { environment } from 'src/environments/environment';
 import { GeneralService } from './general.service';
-import { GlobaldataService } from './globaldata.service';
-import { StorageService } from './storage.service';
-import { Observable } from 'rxjs';
+import { SessionService } from './session.service';
 
-@Injectable({
-  providedIn: 'root'
-})
+/**
+ * Thin wrapper around HttpClient for the FlatMeta API. Adds the bearer token,
+ * optional loading spinner, and signs the user out if the token is rejected.
+ */
+@Injectable({ providedIn: 'root' })
 export class HttpService {
+  private readonly baseUrl = environment.apiUrl;
 
-  constructor(
-    private http: HttpClient,
-    public general: GeneralService,
-    public storage: StorageService
-  ) {}
+  constructor(private http: HttpClient, private general: GeneralService, private session: SessionService) {}
 
-  post(link: string, data: any, loader: boolean): Observable<any> {
-    if (loader) {
-      this.general.presentLoading();
+  get(link: string, loader = false): Observable<any> {
+    return this.wrap(this.http.get(this.baseUrl + link, { headers: this.headers() }), loader);
+  }
+
+  post(link: string, data: any, loader = false): Observable<any> {
+    return this.wrap(this.http.post(this.baseUrl + link, data ?? {}, { headers: this.headers(true) }), loader);
+  }
+
+  uploadImages(file: File, link: string): Observable<any> {
+    const form = new FormData();
+    form.append('images', file);
+    return this.wrap(this.http.post(this.baseUrl + link, form, { headers: this.headers() }), false);
+  }
+
+  /** Promise helpers that never throw: failures resolve to `{ status: false, message }`. */
+  async getAsync(link: string): Promise<any> {
+    try {
+      return await this.get(link).pipe(take(1)).toPromise();
+    } catch (err: any) {
+      return this.toFailure(err);
     }
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + (GlobaldataService.loginToken || ''),
-      'Accept': 'application/json'
-    };
-
-    return this.http.post(this.general.globalUrl + link, JSON.stringify(data), { headers: headers });
   }
 
-  post2(link: string, data: any, loader: boolean): Observable<any> {
-    if (loader) {
-      this.general.presentLoading();
+  async postAsync(link: string, data: any, loader = false): Promise<any> {
+    try {
+      return await this.post(link, data, loader).pipe(take(1)).toPromise();
+    } catch (err: any) {
+      return this.toFailure(err);
     }
-    const headers = { 
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    };
-
-    return this.http.post(this.general.globalUrl + link, JSON.stringify(data), { headers: headers });
   }
 
-  get(link: string, loader: boolean): Observable<any> {
-    if (loader) {
-      this.general.presentLoading();
+  async uploadAsync(file: File, link: string): Promise<any> {
+    try {
+      return await this.uploadImages(file, link).pipe(take(1)).toPromise();
+    } catch (err: any) {
+      return this.toFailure(err);
     }
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + (GlobaldataService.loginToken || ''),
-      'Accept': 'application/json'
-    };
-
-    return this.http.get(this.general.globalUrl + link, { headers: headers });
   }
 
-  get2(link: string, loader: boolean): Observable<any> {
-    if (loader) {
-      this.general.presentLoading();
+  /** @deprecated use get() — kept so older pages keep compiling. */
+  get2(link: string, loader = false) {
+    return this.get(link, loader);
+  }
+
+  /** @deprecated use post() — kept so older pages keep compiling. */
+  post2(link: string, data: any, loader = false) {
+    return this.post(link, data, loader);
+  }
+
+  private headers(json = false): HttpHeaders {
+    let h = new HttpHeaders({ Accept: 'application/json' });
+    if (json) h = h.set('Content-Type', 'application/json');
+    const token = this.session.accessToken;
+    if (token) h = h.set('Authorization', `Bearer ${token}`);
+    return h;
+  }
+
+  private wrap(obs: Observable<any>, loader: boolean): Observable<any> {
+    if (loader) this.general.presentLoading();
+    return obs.pipe(
+      catchError((err: HttpErrorResponse) => {
+        if (err.status === 401) this.session.handleUnauthorized();
+        return throwError(err);
+      }),
+      finalize(() => {
+        if (loader) this.general.stopLoading();
+      })
+    );
+  }
+
+  private toFailure(err: any) {
+    if (err?.status === 401) {
+      return { status: false, unauthorized: true, message: 'Please verify your email to continue.' };
     }
-    const headers = { 
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    };
-
-    return this.http.get(this.general.globalUrl + link, { headers: headers });
+    if (err?.status === 429) {
+      return { status: false, message: 'Too many requests, please slow down.' };
+    }
+    return { status: false, message: err?.error?.message || err?.error?.data?.message || 'Network error. Please try again.' };
   }
-
-  uploadImages(fileToUpload: File, url: string): Observable<any> {
-    const formData = new FormData();
-    formData.append('images', fileToUpload);
-    const headers = {
-      'Authorization': 'Bearer ' + (GlobaldataService.loginToken || ''),
-      'Accept': 'application/json'
-    };
-    return this.http.post(this.general.globalUrl + url, formData, { headers: headers });
-  }
-
 }
