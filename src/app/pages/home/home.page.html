@@ -64,12 +64,33 @@
 
       <button
         type="button"
+        class="top-pill-btn scan-pill"
+        [class.active]="peekUnderlyingMap"
+        (click)="togglePeekUnderlyingMap()"
+        title="Peek Underlying Real-World Map Beneath Custom Land Graphics"
+      >
+        <ion-icon name="layers-outline"></ion-icon>
+        <span>{{ peekUnderlyingMap ? 'Map Peek ON' : 'Peek Map' }}</span>
+      </button>
+
+      <button
+        type="button"
         class="top-pill-btn pins-pill"
         (click)="showPinsModal = true"
         title="Saved Pins & Bookmarks"
       >
         <ion-icon name="bookmark-outline"></ion-icon>
         <span>Pins ({{ savedPins.length }})</span>
+      </button>
+
+      <button
+        type="button"
+        class="top-pill-btn pins-pill"
+        (click)="openLeaderboardModal()"
+        title="Leaderboards, Friendly Citizens & Clans"
+      >
+        <ion-icon name="trophy-outline"></ion-icon>
+        <span>Ranks</span>
       </button>
 
       <button
@@ -490,6 +511,23 @@
             <input type="url" [(ngModel)]="areaEmbedUrlInput" placeholder="https://example.com/embed-widget" />
           </div>
 
+          <div class="ae-field">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+              <label style="margin:0;">Custom HTML/JS Land Sandbox Code (Runs inside your area)</label>
+              <div style="display:flex;gap:6px;">
+                <button type="button" class="mini-block-btn" (click)="applyCodeTemplate('counter')">+ Visitor Counter</button>
+                <button type="button" class="mini-block-btn" (click)="applyCodeTemplate('game')">+ Mini-Game</button>
+                <button type="button" class="mini-block-btn" (click)="applyCodeTemplate('banner')">+ Neon Banner</button>
+              </div>
+            </div>
+            <textarea
+              [(ngModel)]="areaCustomCodeInput"
+              rows="4"
+              placeholder="<div>Write custom HTML/CSS/JS to run inside a sandboxed widget on your land...</div>"
+              style="width:100%;margin-top:6px;background:rgba(15,23,42,0.85);color:#38bdf8;border:1px solid rgba(148,163,184,0.28);border-radius:10px;padding:10px;font-family:monospace;font-size:12px;"
+            ></textarea>
+          </div>
+
           <div class="ae-sale-box">
             <div class="ae-sale-toggle">
               <div>
@@ -520,7 +558,7 @@
         <ion-toolbar class="ion-padding-horizontal">
           <ion-button expand="block" class="meta-btn-gradient" (click)="editorSubmit()">
             <ion-icon name="save-outline" slot="start"></ion-icon>
-            Save Area Details & URL
+            Save Area Details, Code & URL
           </ion-button>
         </ion-toolbar>
       </ion-footer>
@@ -588,14 +626,44 @@
               <ion-icon name="eye-outline"></ion-icon>
               {{ inspectedArea.views }} views
             </span>
+            <span class="addr-pill" (click)="togglePeekUnderlyingMap(); showAreaInspectModal = false" style="cursor:pointer;">
+              <ion-icon name="layers-outline"></ion-icon>
+              {{ peekUnderlyingMap ? 'Restore Artwork' : 'Peek Underlying Map' }}
+            </span>
           </div>
 
           <div class="ia-rich-body" [innerHTML]="inspectedArea.custom_details || '<p>No description added yet.</p>'"></div>
 
-          <!-- Optional Sandboxed Interactive Iframe -->
+          <!-- Optional Sandboxed Custom HTML/JS Code (Brief #5 & [n]) -->
+          <div class="ia-embed-box" *ngIf="safeCustomCodeHtml" style="margin-top:12px;">
+            <h5>Interactive Land Sandbox (HTML/JS)</h5>
+            <iframe
+              [srcdoc]="safeCustomCodeHtml"
+              sandbox="allow-scripts"
+              style="width:100%;min-height:115px;border:1px solid rgba(56,189,248,0.3);border-radius:10px;background:#0f172a;"
+              title="Sandboxed Land Code"
+            ></iframe>
+          </div>
+
+          <!-- Optional Sandboxed External Iframe -->
           <div class="ia-embed-box" *ngIf="safeEmbedUrl">
             <h5>Interactive Area Experience</h5>
             <iframe [src]="safeEmbedUrl" sandbox="allow-scripts allow-same-origin" title="Interactive Land Content"></iframe>
+          </div>
+
+          <!-- Gamification: Challenge Neighbour / Territory Mini-Game (Brief lines 380-395) -->
+          <div class="ia-buy-box" style="margin-top:12px;background:rgba(15,23,42,0.65);border:1px solid rgba(139,92,246,0.35);">
+            <div class="ia-buy-price">
+              <span>Clan Territory & Neighbour Mini-Game</span>
+              <small>Your Clan: <strong>{{ meta.getCurrentClan() }}</strong> · Test @{{ inspectedArea.username }}'s property defense wall</small>
+            </div>
+            <ion-button expand="block" fill="outline" color="secondary" size="small" (click)="challengeAreaForTerritory(inspectedArea)">
+              <ion-icon name="game-controller-outline" slot="start"></ion-icon>
+              Play Territory Challenge Mini-Game
+            </ion-button>
+            <p *ngIf="challengeResultText" style="margin:8px 0 0;font-size:12.5px;color:#38bdf8;font-weight:600;">
+              {{ challengeResultText }}
+            </p>
           </div>
 
           <!-- Direct Buy & Take Control Section if On Sale -->
@@ -603,7 +671,7 @@
             <div class="ia-buy-price">
               <span>Acquire All {{ inspectedArea.no_of_tiles }} Squares</span>
               <strong>${{ (inspectedArea.sale_price * inspectedArea.no_of_tiles).toFixed(2) }} USD</strong>
-              <small>Instant deed transfer (includes 10% FlatMeta marketplace fee)</small>
+              <small>Instant deed transfer (includes 10% FlatMeta marketplace fee; cancels seller's next month billing)</small>
             </div>
             <ion-button expand="block" class="meta-btn-gradient" (click)="buyInspectedAreaNow(inspectedArea)">
               <ion-icon name="cart-outline" slot="start"></ion-icon>
@@ -688,6 +756,115 @@
                 title="Delete Pin"
               >
                 <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+              </ion-button>
+            </div>
+          </div>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- ======================================================================
+       MODAL 5: Leaderboards, Friendly Citizens & Clans
+       (Brief 28/4/22 #15 & Gamification lines 380-395)
+       ====================================================================== -->
+  <ion-modal
+    [isOpen]="showLeaderboardModal"
+    [swipeToClose]="true"
+    [presentingElement]="routerOutlet.nativeEl"
+    mode="ios"
+    (didDismiss)="showLeaderboardModal = false"
+  >
+    <ng-template>
+      <ion-header class="ion-no-border meta-page-header">
+        <ion-toolbar class="meta-page-toolbar">
+          <ion-title>Metaverse Leaderboards & Clans</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="showLeaderboardModal = false">
+              <ion-icon name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="ion-padding" *ngIf="leaderboardData">
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <ion-button
+            size="small"
+            [fill]="leaderboardTab === 'landowners' ? 'solid' : 'outline'"
+            color="primary"
+            (click)="leaderboardTab = 'landowners'"
+          >
+            🏆 Top Landowners
+          </ion-button>
+          <ion-button
+            size="small"
+            [fill]="leaderboardTab === 'friendly' ? 'solid' : 'outline'"
+            color="secondary"
+            (click)="leaderboardTab = 'friendly'"
+          >
+            🤝 Friendly Citizens
+          </ion-button>
+          <ion-button
+            size="small"
+            [fill]="leaderboardTab === 'clans' ? 'solid' : 'outline'"
+            color="tertiary"
+            (click)="leaderboardTab = 'clans'"
+          >
+            🛡️ Clans & Alliances
+          </ion-button>
+        </div>
+
+        <!-- Tab 1: Top Landowners -->
+        <div class="pins-list" *ngIf="leaderboardTab === 'landowners'">
+          <div class="pin-card meta-card" *ngFor="let o of leaderboardData.landowners; let idx = index">
+            <div class="pin-info">
+              <div class="pin-icon" style="font-weight:800;color:#fbbf24;">#{{ idx + 1 }}</div>
+              <div>
+                <h4>{{ o.fullname }} <span *ngIf="o.isMe" style="color:#38bdf8;font-size:11px;">(YOU)</span></h4>
+                <small>@{{ o.username }} · {{ o.areas }} Area{{ o.areas > 1 ? 's' : '' }}</small>
+              </div>
+            </div>
+            <div class="pin-actions">
+              <span class="meta-badge badge-emerald">{{ o.tiles }} Squares</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Friendly Citizens -->
+        <div class="pins-list" *ngIf="leaderboardTab === 'friendly'">
+          <div class="pin-card meta-card" *ngFor="let f of leaderboardData.friendlyCitizens; let idx = index">
+            <div class="pin-info">
+              <div class="pin-icon" style="font-weight:800;color:#34d399;">#{{ idx + 1 }}</div>
+              <div>
+                <h4>{{ f.fullname }}</h4>
+                <small>@{{ f.username }} · {{ f.badge }}</small>
+              </div>
+            </div>
+            <div class="pin-actions">
+              <span class="meta-badge badge-purple">{{ f.score }} Rep</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Clans & Alliances -->
+        <div class="pins-list" *ngIf="leaderboardTab === 'clans'">
+          <div class="pin-card meta-card" *ngFor="let c of leaderboardData.clans">
+            <div class="pin-info">
+              <div class="pin-icon" style="font-size:20px;">{{ c.badge }}</div>
+              <div>
+                <h4>{{ c.name }}</h4>
+                <small>{{ c.members }} Citizens · {{ c.tiles }} Territory Squares</small>
+              </div>
+            </div>
+            <div class="pin-actions">
+              <ion-button
+                size="small"
+                [fill]="c.isMyClan ? 'solid' : 'outline'"
+                [color]="c.isMyClan ? 'success' : 'primary'"
+                (click)="selectUserClan(c.name)"
+              >
+                {{ c.isMyClan ? 'Joined ✓' : 'Join Clan' }}
               </ion-button>
             </div>
           </div>

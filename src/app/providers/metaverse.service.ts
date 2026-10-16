@@ -41,6 +41,7 @@ export interface LandTile {
   three_words?: string;
   custom_details?: string;
   embed_url?: string;
+  custom_code?: string;
   on_sale?: boolean;
   sale_price?: number;
   amount?: number;
@@ -63,6 +64,8 @@ export interface LandAreaSummary {
   custom_details: string;
   description?: string;
   embed_url?: string;
+  custom_code?: string;
+  previous_image?: string;
   image: string;
   no_of_tiles: number;
   lat: number;
@@ -791,6 +794,11 @@ export class MetaverseService {
           three_words: 'flatmeta.welcome.home',
           custom_details:
             '<h4>Welcome to FlatMeta.io!</h4><p>This 3x3 multi-tile showcase is the official <strong>FlatMeta Home</strong> plaza. Every user gets <strong>100 free squares</strong> to claim and personalize with custom images, multi-tile banners, custom URLs, and interactive content!</p><ul><li>Double-click or use arrow keys to walk your avatar</li><li>Chat live with nearby citizens in the Hangouts bar</li><li>Toggle the <strong>Buy Grid</strong> at 15x zoom to claim land</li></ul>',
+          custom_code: `<div style="font-family:sans-serif;background:#0f172a;color:#f8fafc;padding:12px;border-radius:10px;text-align:center;border:1px solid #38bdf8;">
+  <div style="font-size:12px;color:#38bdf8;font-weight:700;letter-spacing:1px;">FLATMETA LIVE SANDBOX WIDGET</div>
+  <p style="margin:6px 0;font-size:13px;">Interactive HTML/JS running inside this 3x3 land area!</p>
+  <button onclick="const el=document.getElementById('cnt');el.textContent=Number(el.textContent)+1;" style="background:#0284c7;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:700;">⚡ Boost Plaza Energy (<span id="cnt">42</span>)</button>
+</div>`,
           on_sale: false,
           sale_price: 0,
           amount: 0.1,
@@ -931,11 +939,14 @@ export class MetaverseService {
         username: raw.username || (raw.fullname ? raw.fullname.toLowerCase().replace(/\s+/g, '_') : 'citizen'),
         fullname: raw.fullname || 'Metaverse Citizen',
         image: raw.image || '',
-        span_bounds: existsIdx > -1 ? current[existsIdx].span_bounds : null,
+        previous_image: raw.previous_image || '',
+        span_bounds: raw.span_bounds || (existsIdx > -1 ? current[existsIdx].span_bounds : null),
         area_title: raw.area_title || `Parcel #${orderId}`,
         slug: raw.slug || `parcel-${orderId}`,
         three_words: raw.three_words || this.gridToThreeWords(gx, gy),
         custom_details: raw.custom_details || '',
+        embed_url: raw.embed_url || '',
+        custom_code: raw.custom_code || '',
         on_sale: raw.sale_status == '1' || Number(raw.sale_price) > 0,
         sale_price: Number(raw.sale_price || 0),
         amount: Number(raw.amount || 0.1),
@@ -951,6 +962,7 @@ export class MetaverseService {
           ...current[existsIdx],
           image: current[existsIdx].image || mapped.image,
           custom_details: current[existsIdx].custom_details || mapped.custom_details,
+          custom_code: current[existsIdx].custom_code || mapped.custom_code,
         };
       } else {
         current.push(mapped);
@@ -1124,7 +1136,7 @@ export class MetaverseService {
   }
 
   /**
-   * Updates area metadata (Title, Custom URL slug, 3-word address, Rich HTML details, Interactive Embed URL, Sale Listing)
+   * Updates area metadata (Title, Custom URL slug, 3-word address, Rich HTML details, Interactive Embed URL, Custom Sandbox Code, Sale Listing)
    */
   public updateAreaMetadata(
     targetTiles: Array<{ gx: number; gy: number }>,
@@ -1134,6 +1146,7 @@ export class MetaverseService {
       three_words?: string;
       custom_details?: string;
       embed_url?: string;
+      custom_code?: string;
       on_sale?: boolean;
       sale_price?: number;
     }
@@ -1159,6 +1172,7 @@ export class MetaverseService {
           three_words: metadata.three_words !== undefined ? metadata.three_words : current[idx].three_words,
           custom_details: metadata.custom_details !== undefined ? metadata.custom_details : current[idx].custom_details,
           embed_url: metadata.embed_url !== undefined ? metadata.embed_url : current[idx].embed_url,
+          custom_code: metadata.custom_code !== undefined ? metadata.custom_code : current[idx].custom_code,
           on_sale: metadata.on_sale !== undefined ? metadata.on_sale : current[idx].on_sale,
           sale_price: metadata.sale_price !== undefined ? Number(metadata.sale_price) : current[idx].sale_price,
         };
@@ -1199,6 +1213,7 @@ export class MetaverseService {
       three_words?: string;
       description?: string;
       embed_url?: string;
+      custom_code?: string;
       on_sale?: boolean;
       sale_price?: number;
     }
@@ -1217,6 +1232,7 @@ export class MetaverseService {
         three_words: details.three_words,
         custom_details: details.description,
         embed_url: details.embed_url,
+        custom_code: details.custom_code,
         on_sale: details.on_sale,
         sale_price: details.sale_price,
       }
@@ -1339,6 +1355,8 @@ export class MetaverseService {
         custom_details: first.custom_details || '',
         description: first.custom_details || '',
         embed_url: first.embed_url,
+        custom_code: first.custom_code,
+        previous_image: first.previous_image,
         image: first.image || 'assets/icon/placeholder-land.svg',
         no_of_tiles: group.length,
         lat: avgLat,
@@ -1390,6 +1408,77 @@ export class MetaverseService {
         a.order_id?.toLowerCase() === q ||
         a.title?.toLowerCase() === q
     );
+  }
+
+  /**
+   * Brief 28/4/22 #15 & Gamification:
+   * Computes live Leaderboard (Top Landowners, Friendly Citizens, and Clan Standings)
+   */
+  public getCurrentClan(): string {
+    return localStorage.getItem('flatmeta_user_clan') || 'Cyber Architects';
+  }
+
+  public setCurrentClan(clan: string) {
+    localStorage.setItem('flatmeta_user_clan', clan);
+  }
+
+  public getLeaderboardData(): {
+    landowners: Array<{ username: string; fullname: string; tiles: number; areas: number; isMe: boolean }>;
+    friendlyCitizens: Array<{ username: string; fullname: string; score: number; badge: string }>;
+    clans: Array<{ name: string; badge: string; members: number; tiles: number; color: string; isMyClan: boolean }>;
+  } {
+    const myUid = this.getCurrentUserId();
+    const myClan = this.getCurrentClan();
+    const ownerMap = new Map<string, { username: string; fullname: string; tiles: number; areas: Set<string>; isMe: boolean }>();
+
+    this.tiles$.value.forEach((t) => {
+      const uid = String(t.user_id || 'citizen');
+      if (!ownerMap.has(uid)) {
+        ownerMap.set(uid, {
+          username: t.username || 'citizen',
+          fullname: t.fullname || 'Metaverse Citizen',
+          tiles: 0,
+          areas: new Set<string>(),
+          isMe: uid === String(myUid),
+        });
+      }
+      const entry = ownerMap.get(uid)!;
+      entry.tiles += 1;
+      entry.areas.add(String(t.order_id));
+    });
+
+    const landowners = Array.from(ownerMap.values())
+      .map((x) => ({
+        username: x.username,
+        fullname: x.fullname,
+        tiles: x.tiles,
+        areas: x.areas.size,
+        isMe: x.isMe,
+      }))
+      .sort((a, b) => b.tiles - a.tiles);
+
+    const myFriendsCount = this.friendIds.size;
+    const friendlyCitizens = [
+      {
+        username: this.getCurrentUsername(),
+        fullname: this.getCurrentFullname() + ' (You)',
+        score: 120 + myFriendsCount * 25 + this.chatMessages$.value.length * 5,
+        badge: '🌟 Explorer',
+      },
+      { username: 'aria_meta', fullname: 'Aria Vance', score: 340, badge: '💬 Welcomer' },
+      { username: 'zane_builder', fullname: 'Zane Sterling', score: 295, badge: '🏗️ Builder' },
+      { username: 'neo_architect', fullname: 'Neo Architect Studio', score: 250, badge: '🎨 Creator' },
+    ].sort((a, b) => b.score - a.score);
+
+    const myTilesCount = this.tiles$.value.filter((t) => String(t.user_id) === String(myUid)).length;
+    const clans = [
+      { name: 'Cyber Architects', badge: '⚡', members: 42, tiles: 1480, color: '#06b6d4', isMyClan: myClan === 'Cyber Architects' },
+      { name: 'Emerald Guardians', badge: '🌿', members: 38, tiles: 1260, color: '#10b981', isMyClan: myClan === 'Emerald Guardians' },
+      { name: 'Solar Pioneers', badge: '☀️', members: 31, tiles: 980, color: '#f59e0b', isMyClan: myClan === 'Solar Pioneers' },
+      { name: 'Royal Knights', badge: '🛡️', members: 29, tiles: 845, color: '#8b5cf6', isMyClan: myClan === 'Royal Knights' },
+    ].map((c) => (c.isMyClan ? { ...c, tiles: c.tiles + myTilesCount } : c));
+
+    return { landowners, friendlyCitizens, clans };
   }
 
   private formatCoordsLabel(lat: number, lng: number): string {

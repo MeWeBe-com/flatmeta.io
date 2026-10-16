@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { GeneralService } from 'src/app/providers/general.service';
+import { HttpService } from 'src/app/providers/http.service';
 import { MetaverseService } from 'src/app/providers/metaverse.service';
 
 export interface CodeProposal {
@@ -96,7 +97,7 @@ export const SMILEY_EXPRESSIONS: Record<string, string> = {
 
   proposals: CodeProposal[] = [];
 
-  constructor(public general: GeneralService, public meta: MetaverseService) {}
+  constructor(public general: GeneralService, public meta: MetaverseService, public http: HttpService) {}
 
   ngOnInit() {
     this.loadTemplate('land-widget.js');
@@ -130,35 +131,61 @@ export const SMILEY_EXPRESSIONS: Record<string, string> = {
       const raw = localStorage.getItem('flatmeta_code_proposals_v1');
       if (raw) {
         this.proposals = JSON.parse(raw);
-        return;
       }
     } catch (e) {}
 
-    this.proposals = [
-      {
-        id: 'prop_1',
-        fileName: 'multi-tile-seamless-spanner.ts',
-        title: 'Zero-gap NxM Canvas Image Slicer for Joined Land Squares',
-        author: 'flatmeta_core',
-        code: '// Slices 1 uploaded image across selected contiguous squares at zoom 15',
-        votes: 42,
-        votedByMe: true,
-        status: 'Approved & Live',
-        createdAt: '2026-10-10',
+    if (!this.proposals || this.proposals.length === 0) {
+      this.proposals = [
+        {
+          id: 'prop_1',
+          fileName: 'multi-tile-seamless-spanner.ts',
+          title: 'Zero-gap NxM Canvas Image Slicer for Joined Land Squares',
+          author: 'flatmeta_core',
+          code: '// Slices 1 uploaded image across selected contiguous squares at zoom 15',
+          votes: 42,
+          votedByMe: true,
+          status: 'Approved & Live',
+          createdAt: '2026-10-10',
+        },
+        {
+          id: 'prop_2',
+          fileName: 'clan-leaderboard-widget.js',
+          title: 'Top Landowners & Friendly Citizens Live Leaderboard Widget',
+          author: 'aria_meta',
+          code: '// Renders real-time leaderboard of top citizens by squares & connections',
+          votes: 19,
+          votedByMe: false,
+          status: 'Community Voting',
+          createdAt: '2026-10-13',
+        },
+      ];
+      this.saveProposals();
+    }
+
+    // Also fetch latest community proposals from backend Mini-Git-Lab API
+    this.http.get2('CommunityProposals', false).subscribe(
+      (res: any) => {
+        if (res?.status === true && Array.isArray(res.data?.proposals)) {
+          res.data.proposals.forEach((bp: any) => {
+            if (!this.proposals.some((lp) => lp.id === bp.id)) {
+              this.proposals.push({
+                id: bp.id,
+                fileName: (bp.category || 'module').toLowerCase().replace(/\s+/g, '-') + '.js',
+                title: bp.title,
+                author: bp.author || 'citizen',
+                code: bp.codeSnippet || bp.description || '',
+                votes: Number(bp.votes || 1),
+                votedByMe: false,
+                status: bp.status === 'Approved' ? 'Approved & Live' : 'Community Voting',
+                createdAt: (bp.created_at || new Date().toISOString()).slice(0, 10),
+              });
+            }
+          });
+          this.saveProposals();
+        }
       },
-      {
-        id: 'prop_2',
-        fileName: 'clan-leaderboard-widget.js',
-        title: 'Top Landowners & Friendly Citizens Live Leaderboard Widget',
-        author: 'aria_meta',
-        code: '// Renders real-time leaderboard of top citizens by squares & connections',
-        votes: 19,
-        votedByMe: false,
-        status: 'Community Voting',
-        createdAt: '2026-10-13',
-      },
-    ];
-    this.saveProposals();
+      () => {}
+    );
   }
 
   saveProposals() {
@@ -185,10 +212,26 @@ export const SMILEY_EXPRESSIONS: Record<string, string> = {
     };
     this.proposals = [prop, ...this.proposals];
     this.saveProposals();
+
+    this.http
+      .post(
+        'SubmitCommunityProposal',
+        {
+          title: prop.title,
+          author: prop.author,
+          category: prop.fileName,
+          description: prop.title,
+          codeSnippet: prop.code,
+        },
+        false
+      )
+      .subscribe({ next: () => {}, error: () => {} });
+
     this.general.presentToast('Committed to Community Code Proposals! Once voted & approved by Admin, it goes live.');
   }
 
   toggleVote(p: CodeProposal) {
+    const delta = p.votedByMe ? -1 : 1;
     if (p.votedByMe) {
       p.votes = Math.max(0, p.votes - 1);
       p.votedByMe = false;
@@ -197,5 +240,10 @@ export const SMILEY_EXPRESSIONS: Record<string, string> = {
       p.votedByMe = true;
     }
     this.saveProposals();
+
+    this.http.post('VoteCommunityProposal', { id: p.id, delta }, false).subscribe({
+      next: () => {},
+      error: () => {},
+    });
   }
 }

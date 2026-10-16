@@ -200,6 +200,29 @@
           </div>
         </div>
 
+        <!-- Optional Phone Number (Brief 06/01/23 line 69: "We will need a valid phone number to validate a user later") -->
+        <div class="input-group">
+          <div class="label-row">
+            <label class="input-label">Phone Number (Optional · For Future Citizen Validation)</label>
+          </div>
+          <div class="input-field-wrap">
+            <ion-icon name="call-outline" class="field-icon"></ion-icon>
+            <ion-input placeholder="+1 555 000 0000" type="tel" formControlName="phone"></ion-input>
+          </div>
+        </div>
+
+        <!-- Clan / Alliance Selection (Brief Gamification line 380) -->
+        <div class="input-group">
+          <div class="label-row">
+            <label class="input-label">Metaverse Clan / Alliance</label>
+          </div>
+          <ion-item class="meta-input-item" style="border-radius:12px;">
+            <ion-select formControlName="clan" interface="popover">
+              <ion-select-option *ngFor="let cl of clans" [value]="cl">{{ cl }}</ion-select-option>
+            </ion-select>
+          </ion-item>
+        </div>
+
         <!-- Submit Button -->
         <div class="form-actions">
           <ion-button expand="block" class="meta-btn-gradient btn-update-profile" type="submit">

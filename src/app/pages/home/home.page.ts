@@ -19,7 +19,7 @@ import { GlobaldataService } from 'src/app/providers/globaldata.service';
 import { EventsService } from 'src/app/providers/events.service';
 import { Capacitor } from '@capacitor/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import { environment } from 'src/environments/environment';
 
 import * as Leaflet from 'leaflet';
@@ -62,9 +62,10 @@ export class HomePage implements OnInit, OnDestroy {
   currentZoomLevel: number = 15;
   private lastZoomStepTime: number = 0;
 
-  // Grid & Scan Toggles
+  // Grid, Scan & Peek Underlying Map Toggles
   buyGridActive: boolean = false;
   scanModeActive: boolean = false;
+  peekUnderlyingMap: boolean = false;
   isAvatarOffScreen: boolean = false;
 
   // Selections & Land Data
@@ -86,6 +87,7 @@ export class HomePage implements OnInit, OnDestroy {
   areaSlugInput: string = '';
   areaThreeWordsInput: string = '';
   areaEmbedUrlInput: string = '';
+  areaCustomCodeInput: string = '';
   areaOnSaleInput: boolean = false;
   areaSalePriceInput: number = 1.0;
 
@@ -93,6 +95,13 @@ export class HomePage implements OnInit, OnDestroy {
   inspectedArea: LandAreaSummary | null = null;
   showAreaInspectModal: boolean = false;
   safeEmbedUrl: SafeResourceUrl | null = null;
+  safeCustomCodeHtml: SafeHtml | null = null;
+  challengeResultText: string = '';
+
+  // Leaderboard & Clans Modal (Brief #15 & Gamification)
+  showLeaderboardModal: boolean = false;
+  leaderboardTab: 'landowners' | 'friendly' | 'clans' = 'landowners';
+  leaderboardData: any = null;
 
   // Pins Modal / Drawer
   showPinsModal: boolean = false;
@@ -795,6 +804,22 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   /**
+   * Brief 25/4/22 & 18/4/22 (lines 251 & 273):
+   * "they can maybe switch and see which area the new content squares are covering or have replaced"
+   */
+  public togglePeekUnderlyingMap() {
+    this.peekUnderlyingMap = !this.peekUnderlyingMap;
+    if (this.landCanvasLayer) {
+      this.landCanvasLayer.setOpacity(this.peekUnderlyingMap ? 0.25 : 1);
+    }
+    this.general.presentToast(
+      this.peekUnderlyingMap
+        ? 'Peek Map ON: Custom land graphics set to 25% opacity so you can see the underlying real-world map!'
+        : 'Peek Map OFF: Full custom land artwork restored.'
+    );
+  }
+
+  /**
    * Initializes the persistent Canvas GridLayer that renders:
    * - Owned land images SEAMLESSLY (zero border/space between adjacent tiles!)
    * - Multi-tile spanned images (1 image sliced across NxM selected squares!)
@@ -1127,8 +1152,31 @@ export class HomePage implements OnInit, OnDestroy {
     this.areaThreeWordsInput = first.three_words || this.meta.gridToThreeWords(first.gx, first.gy);
     this.qEditor = first.custom_details || '';
     this.areaEmbedUrlInput = first.embed_url || '';
+    this.areaCustomCodeInput = first.custom_code || '';
     this.areaOnSaleInput = Boolean(first.on_sale);
     this.areaSalePriceInput = Number(first.sale_price || 1.0);
+  }
+
+  public applyCodeTemplate(type: 'counter' | 'game' | 'banner') {
+    if (type === 'counter') {
+      this.areaCustomCodeInput = `<div style="font-family:sans-serif;background:#0f172a;color:#f8fafc;padding:12px;border-radius:10px;text-align:center;border:1px solid #38bdf8;">
+  <div style="font-size:11px;color:#38bdf8;font-weight:700;">INTERACTIVE VISITOR COUNTER</div>
+  <p style="margin:6px 0;font-size:13px;">Welcome to ${this.areaTitleInput || 'My Land Area'}!</p>
+  <button onclick="const c=document.getElementById('vc');c.textContent=Number(c.textContent)+1;" style="background:#0284c7;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:700;">👋 Leave a High-Five (<span id="vc">1</span>)</button>
+</div>`;
+    } else if (type === 'game') {
+      this.areaCustomCodeInput = `<div style="font-family:sans-serif;background:#064e3b;color:#ecfdf5;padding:12px;border-radius:10px;text-align:center;border:1px solid #34d399;">
+  <div style="font-size:11px;color:#34d399;font-weight:700;">MINI-GAME: METAVERSE COIN MINER</div>
+  <p style="margin:6px 0;font-size:13px;">Coins Mined: <strong id="coins" style="color:#fbbf24;">0</strong></p>
+  <button onclick="const el=document.getElementById('coins');el.textContent=Number(el.textContent)+Math.floor(Math.random()*5+1);" style="background:#10b981;color:#052e16;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:800;">⛏️ Mine Land Block</button>
+</div>`;
+    } else {
+      this.areaCustomCodeInput = `<div style="font-family:sans-serif;background:linear-gradient(135deg,#2e1065,#7c3aed);color:#fff;padding:14px;border-radius:10px;text-align:center;">
+  <h4 style="margin:0 0 4px 0;">✨ ${this.areaTitleInput || 'Custom Land Showcase'}</h4>
+  <p style="margin:0;font-size:12px;opacity:0.9;">Powered by FlatMeta.io Open-Source 2D Metaverse</p>
+</div>`;
+    }
+    this.general.presentToast('Loaded interactive HTML/JS template into Land Sandbox!');
   }
 
   public clearSelection() {
@@ -1165,13 +1213,18 @@ export class HomePage implements OnInit, OnDestroy {
     this.redrawLandLayers();
 
     if (!this.isGuest) {
+      const firstClaimed = result.claimed[0];
       this.http
         .post(
           'ClaimTiles',
           {
             tiles: tilesPayload,
-            custom_details: result.claimed[0]?.custom_details || '',
-            image: result.claimed[0]?.image || '',
+            area_title: firstClaimed?.area_title || '',
+            slug: firstClaimed?.slug || '',
+            three_words: firstClaimed?.three_words || '',
+            span_bounds: firstClaimed?.span_bounds || null,
+            custom_details: firstClaimed?.custom_details || '',
+            image: firstClaimed?.image || '',
           },
           false
         )
@@ -1301,6 +1354,7 @@ export class HomePage implements OnInit, OnDestroy {
         three_words: this.areaThreeWordsInput,
         custom_details: this.qEditor,
         embed_url: this.areaEmbedUrlInput,
+        custom_code: this.areaCustomCodeInput,
         on_sale: this.areaOnSaleInput,
         sale_price: this.areaSalePriceInput,
       }
@@ -1312,7 +1366,12 @@ export class HomePage implements OnInit, OnDestroy {
           'UpdateCustomDetails',
           {
             order_id: this.myBoxs[0].order_id,
+            area_title: this.areaTitleInput,
+            slug: this.areaSlugInput,
+            three_words: this.areaThreeWordsInput,
             custom_details: this.qEditor,
+            embed_url: this.areaEmbedUrlInput,
+            custom_code: this.areaCustomCodeInput,
             on_sale: this.areaOnSaleInput,
             sale_price: this.areaSalePriceInput,
           },
@@ -1323,7 +1382,7 @@ export class HomePage implements OnInit, OnDestroy {
 
     this.showEditor = false;
     this.redrawLandLayers();
-    this.general.presentToast('Land area details, custom URL, and marketplace settings saved!');
+    this.general.presentToast('Land area details, custom URL, sandbox code, and marketplace settings saved!');
   }
 
   // ============================================================================
@@ -1332,12 +1391,46 @@ export class HomePage implements OnInit, OnDestroy {
 
   public openAreaInspection(area: LandAreaSummary) {
     this.inspectedArea = area;
+    this.challengeResultText = '';
     if (area.embed_url && /^https?:\/\//i.test(area.embed_url)) {
       this.safeEmbedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(area.embed_url);
     } else {
       this.safeEmbedUrl = null;
     }
+    if (area.custom_code && area.custom_code.trim().length > 0) {
+      this.safeCustomCodeHtml = this.sanitizer.bypassSecurityTrustHtml(area.custom_code);
+    } else {
+      this.safeCustomCodeHtml = null;
+    }
     this.showAreaInspectModal = true;
+  }
+
+  public openLeaderboardModal() {
+    this.leaderboardData = this.meta.getLeaderboardData();
+    this.showLeaderboardModal = true;
+  }
+
+  public selectUserClan(clanName: string) {
+    this.meta.setCurrentClan(clanName);
+    this.leaderboardData = this.meta.getLeaderboardData();
+    this.general.presentToast(`Joined Clan: ${clanName}!`);
+  }
+
+  /**
+   * Brief Gamification (lines 380-395):
+   * "Play mini-games to challenge a neighbour for their land"
+   */
+  public challengeAreaForTerritory(area: LandAreaSummary) {
+    if (!area) return;
+    const myClan = this.meta.getCurrentClan();
+    const myRoll = Math.floor(Math.random() * 60) + 45;
+    const defRoll = Math.floor(Math.random() * 60) + 40;
+    if (myRoll >= defRoll) {
+      this.challengeResultText = `🏆 Victory! Your ${myClan} squad scored ${myRoll} vs @${area.username}'s ${defRoll} defense wall! (+15 Clan Honor)`;
+      this.displaySpeechBubble(this.getSessionUserId(), `Won mini-game challenge at ${area.title}! 🏆`, 'Twinkle');
+    } else {
+      this.challengeResultText = `🛡️ Defended! @${area.username}'s property wall held strong (${defRoll} vs your ${myRoll}). Try again or form a neighbour alliance!`;
+    }
   }
 
   public buyInspectedAreaNow(area: LandAreaSummary) {

@@ -30,6 +30,8 @@ export class ProfilePage implements OnInit {
   skinColors = GlobaldataService.skinColor;
   circleBgs = ['#2563eb', '#0891b2', '#7c3aed', '#059669', '#db2777', '#d97706', '#4f46e5', '#0f172a'];
 
+  clans = ['Cyber Architects', 'Emerald Guardians', 'Solar Pioneers', 'Royal Knights'];
+
   constructor(
     public general: GeneralService,
     public http: HttpService,
@@ -64,6 +66,8 @@ export class ProfilePage implements OnInit {
       fullname: identity.fullname,
       username: identity.username,
       email: identity.email || '',
+      phone: GlobaldataService.userObject?.phone || localStorage.getItem('flatmeta_user_phone') || '',
+      clan: this.meta.getCurrentClan(),
       user_image: identity.user_image,
     });
   }
@@ -74,6 +78,8 @@ export class ProfilePage implements OnInit {
       fullname: ['', [Validators.required]],
       username: ['', [Validators.required]],
       email: ['', [Validators.required, Validators.email]],
+      phone: [''],
+      clan: [this.meta.getCurrentClan()],
       user_image: '',
     });
   }
@@ -142,15 +148,24 @@ export class ProfilePage implements OnInit {
     }
 
     const val = this.profileForm.value;
+    if (val.clan) {
+      this.meta.setCurrentClan(val.clan);
+    }
+    if (val.phone !== undefined) {
+      localStorage.setItem('flatmeta_user_phone', val.phone || '');
+    }
+
     // Upgrade guest or update citizen immediately via MetaverseService
-    const userObj = await this.meta.verifyEmailAndUpgradeGuest(val.email, val.fullname);
+    const userObj = await this.meta.verifyEmailAndUpgradeGuest(val.email, val.username, val.fullname);
     userObj.username = val.username.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase() || userObj.username;
     userObj.fullname = val.fullname;
+    userObj.phone = val.phone || '';
+    userObj.clan = val.clan || this.meta.getCurrentClan();
     userObj.user_image = this.profileImg || userObj.user_image;
     GlobaldataService.userObject = userObj;
     await this.storage.setObject('userObject', userObj);
     this.events.publishLogin(userObj);
-    this.general.presentToast('Citizen profile & avatar saved!');
+    this.general.presentToast('Citizen profile, clan & avatar saved!');
 
     // Best-effort sync with backend API
     this.http.post('UpdateUser', this.profileForm.value, false).subscribe(
