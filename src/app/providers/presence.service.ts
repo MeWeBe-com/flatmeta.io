@@ -1,6 +1,7 @@
 import { Injectable, NgZone } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { AvatarConfig, avatarDataUrl, detectSmileyExpression, sanitizeAvatarConfig } from '../core/avatar';
+import { LatLngBox, isLatLngBox } from '../core/grid';
 import { FriendsService } from './friends.service';
 import { HttpService } from './http.service';
 import { SessionService } from './session.service';
@@ -73,7 +74,8 @@ export class PresenceService {
   readonly conversations$ = new BehaviorSubject<Conversation[]>([{ id: 'nearby', title: 'Nearby', avatar: '', unread: 0 }]);
   readonly typing$ = new Subject<{ userId: string; text: string }>();
   readonly bubble$ = new Subject<{ userId: string; text: string; expression?: string }>();
-  readonly tilesChanged$ = new Subject<void>();
+  /** Someone's land changed. `bounds` is the changed area; null means "could be anywhere". */
+  readonly tilesChanged$ = new Subject<{ by: string; bounds: LatLngBox | null }>();
   readonly connected$;
 
   private citizens = new Map<string, Citizen>();
@@ -102,7 +104,9 @@ export class PresenceService {
     this.socket.fromEvent('typing').subscribe((d) => this.onTyping(d));
     this.socket.fromEvent('message').subscribe((d) => this.onMessage(d));
     this.socket.fromEvent('user_disconnect').subscribe((d) => this.removeCitizen(String(d?.userId ?? d)));
-    this.socket.fromEvent('tiles_updated').subscribe(() => this.tilesChanged$.next());
+    this.socket
+      .fromEvent('tiles_updated')
+      .subscribe((d) => this.tilesChanged$.next({ by: String(d?.by ?? ''), bounds: isLatLngBox(d?.bounds) ? d.bounds : null }));
 
     this.zone.runOutsideAngular(() => {
       this.heartbeat = setInterval(() => this.zone.run(() => this.tick()), HEARTBEAT_MS / 3);
@@ -136,9 +140,9 @@ export class PresenceService {
     return this.myExpression;
   }
 
-  /** Let others know my land changed so they reload it. */
-  announceTilesChanged() {
-    this.socket.emit('tiles_updated', { by: this.session.identity.id });
+  /** Let others know my land changed; they reload it if `bounds` overlaps what they are looking at. */
+  announceTilesChanged(bounds?: LatLngBox | null) {
+    this.socket.emit('tiles_updated', bounds ? { by: this.session.identity.id, bounds } : { by: this.session.identity.id });
   }
 
   // ---------------------------------------------------------------------------

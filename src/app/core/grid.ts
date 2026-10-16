@@ -77,6 +77,71 @@ export function isValidBounds(b: any): b is GridBounds {
   );
 }
 
+/** A lat/lng rectangle (the map view, a loaded region, or a changed area). */
+export interface LatLngBox {
+  minLat: number;
+  minLng: number;
+  maxLat: number;
+  maxLng: number;
+}
+
+export function isLatLngBox(b: any): b is LatLngBox {
+  return (
+    !!b &&
+    [b.minLat, b.minLng, b.maxLat, b.maxLng].every((v) => typeof v === 'number' && Number.isFinite(v)) &&
+    b.maxLat >= b.minLat &&
+    b.maxLng >= b.minLng
+  );
+}
+
+/** Grows a box by `ratio` of its size on every side, like Leaflet's LatLngBounds.pad. */
+export function padBox(b: LatLngBox, ratio: number): LatLngBox {
+  const dLat = (b.maxLat - b.minLat) * ratio;
+  const dLng = (b.maxLng - b.minLng) * ratio;
+  return {
+    minLat: Math.max(-90, b.minLat - dLat),
+    minLng: b.minLng - dLng,
+    maxLat: Math.min(90, b.maxLat + dLat),
+    maxLng: b.maxLng + dLng,
+  };
+}
+
+export function boxContains(outer: LatLngBox, inner: LatLngBox): boolean {
+  return (
+    inner.minLat >= outer.minLat && inner.maxLat <= outer.maxLat && inner.minLng >= outer.minLng && inner.maxLng <= outer.maxLng
+  );
+}
+
+/** The map wraps around the world, so a box also covers longitudes one world left and right of it. */
+const WORLD_SHIFTS = [0, 360, -360];
+
+export function boxesOverlap(a: LatLngBox, b: LatLngBox): boolean {
+  if (a.minLat > b.maxLat || b.minLat > a.maxLat) return false;
+  return WORLD_SHIFTS.some((s) => a.minLng <= b.maxLng + s && b.minLng + s <= a.maxLng);
+}
+
+export function boxContainsPoint(b: LatLngBox, lat: number, lng: number): boolean {
+  if (lat < b.minLat || lat > b.maxLat) return false;
+  return WORLD_SHIFTS.some((s) => lng + s >= b.minLng && lng + s <= b.maxLng);
+}
+
+/**
+ * `minLat,minLng,maxLat,maxLng` for the API's `bbox`, with longitudes wrapped
+ * into [-180, 180]. A box crossing the antimeridian comes out with minLng > maxLng.
+ */
+export function bboxParam(b: LatLngBox): string {
+  const wrap = (lng: number) => (lng >= -180 && lng <= 180 ? lng : ((((lng + 180) % 360) + 360) % 360) - 180);
+  const [minLng, maxLng] = b.maxLng - b.minLng >= 360 ? [-180, 180] : [wrap(b.minLng), wrap(b.maxLng)];
+  return [b.minLat, minLng, b.maxLat, maxLng].map((v) => Number(v.toFixed(6))).join(',');
+}
+
+/** The lat/lng rectangle covered by whole grid squares. */
+export function gridBoundsToBox(b: GridBounds): LatLngBox {
+  const nw = gridToLatLng(b.minGx, b.minGy);
+  const se = gridToLatLng(b.maxGx + 1, b.maxGy + 1);
+  return { minLat: se.lat, minLng: nw.lng, maxLat: nw.lat, maxLng: se.lng };
+}
+
 const WORD_LIST = [
   'alpha', 'orbit', 'nexus', 'cyber', 'solar', 'lunar', 'pixel', 'prism',
   'atlas', 'nova', 'pulse', 'spark', 'crest', 'haven', 'plaza', 'tower',

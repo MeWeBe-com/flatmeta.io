@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AlertController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
+import { distinctUntilChanged, map, skip } from 'rxjs/operators';
 import { GeneralService } from 'src/app/providers/general.service';
 import { EventsService } from 'src/app/providers/events.service';
 import { LandArea, LandService, PLATFORM_COMMISSION_RATE } from 'src/app/providers/land.service';
@@ -32,7 +33,8 @@ export class SalelistPage implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    this.subs.add(this.land.tiles$.subscribe(() => this.load()));
+    // Re-mark my own listings when I sign in or out.
+    this.subs.add(this.session.identity$.pipe(map((i) => i.id), distinctUntilChanged(), skip(1)).subscribe(() => this.load()));
   }
 
   ngOnDestroy() {
@@ -40,7 +42,7 @@ export class SalelistPage implements OnInit, OnDestroy {
   }
 
   ionViewWillEnter() {
-    this.land.refresh();
+    this.load();
   }
 
   setFilter(f: Filter) {
@@ -49,7 +51,7 @@ export class SalelistPage implements OnInit, OnDestroy {
   }
 
   refresh() {
-    this.land.refresh();
+    this.load();
     this.general.presentToast('Refreshing the marketplace…', 1200);
   }
 
@@ -95,7 +97,11 @@ export class SalelistPage implements OnInit, OnDestroy {
     }
   }
 
-  private load() {
-    this.listings = this.land.marketplace(this.filter);
+  private async load() {
+    const filter = this.filter;
+    const list = await this.land.marketplace(filter);
+    if (filter !== this.filter) return;
+    if (list) this.listings = list;
+    else this.general.presentToast('Could not load the marketplace.');
   }
 }

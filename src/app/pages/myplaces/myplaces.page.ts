@@ -36,7 +36,7 @@ export class MyplacesPage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.subs.add(this.land.tiles$.subscribe(() => (this.areas = this.land.myAreas())));
+    this.subs.add(this.land.myAreas$.subscribe((areas) => (this.areas = areas)));
     this.subs.add(this.land.stats$.subscribe((s) => (this.stats = s)));
   }
 
@@ -45,11 +45,11 @@ export class MyplacesPage implements OnInit, OnDestroy {
   }
 
   ionViewWillEnter() {
-    this.land.refresh();
+    this.land.refreshMine();
   }
 
   refresh() {
-    this.land.refresh();
+    this.land.refreshMine();
     this.general.presentToast('Refreshing your land…', 1200);
   }
 

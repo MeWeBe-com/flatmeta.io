@@ -1,4 +1,18 @@
-import { boundsOf, gridCenterLatLng, gridToLatLng, gridToThreeWords, latLngToGrid, slugify, snapToAllowedZoom } from './grid';
+import {
+  bboxParam,
+  boundsOf,
+  boxContains,
+  boxContainsPoint,
+  boxesOverlap,
+  gridBoundsToBox,
+  gridCenterLatLng,
+  gridToLatLng,
+  gridToThreeWords,
+  latLngToGrid,
+  padBox,
+  slugify,
+  snapToAllowedZoom,
+} from './grid';
 
 describe('grid', () => {
   it('round-trips a square through its north-west corner', () => {
@@ -34,5 +48,38 @@ describe('grid', () => {
     expect(slugify('https://flatmeta.io/u/Pepsi Land!')).toBe('pepsi-land');
     expect(slugify('  --My__Shop--  ')).toBe('my-shop');
     expect(slugify('<script>')).toBe('script');
+  });
+
+  it('pads, compares and overlaps lat/lng boxes, across the antimeridian too', () => {
+    const view = { minLat: 51, minLng: -1, maxLat: 52, maxLng: 1 };
+    expect(padBox(view, 0.5)).toEqual({ minLat: 50.5, minLng: -2, maxLat: 52.5, maxLng: 2 });
+    expect(padBox({ minLat: 80, minLng: 0, maxLat: 89, maxLng: 1 }, 1).maxLat).toBe(90);
+    expect(boxContains(padBox(view, 0.5), view)).toBeTrue();
+    expect(boxContains(view, padBox(view, 0.5))).toBeFalse();
+
+    expect(boxesOverlap(view, { minLat: 51.5, minLng: 0.5, maxLat: 51.6, maxLng: 0.6 })).toBeTrue();
+    expect(boxesOverlap(view, { minLat: 53, minLng: 0, maxLat: 54, maxLng: 1 })).toBeFalse();
+    // A view scrolled one world east (lng 170..190) still sees changes at lng -175.
+    const wrapped = { minLat: 0, minLng: 170, maxLat: 10, maxLng: 190 };
+    expect(boxesOverlap(wrapped, { minLat: 1, minLng: -175, maxLat: 2, maxLng: -174 })).toBeTrue();
+    expect(boxContainsPoint(wrapped, 5, -175)).toBeTrue();
+    expect(boxContainsPoint(wrapped, 5, 0)).toBeFalse();
+  });
+
+  it('formats the API bbox with wrapped longitudes', () => {
+    expect(bboxParam({ minLat: 51, minLng: -1, maxLat: 52, maxLng: 1 })).toBe('51,-1,52,1');
+    expect(bboxParam({ minLat: 0, minLng: 170, maxLat: 10, maxLng: 190 })).toBe('0,170,10,-170');
+    expect(bboxParam({ minLat: -80, minLng: -400, maxLat: 80, maxLng: 400 })).toBe('-80,-180,80,180');
+  });
+
+  it('turns grid bounds into the lat/lng box of those squares', () => {
+    const { gx, gy } = latLngToGrid(51.50972, -0.104317);
+    const box = gridBoundsToBox({ minGx: gx, minGy: gy, maxGx: gx + 1, maxGy: gy });
+    const nw = gridToLatLng(gx, gy);
+    expect(box.maxLat).toBe(nw.lat);
+    expect(box.minLng).toBe(nw.lng);
+    expect(box.minLat).toBeLessThan(box.maxLat);
+    const c = gridCenterLatLng(gx + 1, gy);
+    expect(boxContainsPoint(box, c.lat, c.lng)).toBeTrue();
   });
 });

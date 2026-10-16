@@ -1,6 +1,5 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
 import { GeneralService } from 'src/app/providers/general.service';
 import { EventsService } from 'src/app/providers/events.service';
 import { LandArea, LandService } from 'src/app/providers/land.service';
@@ -11,27 +10,24 @@ import { LandArea, LandService } from 'src/app/providers/land.service';
   templateUrl: './recentpurchases.page.html',
   styleUrls: ['./recentpurchases.page.scss'],
 })
-export class RecentpurchasesPage implements OnInit, OnDestroy {
+export class RecentpurchasesPage {
   areas: LandArea[] = [];
-  private subs = new Subscription();
 
   constructor(public general: GeneralService, private events: EventsService, private land: LandService, private router: Router) {}
 
-  ngOnInit() {
-    this.subs.add(this.land.tiles$.subscribe(() => (this.areas = this.land.latest(48))));
-  }
-
-  ngOnDestroy() {
-    this.subs.unsubscribe();
-  }
-
   ionViewWillEnter() {
-    this.land.refresh();
+    this.load();
   }
 
   refresh() {
-    this.land.refresh();
+    this.load();
     this.general.presentToast('Refreshing…', 1200);
+  }
+
+  private async load() {
+    const list = await this.land.latest(48);
+    if (list) this.areas = list.filter((a) => !a.draft && !a.official);
+    else this.general.presentToast('Could not load the latest land.');
   }
 
   showOnMap(area: LandArea) {

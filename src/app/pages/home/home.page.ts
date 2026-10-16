@@ -3,7 +3,6 @@ import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import { Geolocation } from '@capacitor/geolocation';
 import { Subscription, combineLatest } from 'rxjs';
-import { filter, first } from 'rxjs/operators';
 import * as Leaflet from 'leaflet';
 import * as GeoSearch from 'leaflet-geosearch';
 import DriftMarker from 'leaflet-drift-marker';
@@ -241,7 +240,6 @@ export class HomePage implements OnDestroy {
       })
     );
     this.subs.add(this.presence.citizens$.subscribe((list) => this.drawCitizens(list)));
-    this.subs.add(this.presence.tilesChanged$.subscribe(() => this.land.refresh()));
     this.subs.add(this.presence.bubble$.subscribe((b) => this.showBubble(b.userId, b.text, 4500)));
     this.subs.add(this.presence.typing$.subscribe((t) => this.showBubble(t.userId, t.text ? `✍️ ${t.text}` : '…', 2200, true)));
     this.subs.add(
@@ -319,15 +317,31 @@ export class HomePage implements OnDestroy {
         this.checkAvatarOnScreen();
       })
     );
-    this.map.on('moveend', () => this.zone.run(() => this.checkAvatarOnScreen()));
+    this.map.on('moveend', () =>
+      this.zone.run(() => {
+        this.checkAvatarOnScreen();
+        this.reportView();
+      })
+    );
     this.map.on('click', (e: Leaflet.LeafletMouseEvent) => this.zone.run(() => this.onMapClick(e)));
     // "When double click, avatar should go to where mouse is."
     this.map.on('dblclick', (e: Leaflet.LeafletMouseEvent) => this.zone.run(() => this.walkTo(e.latlng.lat, e.latlng.lng)));
     this.map.on('contextmenu', (e: Leaflet.LeafletMouseEvent) => this.zone.run(() => this.inspectAt(e.latlng)));
 
     this.redrawBadges();
+    this.reportView();
     if (!this.hasStartOverride()) this.locateOnFirstVisit();
     setTimeout(() => this.map.invalidateSize(), 200);
+  }
+
+  /** LandService loads only the land around what the map shows. */
+  private reportView() {
+    if (!this.map) return;
+    const b = this.map.getBounds();
+    this.land.setView(
+      { minLat: b.getSouth(), minLng: b.getWest(), maxLat: b.getNorth(), maxLng: b.getEast() },
+      snapToAllowedZoom(this.map.getZoom())
+    );
   }
 
   stepZoom(direction: 1 | -1) {
@@ -502,19 +516,14 @@ export class HomePage implements OnDestroy {
       this.goFlatMetaHome();
       return;
     }
-    const tryOpen = () => {
-      const area = this.land.findArea(slug);
-      if (area) {
-        this.flyTo(area.lat, area.lng, ZOOM_LEVELS.BUY, true);
-        setTimeout(() => this.openArea(area), 900);
+    this.land.findAreaRemote(slug).then((area) => {
+      if (!area) {
+        this.general.presentToast(`No land found at flatmeta.io/u/${slug}`);
+        return;
       }
-      return !!area;
-    };
-    if (!tryOpen()) {
-      this.land.loaded$.pipe(filter(Boolean), first()).subscribe(() => {
-        if (!tryOpen()) this.general.presentToast(`No land found at flatmeta.io/u/${slug}`);
-      });
-    }
+      this.flyTo(area.lat, area.lng, ZOOM_LEVELS.BUY, true);
+      setTimeout(() => this.openArea(area), 900);
+    });
   }
 
   // ===========================================================================
@@ -539,7 +548,7 @@ export class HomePage implements OnDestroy {
     this.areaBadges.clearLayers();
     if (this.zoom === ZOOM_LEVELS.BUY) return;
     const size = this.zoom === ZOOM_LEVELS.ROAM ? 38 : 26;
-    for (const area of this.land.areas()) {
+    for (const area of this.land.badges()) {
       const m = Leaflet.marker([area.lat, area.lng], {
         icon: areaBadgeIcon({ image: area.image, title: area.title, tiles: area.no_of_tiles, onSale: area.on_sale, size }),
         keyboard: false,
@@ -547,7 +556,8 @@ export class HomePage implements OnDestroy {
       m.on('click', () =>
         this.zone.run(() => {
           this.flyTo(area.lat, area.lng, ZOOM_LEVELS.BUY, false);
-          this.openArea(area);
+          // A badge only has the summary; fetch the whole area for the details popup.
+          this.openAreaById(area.order_id);
         })
       );
       this.areaBadges.addLayer(m);
@@ -655,7 +665,6 @@ export class HomePage implements OnDestroy {
       if (res.needsAuth) this.session.requestAuth('Verify your email to claim more than 100 squares.');
       return;
     }
-    this.presence.announceTilesChanged();
     this.newSelection = [];
     this.buyMode = false;
     if (res.paymentUrl) {
@@ -710,10 +719,7 @@ export class HomePage implements OnDestroy {
     const res = await this.land.setImage(this.ownedSelection, this.pickedImage, this.spanImage);
     this.busy = false;
     this.general.presentToast(res.message);
-    if (res.ok) {
-      this.showArtwork = false;
-      this.presence.announceTilesChanged();
-    }
+    if (res.ok) this.showArtwork = false;
   }
 
   async revertArtwork() {
@@ -721,7 +727,6 @@ export class HomePage implements OnDestroy {
     const res = await this.land.revertImage(this.ownedSelection);
     this.general.presentToast(res.message);
     this.showArtwork = false;
-    this.presence.announceTilesChanged();
   }
 
   // --- Details, custom URL, code, selling -----------------------------------
@@ -753,10 +758,7 @@ export class HomePage implements OnDestroy {
     this.busy = false;
     this.general.presentToast(res.message);
     if (res.needsAuth) this.session.requestAuth('Verify your email to list land for sale.');
-    if (res.ok) {
-      this.showEditor = false;
-      this.presence.announceTilesChanged();
-    }
+    if (res.ok) this.showEditor = false;
   }
 
   applyCodeTemplate(kind: 'counter' | 'banner') {
@@ -780,6 +782,12 @@ export class HomePage implements OnDestroy {
     this.safeEmbedUrl = /^https:\/\//i.test(area.embed_url || '') ? this.sanitizer.bypassSecurityTrustResourceUrl(area.embed_url) : null;
     // Owner code only ever runs inside a sandboxed iframe with no access to our origin.
     this.safeCode = area.custom_code?.trim() ? this.sanitizer.bypassSecurityTrustHtml(area.custom_code) : null;
+  }
+
+  /** Opens the details popup for an area that may not be loaded on the map. */
+  private async openAreaById(orderId: string) {
+    const area = await this.land.loadArea(orderId);
+    if (area) this.zone.run(() => this.openArea(area));
   }
 
   closeArea() {
@@ -1032,16 +1040,17 @@ export class HomePage implements OnDestroy {
       return;
     }
     const lower = q.toLowerCase();
+    const areaResult = (a: LandArea): SearchResult => ({
+      type: 'area',
+      title: a.title,
+      subtitle: `${a.slug ? 'flatmeta.io/u/' + a.slug : a.three_words} · ${a.no_of_tiles} squares`,
+      lat: a.lat,
+      lng: a.lng,
+      zoom: ZOOM_LEVELS.BUY,
+      orderId: a.order_id,
+    });
     const local: SearchResult[] = [
-      ...this.land.search(q).map((a) => ({
-        type: 'area' as const,
-        title: a.title,
-        subtitle: `${a.slug ? 'flatmeta.io/u/' + a.slug : a.three_words} · ${a.no_of_tiles} squares`,
-        lat: a.lat,
-        lng: a.lng,
-        zoom: ZOOM_LEVELS.BUY,
-        orderId: a.order_id,
-      })),
+      ...this.land.search(q).map(areaResult),
       ...this.pins
         .filter((p) => p.name.toLowerCase().includes(lower) || p.three_words.includes(lower))
         .map((p) => ({ type: 'pin' as const, title: p.name, subtitle: `Saved pin · ${p.three_words}`, lat: p.lat, lng: p.lng, zoom: p.zoom })),
@@ -1053,11 +1062,17 @@ export class HomePage implements OnDestroy {
     this.showSearch = local.length > 0;
     this.searchTimer = setTimeout(async () => {
       try {
-        const places = await geocoder.search({ query: q });
+        // Land anywhere in the world (the map only has what is in view), and real places.
+        const [remote, places] = await Promise.all([
+          this.land.searchRemote(q),
+          geocoder.search({ query: q }).catch((): any[] => []),
+        ]);
         this.zone.run(() => {
           if (this.searchQuery.trim() !== q) return;
+          const shown = new Set(local.map((r) => r.orderId).filter(Boolean));
           this.searchResults = [
             ...local,
+            ...remote.filter((a) => !shown.has(a.order_id)).map(areaResult),
             ...(places || []).slice(0, 5).map((p: any) => ({
               type: 'place' as const,
               title: String(p.label).split(',')[0],
@@ -1078,8 +1093,8 @@ export class HomePage implements OnDestroy {
     this.searchQuery = r.title;
     this.flyTo(r.lat, r.lng, r.zoom, true);
     if (r.orderId) {
-      const area = this.land.area(r.orderId);
-      if (area) setTimeout(() => this.openArea(area), 900);
+      const orderId = r.orderId;
+      setTimeout(() => this.openAreaById(orderId), 900);
     }
   }
 
@@ -1188,8 +1203,10 @@ export class HomePage implements OnDestroy {
     const lng = Number(item.lng ?? item.center_lng);
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
       this.flyTo(lat, lng, ZOOM_LEVELS.BUY, true);
-      const area = item.order_id && this.land.area(String(item.order_id));
-      if (area) setTimeout(() => this.openArea(area), 900);
+      if (!item.order_id) return;
+      // Pages pass whole areas (from MyPlaces, SaleList, ...); otherwise fetch it.
+      if (Array.isArray(item.tiles) && item.tiles.length) setTimeout(() => this.openArea(item as LandArea), 900);
+      else setTimeout(() => this.openAreaById(String(item.order_id)), 900);
     }
   }
 

@@ -2,24 +2,37 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import {
+  GRID_ZOOM,
   GridBounds,
   GridPoint,
+  LatLngBox,
+  bboxParam,
   boundsOf,
+  boxContains,
+  boxContainsPoint,
+  boxesOverlap,
+  gridBoundsToBox,
   gridCenterLatLng,
   gridKey,
   gridToLatLng,
   gridToThreeWords,
   isValidBounds,
   latLngToGrid,
+  padBox,
   slugify,
 } from '../core/grid';
 import { HttpService } from './http.service';
+import { PresenceService } from './presence.service';
 import { Identity, SessionService } from './session.service';
 
 export const FREE_TILE_QUOTA = 100;
 export const PRICE_PER_TILE_MONTH = 0.1;
 export const PLATFORM_COMMISSION_RATE = 0.1;
 export const FLATMETA_HOME: [number, number] = [51.50972, -0.104317];
+/** Extra land loaded around the view on every side (as a share of the view), so small pans need no request. */
+export const VIEW_MARGIN = 0.35;
+/** Squares kept in memory; beyond this, squares outside the loaded region are dropped. */
+const MAX_CACHED_TILES = 15000;
 
 /** One owned 40x40px square at zoom 15. */
 export interface LandTile {
@@ -50,6 +63,8 @@ export interface LandTile {
   draft?: boolean;
   /** FlatMeta's own welcome plaza (not ownable). */
   official?: boolean;
+  /** Squares in the whole area; the map may only have loaded some of them. */
+  order_tiles?: number;
 }
 
 /** Tiles grouped by order: what users think of as "a land area". */
@@ -120,27 +135,57 @@ const DRAFTS_KEY = 'flatmeta_land_drafts_v1';
 
 @Injectable({ providedIn: 'root' })
 export class LandService {
+  /** Server squares loaded so far, mostly around the current view. */
   private server = new Map<string, LandTile>();
   private drafts = new Map<string, LandTile>();
   private official = new Map<string, LandTile>();
+  /** One row per area for the zoomed-out levels (from `PurchasedTiles?summary=1`). */
+  private summaries: LandArea[] = [];
+  /** My server land, from `MyPlaces` (whole areas, wherever they are). */
+  private mine: LandArea[] = [];
   private ledger = { boughtUsd: 0, soldUsd: 0 };
-  private refresh$ = new Subject<void>();
-  private loading = false;
 
-  /** All tiles to draw: server + this guest's drafts + the official plaza. */
+  /** What the map shows, and the regions whose land is loaded and still fresh. */
+  private view: { box: LatLngBox; zoom: number } | null = null;
+  private tileBox: LatLngBox | null = null;
+  private summaryBox: LatLngBox | null = null;
+  private summaryZoom = 0;
+  /** Bumped whenever loaded land goes stale, so a request already in flight doesn't mark it fresh. */
+  private version = 0;
+  private syncing = false;
+  private syncAgain = false;
+  private view$ = new Subject<void>();
+  private resync$ = new Subject<void>();
+  private identityId = '';
+
+  /** Tiles to draw: loaded server land + this guest's drafts + the official plaza. */
   readonly tiles$ = new BehaviorSubject<LandTile[]>([]);
   readonly stats$ = new BehaviorSubject<PortfolioStats>(this.computeStats());
+  /** My land: server areas from MyPlaces plus this device's drafts. */
+  readonly myAreas$ = new BehaviorSubject<LandArea[]>([]);
   readonly loaded$ = new BehaviorSubject<boolean>(false);
 
-  constructor(private http: HttpService, private session: SessionService) {
+  constructor(private http: HttpService, private session: SessionService, private presence: PresenceService) {
     this.buildOfficialPlaza();
     this.loadDrafts();
     this.publish();
 
-    this.refresh$.pipe(debounceTime(250)).subscribe(() => this.fetchTiles());
-    this.session.identity$.subscribe(() => this.publish());
+    this.view$.pipe(debounceTime(300)).subscribe(() => this.sync());
+    this.resync$.pipe(debounceTime(250)).subscribe(() => {
+      this.invalidate();
+      this.sync();
+    });
+    this.session.identity$.subscribe((id) => {
+      if (id.id !== this.identityId) {
+        this.identityId = id.id;
+        this.mine = [];
+        this.ledger = { boughtUsd: 0, soldUsd: 0 };
+        if (!id.isGuest) this.fetchMine();
+      }
+      this.publish();
+    });
     this.session.signedOut$.subscribe(() => this.refresh());
-    this.refresh();
+    this.presence.tilesChanged$.subscribe((change) => this.onRemoteChange(change.by, change.bounds));
   }
 
   // ---------------------------------------------------------------------------
@@ -165,8 +210,8 @@ export class LandService {
     return !!tile && String(tile.user_id) === identity.id;
   }
 
+  /** Areas built from the loaded squares (an area at the edge of the view may be partly loaded). */
   areas(): LandArea[] {
-    const me = this.session.identity;
     const groups = new Map<string, LandTile[]>();
     for (const t of this.tiles) {
       const list = groups.get(t.order_id) || [];
@@ -174,89 +219,90 @@ export class LandService {
       groups.set(t.order_id, list);
     }
     const out: LandArea[] = [];
-    groups.forEach((tiles, orderId) => {
-      const first = tiles[0];
-      const lat = tiles.reduce((s, t) => s + gridCenterLatLng(t.gx, t.gy).lat, 0) / tiles.length;
-      const lng = tiles.reduce((s, t) => s + gridCenterLatLng(t.gx, t.gy).lng, 0) / tiles.length;
-      out.push({
-        order_id: orderId,
-        user_id: first.user_id,
-        username: first.username,
-        fullname: first.fullname,
-        title: first.area_title || `${first.fullname || first.username}'s land`,
-        slug: first.slug,
-        three_words: first.three_words,
-        custom_details: first.custom_details,
-        embed_url: first.embed_url,
-        custom_code: first.custom_code,
-        image: tiles.find((t) => t.image)?.image || '',
-        previous_image: first.previous_image,
-        no_of_tiles: tiles.length,
-        lat,
-        lng,
-        sale_price: first.sale_price,
-        total_sale_value: Number((first.sale_price * tiles.length).toFixed(2)),
-        on_sale: first.on_sale && first.sale_price > 0,
-        promoted: first.promoted,
-        views: first.views,
-        created_at: first.created_at,
-        is_mine: String(first.user_id) === me.id,
-        draft: !!first.draft,
-        official: !!first.official,
-        tiles,
-      });
-    });
+    groups.forEach((tiles, orderId) => out.push(this.buildArea(orderId, tiles)));
     return out;
   }
 
   area(orderId: string): LandArea | undefined {
-    return this.areas().find((a) => a.order_id === String(orderId));
+    const id = String(orderId);
+    return this.areas().find((a) => a.order_id === id) || this.mine.find((a) => a.order_id === id);
   }
 
   myAreas(): LandArea[] {
-    return this.areas().filter((a) => a.is_mine);
+    return this.myAreas$.value;
   }
 
-  marketplace(filter: 'recent' | 'popular' | 'promoted' = 'recent'): LandArea[] {
-    let list = this.areas().filter((a) => a.on_sale && !a.draft && !a.official);
-    if (filter === 'promoted') {
-      list = list.filter((a) => a.promoted);
+  /** Badges for the City and World levels: one per area in view, plus drafts and FlatMeta Home. */
+  badges(): LandArea[] {
+    const out = this.summaries.slice();
+    const seen = new Set(out.map((a) => a.order_id));
+    for (const a of this.localAreas()) {
+      if (!seen.has(a.order_id)) out.push(a);
     }
-    if (filter === 'popular') {
-      return list.sort((a, b) => b.views - a.views || b.no_of_tiles - a.no_of_tiles);
-    }
-    return list.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+    return out;
   }
 
-  latest(limit = 30): LandArea[] {
-    return this.areas()
-      .filter((a) => !a.draft && !a.official)
-      .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
-      .slice(0, limit);
-  }
-
-  /** Finds an area from a custom URL slug, 3-word address or order id. */
+  /** Finds a loaded area from a custom URL slug, 3-word address or order id. */
   findArea(query: string): LandArea | undefined {
     const q = slugify(query);
     const raw = String(query || '').trim().toLowerCase();
     if (!q && !raw) return undefined;
-    return this.areas().find(
-      (a) => (a.slug && a.slug === q) || (a.three_words && a.three_words.toLowerCase() === raw) || a.order_id === raw
-    );
+    return [...this.areas(), ...this.mine].find((a) => this.matchesExactly(a, q, raw));
   }
 
+  /** Like findArea, but asks the server when the area isn't loaded (e.g. a flatmeta.io/u/<slug> link). */
+  async findAreaRemote(query: string): Promise<LandArea | undefined> {
+    const local = this.findArea(query);
+    if (local) return local;
+    const q = slugify(query);
+    const raw = String(query || '').trim().toLowerCase();
+    return (await this.fetchFindArea(query)).find((a) => this.matchesExactly(a, q, raw));
+  }
+
+  /** The whole area with this order id: from the server unless it is a local draft or FlatMeta Home. */
+  async loadArea(orderId: string): Promise<LandArea | undefined> {
+    const id = String(orderId);
+    const local = this.localAreas().find((a) => a.order_id === id);
+    if (local) return local;
+    const found = (await this.fetchFindArea(id)).find((a) => a.order_id === id);
+    return found || this.area(id);
+  }
+
+  /** Search of the loaded land (instant); see searchRemote for everything else. */
   search(query: string): LandArea[] {
     const q = String(query || '').trim().toLowerCase();
     if (!q) return [];
-    return this.areas()
+    return [...this.areas(), ...this.mine]
       .filter(
-        (a) =>
-          a.title.toLowerCase().includes(q) ||
-          (a.slug || '').includes(slugify(q)) ||
-          (a.three_words || '').includes(q) ||
-          (a.username || '').toLowerCase().includes(q)
+        (a, i, all) =>
+          all.findIndex((b) => b.order_id === a.order_id) === i &&
+          (a.title.toLowerCase().includes(q) ||
+            (a.slug || '').includes(slugify(q)) ||
+            (a.three_words || '').includes(q) ||
+            (a.username || '').toLowerCase().includes(q))
       )
       .slice(0, 8);
+  }
+
+  async searchRemote(query: string): Promise<LandArea[]> {
+    return this.fetchFindArea(query);
+  }
+
+  /** Marketplace listings from `SaleList`. Null when the request failed. */
+  async marketplace(filter: 'recent' | 'popular' | 'promoted' = 'recent'): Promise<LandArea[] | null> {
+    const res = await this.http.getAsync(`SaleList?filter=${filter === 'popular' ? 'popular' : 'recent'}&limit=200`);
+    if (res?.status !== true || !Array.isArray(res.data?.tiles)) return null;
+    let list = this.areasFromRecords(res.data.tiles).filter((a) => a.on_sale);
+    if (filter === 'promoted') list = list.filter((a) => a.promoted);
+    if (filter === 'popular') return list.sort((a, b) => b.views - a.views || b.no_of_tiles - a.no_of_tiles);
+    return list.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  }
+
+  /** The newest land areas from `LatestPurchasedTiles`. Null when the request failed. */
+  async latest(limit = 48): Promise<LandArea[] | null> {
+    const res = await this.http.getAsync(`LatestPurchasedTiles?limit=${limit}`);
+    if (res?.status !== true || !Array.isArray(res.data?.tiles)) return null;
+    return this.areasFromRecords(res.data.tiles);
   }
 
   /** Is any of these squares already owned (by anyone)? */
@@ -265,59 +311,237 @@ export class LandService {
   }
 
   // ---------------------------------------------------------------------------
-  // Loading
+  // Loading: only the land around the view
   // ---------------------------------------------------------------------------
 
-  refresh() {
-    this.refresh$.next();
+  /**
+   * The map calls this after every move. At the Land level it loads the squares in
+   * the view plus VIEW_MARGIN; zoomed out it loads one summary row per area.
+   */
+  setView(box: LatLngBox, zoom: number) {
+    this.view = { box, zoom };
+    this.view$.next();
   }
 
-  private async fetchTiles() {
-    if (this.loading) {
-      // Another fetch is in flight; queue one more after it.
-      setTimeout(() => this.refresh(), 400);
+  /** Reloads the land in view and my land. */
+  refresh() {
+    this.resync$.next();
+    this.refreshMine();
+  }
+
+  /** Reloads my land and portfolio (MyPlaces). */
+  refreshMine() {
+    if (!this.session.isGuest) this.fetchMine();
+  }
+
+  private invalidate() {
+    this.version++;
+    this.tileBox = null;
+    this.summaryBox = null;
+  }
+
+  private onRemoteChange(by: string, bounds: LatLngBox | null) {
+    // My own change from another tab or device.
+    if (by && by === this.session.identity.id) this.refreshMine();
+    const inView =
+      !bounds ||
+      (this.tileBox && boxesOverlap(this.tileBox, bounds)) ||
+      (this.summaryBox && boxesOverlap(this.summaryBox, bounds));
+    if (inView) {
+      this.resync$.next();
       return;
     }
-    this.loading = true;
+    // Not loaded here: forget any old copy so it is fetched fresh if the map goes there.
+    this.server.forEach((t, k) => boxContainsPoint(bounds, t.lat, t.lng) && this.server.delete(k));
+  }
+
+  private async sync() {
+    if (this.syncing) {
+      this.syncAgain = true;
+      return;
+    }
+    this.syncing = true;
     try {
-      const res = await this.http.getAsync('PurchasedTiles');
-      if (res?.status === true && Array.isArray(res.data?.tiles)) {
-        const next = new Map<string, LandTile>();
-        for (const raw of res.data.tiles) {
-          const tile = this.fromApi(raw);
-          if (tile) next.set(gridKey(tile.gx, tile.gy), tile);
+      do {
+        this.syncAgain = false;
+        const v = this.view;
+        if (!v) break;
+        if (v.zoom >= GRID_ZOOM) {
+          if (!this.tileBox || !boxContains(this.tileBox, v.box)) await this.loadTiles(padBox(v.box, VIEW_MARGIN));
+        } else if (!this.summaryBox || this.summaryZoom !== v.zoom || !boxContains(this.summaryBox, v.box)) {
+          await this.loadSummaries(padBox(v.box, VIEW_MARGIN), v.zoom);
         }
-        this.server = next;
-        // A draft that someone else has meanwhile saved for real is no longer claimable.
-        let changed = false;
-        this.drafts.forEach((_, key) => {
-          if (next.has(key)) {
-            this.drafts.delete(key);
-            changed = true;
-          }
-        });
-        if (changed) this.saveDrafts();
-        this.publish();
-        this.loaded$.next(true);
-      }
-      if (!this.session.isGuest) {
-        await this.fetchPortfolio();
-      }
+      } while (this.syncAgain);
     } finally {
-      this.loading = false;
+      this.syncing = false;
     }
   }
 
-  private async fetchPortfolio() {
+  private async loadTiles(box: LatLngBox) {
+    const version = this.version;
+    const res = await this.http.getAsync(`PurchasedTiles?bbox=${bboxParam(box)}`);
+    if (res?.status !== true || !Array.isArray(res.data?.tiles)) return;
+    const fetched = new Map<string, LandTile>();
+    for (const raw of res.data.tiles) {
+      const tile = this.fromApi(raw);
+      if (tile) fetched.set(gridKey(tile.gx, tile.gy), tile);
+    }
+    // The answer replaces everything we had in the box, so released squares disappear.
+    this.server.forEach((t, k) => boxContainsPoint(box, t.lat, t.lng) && this.server.delete(k));
+    fetched.forEach((t, k) => this.server.set(k, t));
+    if (this.server.size > MAX_CACHED_TILES) {
+      this.server.forEach((t, k) => !boxContainsPoint(box, t.lat, t.lng) && this.server.delete(k));
+    }
+    // A draft that someone else has meanwhile saved for real is no longer claimable.
+    let changed = false;
+    this.drafts.forEach((_, key) => {
+      if (fetched.has(key)) {
+        this.drafts.delete(key);
+        changed = true;
+      }
+    });
+    if (changed) this.saveDrafts();
+    if (version === this.version) this.tileBox = box;
+    else this.syncAgain = true;
+    this.publish();
+    this.loaded$.next(true);
+  }
+
+  private async loadSummaries(box: LatLngBox, zoom: number) {
+    const version = this.version;
+    const res = await this.http.getAsync(`PurchasedTiles?summary=1&bbox=${bboxParam(box)}`);
+    if (res?.status !== true || !Array.isArray(res.data?.areas)) return;
+    this.summaries = res.data.areas.map((r: any) => this.areaFromSummary(r)).filter((a: LandArea | null): a is LandArea => !!a);
+    if (version === this.version) {
+      this.summaryBox = box;
+      this.summaryZoom = zoom;
+    } else {
+      this.syncAgain = true;
+    }
+    this.publish();
+    this.loaded$.next(true);
+  }
+
+  private async fetchMine() {
     const res = await this.http.getAsync('MyPlaces');
-    const p = res?.data?.portfolio;
-    if (res?.status === true && p) {
+    if (res?.status !== true) return;
+    if (Array.isArray(res.data?.tiles)) this.mine = this.areasFromRecords(res.data.tiles);
+    const p = res.data?.portfolio;
+    if (p) {
       this.ledger = {
         boughtUsd: Number(p.bought_usd ?? p.total_bought_usd ?? 0),
         soldUsd: Number(p.sold_usd ?? p.total_sold_usd ?? 0),
       };
-      this.stats$.next(this.computeStats());
     }
+    this.publish();
+  }
+
+  private async fetchFindArea(query: string): Promise<LandArea[]> {
+    const q = String(query || '').trim();
+    if (!q) return [];
+    const res = await this.http.getAsync(`FindArea?q=${encodeURIComponent(q.slice(0, 120))}`);
+    return res?.status === true && Array.isArray(res.data?.tiles) ? this.areasFromRecords(res.data.tiles) : [];
+  }
+
+  /** Order records (MyPlaces, SaleList, LatestPurchasedTiles, FindArea) carry all their squares. */
+  private areasFromRecords(records: any[]): LandArea[] {
+    const out: LandArea[] = [];
+    for (const r of records) {
+      const tiles = (Array.isArray(r?.tiles) ? r.tiles : [])
+        .map((t: any) => this.fromApi({ ...r, ...t, order_id: r.order_id ?? r.id, span_bounds: t.span_bounds ?? r.span_bounds }))
+        .filter((t: LandTile | null): t is LandTile => !!t);
+      if (tiles.length) out.push(this.buildArea(String(r.order_id ?? r.id), tiles));
+    }
+    return out;
+  }
+
+  private areaFromSummary(r: any): LandArea | null {
+    let lat = Number(r?.lat);
+    let lng = Number(r?.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    // The server averages the squares' north-west corners; shift half a square to the middle.
+    const g = latLngToGrid(lat, lng);
+    const nw = gridToLatLng(g.gx, g.gy);
+    const se = gridToLatLng(g.gx + 1, g.gy + 1);
+    lat += (se.lat - nw.lat) / 2;
+    lng += (se.lng - nw.lng) / 2;
+    const tiles = Number(r.no_of_tiles) || 1;
+    const salePrice = Number(r.sale_price || 0);
+    return {
+      order_id: String(r.order_id),
+      user_id: String(r.user_id ?? ''),
+      username: String(r.username || 'citizen'),
+      fullname: String(r.fullname || r.username || 'Citizen'),
+      title: String(r.area_title || '') || `${r.fullname || r.username || 'Citizen'}'s land`,
+      slug: String(r.slug || ''),
+      three_words: '',
+      custom_details: '',
+      embed_url: '',
+      custom_code: '',
+      image: this.normalizeImage(r.image),
+      previous_image: '',
+      no_of_tiles: tiles,
+      lat,
+      lng,
+      sale_price: salePrice,
+      total_sale_value: Number((salePrice * tiles).toFixed(2)),
+      on_sale: !!r.on_sale && salePrice > 0,
+      promoted: !!r.promoted,
+      views: 0,
+      created_at: '',
+      is_mine: String(r.user_id) === this.session.identity.id,
+      draft: false,
+      official: false,
+      tiles: [],
+    };
+  }
+
+  /** Drafts on this device and FlatMeta Home, as areas. */
+  private localAreas(): LandArea[] {
+    const groups = new Map<string, LandTile[]>();
+    const add = (t: LandTile) => groups.set(t.order_id, [...(groups.get(t.order_id) || []), t]);
+    this.official.forEach(add);
+    this.drafts.forEach(add);
+    return Array.from(groups, ([orderId, tiles]) => this.buildArea(orderId, tiles));
+  }
+
+  private buildArea(orderId: string, tiles: LandTile[]): LandArea {
+    const me = this.session.identity;
+    const first = tiles[0];
+    const lat = tiles.reduce((s, t) => s + gridCenterLatLng(t.gx, t.gy).lat, 0) / tiles.length;
+    const lng = tiles.reduce((s, t) => s + gridCenterLatLng(t.gx, t.gy).lng, 0) / tiles.length;
+    const count = Math.max(tiles.length, first.order_tiles || 0);
+    return {
+      order_id: orderId,
+      user_id: first.user_id,
+      username: first.username,
+      fullname: first.fullname,
+      title: first.area_title || `${first.fullname || first.username}'s land`,
+      slug: first.slug,
+      three_words: first.three_words,
+      custom_details: first.custom_details,
+      embed_url: first.embed_url,
+      custom_code: first.custom_code,
+      image: tiles.find((t) => t.image)?.image || '',
+      previous_image: first.previous_image,
+      no_of_tiles: count,
+      lat,
+      lng,
+      sale_price: first.sale_price,
+      total_sale_value: Number((first.sale_price * count).toFixed(2)),
+      on_sale: first.on_sale && first.sale_price > 0,
+      promoted: first.promoted,
+      views: first.views,
+      created_at: first.created_at,
+      is_mine: String(first.user_id) === me.id,
+      draft: !!first.draft,
+      official: !!first.official,
+      tiles,
+    };
+  }
+
+  private matchesExactly(a: LandArea, slug: string, raw: string): boolean {
+    return (!!a.slug && a.slug === slug) || (!!a.three_words && a.three_words.toLowerCase() === raw) || a.order_id === raw;
   }
 
   private fromApi(raw: any): LandTile | null {
@@ -361,6 +585,7 @@ export class LandService {
       views: Number(raw.views || 0),
       promoted: !!raw.promoted,
       created_at: String(raw.created_at || ''),
+      order_tiles: Number(raw.no_of_tiles) || undefined,
     };
   }
 
@@ -455,6 +680,7 @@ export class LandService {
     });
     this.refresh();
     if (res?.status === true) {
+      this.announce(free);
       return {
         ok: true,
         claimed: free,
@@ -501,7 +727,10 @@ export class LandService {
       }
     }
     this.publish();
-    if (real.length) this.refresh();
+    if (real.length) {
+      this.announce(real);
+      this.refresh();
+    }
     if (failed) return { ok: false, message: failed };
     return {
       ok: true,
@@ -516,11 +745,15 @@ export class LandService {
       this.drafts.set(gridKey(t.gx, t.gy), { ...t, image: t.previous_image || '', previous_image: '', span_bounds: null });
     }
     this.saveDrafts();
-    for (const [orderId, tiles] of this.byOrder(mine.filter((t) => !t.draft))) {
+    const real = mine.filter((t) => !t.draft);
+    for (const [orderId, tiles] of this.byOrder(real)) {
       await this.http.postAsync('RevertBoxImage', { order_id: orderId, tiles: tiles.map((t) => gridToLatLng(t.gx, t.gy)) });
     }
     this.publish();
-    this.refresh();
+    if (real.length) {
+      this.announce(real);
+      this.refresh();
+    }
     return { ok: true, message: 'Reverted to the previous image.' };
   }
 
@@ -555,8 +788,8 @@ export class LandService {
     }
     if (clean.sale_price !== undefined) clean.sale_price = Math.max(0, Number(clean.sale_price) || 0);
 
-    const tiles = this.tiles.filter((t) => t.order_id === String(orderId));
-    if (!tiles.length || !this.isMine(tiles[0])) return { ok: false, message: 'You can only edit your own land.' };
+    const area = this.ownArea(orderId);
+    if (!area) return { ok: false, message: 'You can only edit your own land.' };
 
     const apply = (t: LandTile): LandTile => ({
       ...t,
@@ -570,11 +803,11 @@ export class LandService {
       sale_price: clean.sale_price ?? t.sale_price,
     });
 
-    if (tiles[0].draft) {
+    if (area.draft) {
       if (clean.on_sale) {
         return { ok: false, needsAuth: true, message: 'Verify your email before listing land for sale.' };
       }
-      tiles.forEach((t) => this.drafts.set(gridKey(t.gx, t.gy), apply(t)));
+      this.drafts.forEach((t, k) => t.order_id === area.order_id && this.drafts.set(k, apply(t)));
       this.saveDrafts();
       this.publish();
       return { ok: true, message: 'Saved on this device. Verify your email to keep it.' };
@@ -582,8 +815,10 @@ export class LandService {
 
     const res = await this.http.postAsync('UpdateCustomDetails', { order_id: orderId, ...clean });
     if (res?.status === true) {
-      tiles.forEach((t) => this.server.set(gridKey(t.gx, t.gy), apply(t)));
+      this.server.forEach((t, k) => t.order_id === area.order_id && this.server.set(k, apply(t)));
+      this.mine = this.mine.map((a) => (a.order_id === area.order_id ? this.buildArea(a.order_id, a.tiles.map(apply)) : a));
       this.publish();
+      this.announce(area.tiles);
       this.refresh();
       return { ok: true, message: 'Land details saved.' };
     }
@@ -591,21 +826,24 @@ export class LandService {
   }
 
   async release(orderId: string): Promise<ActionResult> {
-    const tiles = this.tiles.filter((t) => t.order_id === String(orderId));
-    if (!tiles.length || !this.isMine(tiles[0])) return { ok: false, message: 'You can only release your own land.' };
-    if (tiles[0].draft) {
-      tiles.forEach((t) => this.drafts.delete(gridKey(t.gx, t.gy)));
+    const area = this.ownArea(orderId);
+    if (!area) return { ok: false, message: 'You can only release your own land.' };
+    if (area.draft) {
+      this.drafts.forEach((t, k) => t.order_id === area.order_id && this.drafts.delete(k));
       this.saveDrafts();
       this.publish();
       return { ok: true, message: 'Draft removed.' };
     }
     const res = await this.http.postAsync('ReleaseOrder', { order_id: orderId });
-    this.refresh();
     if (res?.status === true) {
-      tiles.forEach((t) => this.server.delete(gridKey(t.gx, t.gy)));
+      this.server.forEach((t, k) => t.order_id === area.order_id && this.server.delete(k));
+      this.mine = this.mine.filter((a) => a.order_id !== area.order_id);
       this.publish();
+      this.announce(area.tiles);
+      this.refresh();
       return { ok: true, message: 'Land released back to the open map.' };
     }
+    this.refresh();
     return { ok: false, message: this.errorMessage(res, 'Could not release land.') };
   }
 
@@ -630,6 +868,7 @@ export class LandService {
     const me = this.session.identity;
     const groups = this.byOrder(Array.from(this.drafts.values()));
     let saved = 0;
+    const savedTiles: LandTile[] = [];
     let lastPaymentUrl: string | null = null;
     const problems: string[] = [];
 
@@ -648,6 +887,7 @@ export class LandService {
         continue;
       }
       saved += tiles.length;
+      savedTiles.push(...tiles);
       if (res.data?.url) lastPaymentUrl = res.data.url;
       const orderId = String(res.data?.order_id || '');
       const withImage = tiles.filter((t) => t.image);
@@ -666,6 +906,7 @@ export class LandService {
     }
     this.saveDrafts();
     this.publish();
+    if (savedTiles.length) this.announce(savedTiles);
     this.refresh();
     return {
       ok: problems.length === 0,
@@ -699,10 +940,25 @@ export class LandService {
   }
 
   private ownedCount(me: Identity): number {
-    let n = 0;
-    this.server.forEach((t) => this.isMine(t, me) && n++);
+    let n = this.mine.reduce((s, a) => s + a.no_of_tiles, 0);
     this.drafts.forEach((t) => this.isMine(t, me) && n++);
     return n;
+  }
+
+  /** One of my areas (server or draft), wherever it is on the map. */
+  private ownArea(orderId: string): LandArea | undefined {
+    const id = String(orderId);
+    const area =
+      this.mine.find((a) => a.order_id === id) ||
+      this.localAreas().find((a) => a.order_id === id) ||
+      this.areas().find((a) => a.order_id === id);
+    return area && !area.official && area.is_mine ? area : undefined;
+  }
+
+  /** Tells other clients which squares changed, so only those looking there reload. */
+  private announce(points: GridPoint[]) {
+    const b = boundsOf(points);
+    if (b) this.presence.announceTilesChanged(gridBoundsToBox(b));
   }
 
   private byOrder(tiles: LandTile[]): Map<string, LandTile[]> {
@@ -717,30 +973,32 @@ export class LandService {
     this.server.forEach((t, k) => !this.official.has(k) && all.push(t));
     this.drafts.forEach((t, k) => !this.official.has(k) && !this.server.has(k) && all.push(t));
     this.tiles$.next(all);
+    this.myAreas$.next([...this.mine, ...this.localAreas().filter((a) => a.draft && a.is_mine)]);
     this.stats$.next(this.computeStats());
   }
 
+  /** From MyPlaces (all my server land, not just what is in view) plus my drafts. */
   private computeStats(): PortfolioStats {
     const me = this.session?.identity;
-    const mine = me ? (this.tiles$?.value || []).filter((t) => !t.official && String(t.user_id) === me.id) : [];
-    const owned = mine.filter((t) => !t.draft).length;
-    const draftTiles = mine.length - owned;
-    const total = mine.length;
+    const mine = this.mine || [];
+    const draftTiles = me && this.drafts ? Array.from(this.drafts.values()).filter((t) => String(t.user_id) === me.id) : [];
+    const owned = mine.reduce((s, a) => s + a.no_of_tiles, 0);
+    const total = owned + draftTiles.length;
     const billable = Math.max(0, total - FREE_TILE_QUOTA);
-    const areaIds = new Set(mine.map((t) => t.order_id));
-    const onSale = new Set(mine.filter((t) => t.on_sale && t.sale_price > 0).map((t) => t.order_id));
-    const worth = mine.reduce((s, t) => s + (t.on_sale && t.sale_price > 0 ? t.sale_price : PRICE_PER_TILE_MONTH * 12), 0);
+    const worth =
+      mine.reduce((s, a) => s + (a.on_sale ? a.total_sale_value : a.no_of_tiles * PRICE_PER_TILE_MONTH * 12), 0) +
+      draftTiles.length * PRICE_PER_TILE_MONTH * 12;
     return {
       ownedTiles: owned,
-      draftTiles,
+      draftTiles: draftTiles.length,
       freeQuotaRemaining: Math.max(0, FREE_TILE_QUOTA - total),
       billableTiles: billable,
       monthlyUsd: Number((billable * PRICE_PER_TILE_MONTH).toFixed(2)),
       worthUsd: Number(worth.toFixed(2)),
       boughtUsd: this.ledger?.boughtUsd || 0,
       soldUsd: this.ledger?.soldUsd || 0,
-      areas: areaIds.size,
-      onSaleAreas: onSale.size,
+      areas: mine.length + new Set(draftTiles.map((t) => t.order_id)).size,
+      onSaleAreas: mine.filter((a) => a.on_sale).length,
     };
   }
 
