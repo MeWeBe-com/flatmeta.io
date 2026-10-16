@@ -1060,7 +1060,7 @@ export class LandService {
           slug: 'flatmeta-home',
           three_words: 'flatmeta.welcome.home',
           custom_details:
-            '<h4>Welcome to FlatMeta</h4><p>FlatMeta is an open, shared 2D world on top of the real map. Walk around with your avatar, chat with people nearby, and claim squares of land to make your own.</p><ul><li><strong>Move:</strong> double-click the map, drag your avatar, or use the arrow keys.</li><li><strong>Claim land:</strong> press <em>Buy Land</em>, tap squares, then <em>Claim</em>. Your first 100 squares are free.</li><li><strong>Personalise:</strong> select your squares and add an image, a title, a custom link like flatmeta.io/u/your-name, or your own HTML.</li><li><strong>Save:</strong> everything works straight away; verify your email when you want to keep it.</li></ul><p>FlatMeta is open source. Suggest features and send code on GitHub.</p>',
+            '<h4>Welcome to FlatMeta</h4><p>FlatMeta is an open, shared 2D world on top of the real map. Walk around with your avatar, chat with people nearby, and claim squares of land to make your own.</p><ul><li><strong>Move:</strong> tap or click anywhere on the map, drag your avatar, or use the arrow keys.</li><li><strong>Claim land:</strong> press <em>Buy Land</em>, tap squares, then <em>Claim</em>. Your first 100 squares are free.</li><li><strong>Personalise:</strong> select your squares and add an image, a title, a custom link like flatmeta.io/u/your-name, or your own HTML.</li><li><strong>Save:</strong> everything works straight away; verify your email when you want to keep it.</li></ul><p>FlatMeta is open source. Suggest features and send code on GitHub.</p>',
           embed_url: '',
           custom_code: '',
           on_sale: false,

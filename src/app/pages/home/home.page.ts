@@ -324,7 +324,7 @@ export class HomePage implements OnDestroy {
       })
     );
     this.map.on('click', (e: Leaflet.LeafletMouseEvent) => this.zone.run(() => this.onMapClick(e)));
-    // "When double click, avatar should go to where mouse is."
+    // Double-click also walks there, which still works while Buy mode uses single taps for squares.
     this.map.on('dblclick', (e: Leaflet.LeafletMouseEvent) => this.zone.run(() => this.walkTo(e.latlng.lat, e.latlng.lng)));
     this.map.on('contextmenu', (e: Leaflet.LeafletMouseEvent) => this.zone.run(() => this.inspectAt(e.latlng)));
 
@@ -587,9 +587,17 @@ export class HomePage implements OnDestroy {
     this.landLayer.setOpacity(this.peekMap ? 0.25 : 1);
   }
 
+  /**
+   * Click / tap on the map: your avatar walks there. At the Land level a tap on
+   * your own square selects it for editing instead, a tap on someone else's land
+   * also opens its details, and in Buy mode taps pick free squares.
+   */
   private onMapClick(e: Leaflet.LeafletMouseEvent) {
     this.showSearch = false;
-    if (this.zoom !== ZOOM_LEVELS.BUY) return;
+    if (this.zoom !== ZOOM_LEVELS.BUY) {
+      this.walkTo(e.latlng.lat, e.latlng.lng);
+      return;
+    }
     const { gx, gy } = latLngToGrid(e.latlng.lat, e.latlng.lng);
     const tile = this.land.tileAt(gx, gy);
 
@@ -601,6 +609,7 @@ export class HomePage implements OnDestroy {
         else this.ownedSelection.push(tile);
         this.ownedSelection = [...this.ownedSelection];
       } else {
+        this.walkTo(e.latlng.lat, e.latlng.lng);
         const area = this.land.area(tile.order_id);
         if (area) this.openArea(area);
       }
@@ -608,7 +617,10 @@ export class HomePage implements OnDestroy {
       return;
     }
 
-    if (!this.buyMode) return;
+    if (!this.buyMode) {
+      this.walkTo(e.latlng.lat, e.latlng.lng);
+      return;
+    }
     this.ownedSelection = [];
     const idx = this.newSelection.findIndex((p) => p.gx === gx && p.gy === gy);
     if (idx > -1) this.newSelection.splice(idx, 1);

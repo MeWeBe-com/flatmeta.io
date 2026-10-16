@@ -3,7 +3,7 @@
 FlatMeta is a shared 2D world on top of the real map. You land on the site, your avatar
 appears where you are, and you can straight away:
 
-- walk around (double-click the map, drag your avatar, or use the arrow keys),
+- walk around (tap or click anywhere on the map, drag your avatar, or use the arrow keys),
 - talk to anyone nearby in a Hangouts-style chat, with speech bubbles over avatars,
 - claim squares of land (the first 100 are free) and put one image across them,
 - give your land a name, a link like `flatmeta.io/u/your-name`, a 3-word address, a description, your own sandboxed HTML/JS or an embedded page,
