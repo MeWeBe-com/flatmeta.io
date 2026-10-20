@@ -19,7 +19,7 @@
           </div>
           <div class="citizen-details">
             <h4 class="citizen-name">{{ me.fullname }}</h4>
-            <span class="citizen-handle">@{{ me.username }}</span>
+            <span class="citizen-handle">&#64;{{ me.username }}</span>
             <div class="citizen-status">
               <span class="meta-badge badge-emerald" *ngIf="!me.isGuest">Verified · {{ me.clan }}</span>
               <span class="meta-badge badge-amber" *ngIf="me.isGuest">Guest — not saved yet</span>

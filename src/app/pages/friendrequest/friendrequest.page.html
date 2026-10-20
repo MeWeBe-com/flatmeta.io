@@ -21,7 +21,7 @@
       <h3>Requests <span class="meta-badge badge-amber">{{ requests.length }}</span></h3>
       <div class="person" *ngFor="let r of requests">
         <img [src]="r.image" alt="" />
-        <div class="who"><b>{{ r.fullname }}</b><small>@{{ r.username }} · {{ r.created_at }}</small></div>
+        <div class="who"><b>{{ r.fullname }}</b><small>&#64;{{ r.username }} · {{ r.created_at }}</small></div>
         <ion-button size="small" (click)="respond(r, true)">Accept</ion-button>
         <ion-button size="small" fill="outline" color="medium" (click)="respond(r, false)">Decline</ion-button>
       </div>
@@ -34,7 +34,7 @@
         <img [src]="isOnline(f.user_id)?.avatarUrl || f.image" alt="" />
         <div class="who">
           <b>{{ f.fullname }}</b>
-          <small>@{{ f.username }} · {{ isOnline(f.user_id) ? 'online now' : 'offline' }}</small>
+          <small>&#64;{{ f.username }} · {{ isOnline(f.user_id) ? 'online now' : 'offline' }}</small>
         </div>
         <ion-button size="small" fill="outline" *ngIf="isOnline(f.user_id) as live" (click)="findOnMap(live)">Find</ion-button>
         <ion-button size="small" (click)="chatFriend(f)">Chat</ion-button>
@@ -46,7 +46,7 @@
       <p class="hint" *ngIf="!online.length">No one else is online. Share a link to your position from the map to invite people.</p>
       <div class="person" *ngFor="let c of online">
         <img [src]="c.avatarUrl" alt="" />
-        <div class="who"><b>{{ c.fullname }}</b><small>@{{ c.username }}{{ c.isGuest ? ' · guest' : '' }}</small></div>
+        <div class="who"><b>{{ c.fullname }}</b><small>&#64;{{ c.username }}{{ c.isGuest ? ' · guest' : '' }}</small></div>
         <ion-button size="small" fill="outline" (click)="findOnMap(c)">Find</ion-button>
         <ion-button size="small" fill="outline" (click)="chat(c)">Chat</ion-button>
         <ion-button size="small" *ngIf="!c.isGuest && !friendsService.isFriend(c.id)" [disabled]="friendsService.isRequested(c.id)" (click)="connect(c)">

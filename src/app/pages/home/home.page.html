@@ -212,7 +212,7 @@
           <img [src]="m.senderAvatar" class="msg-avatar" alt="" />
           <div class="msg-bubble">
             <div class="msg-meta">
-              <span>@{{ m.senderUsername || m.senderName }}</span>
+              <span>&#64;{{ m.senderUsername || m.senderName }}</span>
               <time>{{ m.created_at | date: 'shortTime' }}</time>
             </div>
             <div class="msg-text">{{ m.message }}</div>
@@ -480,7 +480,7 @@
           <p class="hint" *ngIf="!ranks.landowners.length">No land has been claimed yet — be the first.</p>
           <div class="list-row" *ngFor="let o of ranks.landowners; let i = index" [class.me]="o.isMe">
             <span class="rank">#{{ i + 1 }}</span>
-            <span class="list-main static"><span><b>{{ o.fullname }}{{ o.isMe ? ' (you)' : '' }}</b><small>@{{ o.username }} · {{ o.areas }} area{{ o.areas === 1 ? '' : 's' }}</small></span></span>
+            <span class="list-main static"><span><b>{{ o.fullname }}{{ o.isMe ? ' (you)' : '' }}</b><small>&#64;{{ o.username }} · {{ o.areas }} area{{ o.areas === 1 ? '' : 's' }}</small></span></span>
             <span class="meta-badge badge-emerald">{{ o.tiles }} squares</span>
           </div>
         </ng-container>
@@ -503,7 +503,7 @@
     <ng-template>
       <ion-header class="ion-no-border">
         <ion-toolbar>
-          <ion-title>Report @{{ reportTarget?.username }}</ion-title>
+          <ion-title>Report &#64;{{ reportTarget?.username }}</ion-title>
           <ion-buttons slot="end">
             <ion-button (click)="showReport = false" aria-label="Close"><ion-icon name="close-outline"></ion-icon></ion-button>
           </ion-buttons>
