@@ -3,7 +3,7 @@ import { RouterModule, Routes, UrlMatchResult, UrlSegment } from '@angular/route
 import { TabsPage } from './tabs.page';
 import { authRedirect } from '../core/auth-redirect.guard';
 
-const PAGES = ['login', 'signup', 'myplaces', 'salelist', 'profile', 'friendrequest', 'thankyou', 'opensource', 'recentpurchases'];
+const PAGES = ['login', 'signup', 'terms', 'privacy', 'refunds', 'myplaces', 'salelist', 'profile', 'friendrequest', 'thankyou', 'opensource', 'recentpurchases'];
 
 /**
  * Every map URL is handled by ONE route so the map page (and its Leaflet map)
@@ -46,6 +46,11 @@ const routes: Routes = [
       page('friendrequest', () => import('../pages/friendrequest/friendrequest.module').then((m) => m.FriendrequestPageModule)),
       page('thankyou', () => import('../pages/thankyou/thankyou.module').then((m) => m.ThankyouPageModule)),
       page('opensource', () => import('../pages/opensource/opensource.module').then((m) => m.OpensourcePageModule)),
+      ...(['terms', 'privacy', 'refunds'] as const).map((doc) => ({
+        path: doc,
+        data: { doc },
+        loadChildren: () => import('../pages/legal/legal.module').then((m) => m.LegalPageModule),
+      })),
       page('recentpurchases', () => import('../pages/recentpurchases/recentpurchases.module').then((m) => m.RecentpurchasesPageModule)),
       { matcher: mapMatcher, loadChildren: () => import('../pages/home/home.module').then((m) => m.HomePageModule) },
     ],

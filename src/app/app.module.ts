@@ -9,7 +9,6 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { ServiceWorkerModule } from '@angular/service-worker';
 import { environment } from '../environments/environment';
-import { InAppBrowser } from '@awesome-cordova-plugins/in-app-browser/ngx';
 import { QuillModule } from 'ngx-quill'
 
 @NgModule({
@@ -30,7 +29,6 @@ import { QuillModule } from 'ngx-quill'
         })
     ],
     providers: [
-        InAppBrowser,
         { provide: RouteReuseStrategy, useClass: IonicRouteStrategy }
     ],
     bootstrap: [AppComponent]

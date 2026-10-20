@@ -4,7 +4,7 @@ import { filter } from 'rxjs/operators';
 import { GeneralService } from '../providers/general.service';
 import { EventsService } from '../providers/events.service';
 
-const NON_MAP_PAGES = /^\/(myplaces|salelist|profile|friendrequest|thankyou|opensource|recentpurchases)(\/|\?|$)/;
+const NON_MAP_PAGES = /^\/(myplaces|salelist|profile|friendrequest|thankyou|opensource|recentpurchases|terms|privacy|refunds)(\/|\?|$)/;
 
 @Component({
   selector: 'app-tabs',

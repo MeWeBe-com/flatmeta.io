@@ -12,24 +12,30 @@
 <ion-content [fullscreen]="true" class="thankyou-content">
   <div class="thankyou-wrapper">
     <div class="thankyou-card meta-card-glass">
-      <div class="celebration-icon-box">
-        <ion-icon name="checkmark-done-circle"></ion-icon>
-        <span class="pulse-ring"></span>
+      <div class="celebration-icon-box" [class.is-problem]="status !== 'ok'">
+        <ion-icon [name]="status === 'ok' ? 'checkmark-done-circle' : status === 'cancelled' ? 'close-circle' : 'alert-circle'"></ion-icon>
+        <span class="pulse-ring" *ngIf="status === 'ok'"></span>
       </div>
 
-      <h2 class="thankyou-title">Thank <span class="gradient-text">you!</span></h2>
+      <h2 class="thankyou-title" *ngIf="status === 'ok'">Thank <span class="gradient-text">you!</span></h2>
+      <h2 class="thankyou-title" *ngIf="status === 'cancelled'">Payment <span class="gradient-text">cancelled</span></h2>
+      <h2 class="thankyou-title" *ngIf="status === 'problem'">Something <span class="gradient-text">went wrong</span></h2>
       <p class="thankyou-subtitle">
-        Your PayPal payment went through and the land is now yours. It can take a few seconds to appear on the map.
+        {{ message || (status === 'ok' ? 'All done — your land is ready.' : status === 'cancelled' ? 'Nothing was charged.' : 'Please try again, or contact us if you were charged.') }}
       </p>
 
-      <div class="deed-status-card">
-        <div class="status-row">
+      <div class="deed-status-card" *ngIf="status === 'ok'">
+        <div class="status-row" *ngIf="kind === 'rent'">
           <span class="s-lbl">Billing</span>
-          <span class="s-val">Monthly via PayPal — cancel any time in PayPal before the next payment</span>
+          <span class="s-val">$0.10 per square per month beyond your free 100, first payment in one month. Cancel any time in PayPal.</span>
+        </div>
+        <div class="status-row" *ngIf="kind === 'sale'">
+          <span class="s-lbl">Payment</span>
+          <span class="s-val">One-time payment, receipt sent by PayPal. The seller has been paid their share.</span>
         </div>
         <div class="status-row">
           <span class="s-lbl">Next</span>
-          <span class="s-val">Add an image, a name and your own link to your new land</span>
+          <span class="s-val">Add an image, a name and your own link to your land</span>
         </div>
       </div>
 

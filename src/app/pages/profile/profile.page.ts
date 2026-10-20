@@ -20,7 +20,7 @@ export class ProfilePage implements OnInit, OnDestroy {
   avatar: AvatarConfig;
   preview = '';
   settings: UserSettings;
-  form = { fullname: '', username: '', phone: '', clan: DEFAULT_CLAN };
+  form = { fullname: '', username: '', phone: '', clan: DEFAULT_CLAN, paypal_email: '' };
   busy = false;
   private subs = new Subscription();
 
@@ -36,7 +36,7 @@ export class ProfilePage implements OnInit, OnDestroy {
         this.me = id;
         this.avatar = { ...id.avatarConfig };
         this.preview = id.avatarUrl;
-        this.form = { fullname: id.fullname, username: id.username, phone: id.phone, clan: id.clan };
+        this.form = { fullname: id.fullname, username: id.username, phone: id.phone, clan: id.clan, paypal_email: id.paypalEmail };
       })
     );
     this.subs.add(this.settingsService.settings$.subscribe((s) => (this.settings = s)));

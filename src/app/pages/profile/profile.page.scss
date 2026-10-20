@@ -335,3 +335,10 @@
     color: #38bdf8;
   }
 }
+
+.field-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--flatmeta-text-muted);
+}

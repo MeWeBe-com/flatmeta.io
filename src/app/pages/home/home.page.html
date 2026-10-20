@@ -362,6 +362,7 @@
               <small>
                 {{ editor.tiles }} squares · buyer pays ${{ ((editor.sale_price || 0) * editor.tiles).toFixed(2) }},
                 you receive ${{ ((editor.sale_price || 0) * editor.tiles * (1 - COMMISSION)).toFixed(2) }}
+                by PayPal to {{ me.paypalEmail }} (change it in Avatar &amp; profile)
               </small>
             </label>
           </div>

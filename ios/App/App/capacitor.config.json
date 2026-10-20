@@ -3,16 +3,14 @@
 	"appName": "FlatMeta",
 	"webDir": "www",
 	"server": {
-		"androidScheme": "https",
-		"cleartext": true
+		"androidScheme": "https"
 	},
 	"packageClassList": [
 		"AppPlugin",
+		"CAPBrowserPlugin",
 		"GeolocationPlugin",
 		"HapticsPlugin",
 		"KeyboardPlugin",
-		"PreferencesPlugin",
-		"StatusBarPlugin",
-		"CDVPlugin"
+		"StatusBarPlugin"
 	]
 }

@@ -1,0 +1,165 @@
+<ion-header class="ion-no-border meta-page-header">
+  <ion-toolbar class="meta-page-toolbar">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/" text="" icon="arrow-back-outline"></ion-back-button>
+    </ion-buttons>
+    <ion-title class="meta-page-title"><span class="gradient-text">{{ title }}</span></ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <article class="legal">
+    <p class="updated">Last updated {{ updated }}</p>
+
+    <!-- ===================================================================== -->
+    <ng-container *ngIf="doc === 'terms'">
+      <p>
+        These terms apply when you use FlatMeta (flatmeta.io and the FlatMeta apps), run by {{ company }} ("we").
+        By using FlatMeta you agree to them. If you do not agree, please do not use the service.
+      </p>
+
+      <h2>1. What FlatMeta is</h2>
+      <p>
+        FlatMeta is a shared map where people move an avatar, chat, and claim squares of "land" to decorate and share.
+        Land on FlatMeta is a licence to show your content on a part of our map. It is not ownership of any real place,
+        it is not real estate, and it is not a financial product, token or investment.
+      </p>
+
+      <h2>2. Accounts</h2>
+      <p>
+        You can use FlatMeta as a guest. To keep land or buy and sell, you verify an email address. You must be at least
+        16 years old (or the age of digital consent where you live). Keep access to your email safe: anyone who can read
+        it can sign in to your account. You are responsible for what happens on your account.
+      </p>
+
+      <h2>3. Land, prices and fees</h2>
+      <ul>
+        <li>Each verified account can hold 100 squares free of charge.</li>
+        <li>Each square beyond 100 costs US$0.10 per month, billed by PayPal subscription. The first payment is taken one month after you approve the subscription.</li>
+        <li>You can sell land you hold on the FlatMeta marketplace at a price you choose. We keep 10% of the sale price; the seller receives 90%, paid by PayPal to the seller's payout email.</li>
+        <li>If rent for land stops (you cancel, or payments fail), you keep the land until the end of the period already paid plus 7 days. After that it returns to the open map, along with its content.</li>
+        <li>Prices may change. We will tell you at least 30 days before a change affects a subscription you already have.</li>
+      </ul>
+
+      <h2>4. Your content</h2>
+      <p>
+        You keep the rights to images, text and code you add. You give us a worldwide, non-exclusive, royalty-free licence
+        to host, show and share that content on FlatMeta for as long as it is there. You must have the right to everything
+        you upload. Do not post anything that is illegal, infringes others' rights, is sexual involving minors, harassing,
+        hateful, violent, misleading, malicious (including code that attacks visitors), or spam. Custom code runs in an
+        isolated sandbox, but you are responsible for it.
+      </p>
+
+      <h2>5. Moderation</h2>
+      <p>
+        You can report people and content from the map. We may remove content, reset land to its default look, take land
+        back, or suspend accounts that break these terms, without a refund where the breach is serious. If we remove land
+        for reasons other than your breach, we will refund any unused rent.
+      </p>
+
+      <h2>6. Availability</h2>
+      <p>
+        We work to keep FlatMeta running but cannot promise it will always be available or error-free, and features may
+        change. FlatMeta uses map data from OpenStreetMap contributors.
+      </p>
+
+      <h2>7. Liability</h2>
+      <p>
+        FlatMeta is provided "as is". To the extent the law allows, we are not liable for indirect or consequential losses,
+        and our total liability to you is limited to the amount you paid us in the 12 months before the claim. Nothing in
+        these terms limits liability that cannot be limited by law, or your statutory rights as a consumer.
+      </p>
+
+      <h2>8. Ending</h2>
+      <p>
+        You can stop using FlatMeta and ask us to delete your account at any time by emailing {{ contact }}. Cancel any
+        PayPal subscriptions first; your land is released when the account is deleted.
+      </p>
+
+      <h2>9. Law and contact</h2>
+      <p>
+        These terms are governed by the laws of {{ country }}, and its courts have jurisdiction, without removing protection
+        you have under the laws where you live. Questions: {{ contact }}.
+      </p>
+    </ng-container>
+
+    <!-- ===================================================================== -->
+    <ng-container *ngIf="doc === 'privacy'">
+      <p>
+        This explains what {{ company }} ("we") collects when you use FlatMeta, why, and your choices.
+        Contact: {{ contact }}.
+      </p>
+
+      <h2>What we collect</h2>
+      <ul>
+        <li><b>Account:</b> email address, username, display name, avatar settings or photo, optional phone number and clan, and your PayPal payout email if you sell land.</li>
+        <li><b>Your activity:</b> land you claim and what you put on it, listings, connections, reports, and private messages between verified users.</li>
+        <li><b>Location:</b> where your avatar is on the map. To start you near home we ask your browser for your location, or estimate your city from your IP address using a lookup service (get.geojs.io / ipapi.co). We do not store your precise real-world location on our servers; your avatar's map position is shared live with people nearby while you are online.</li>
+        <li><b>Nearby chat</b> is sent live to people near you and kept only on their and your devices.</li>
+        <li><b>Payments:</b> handled by PayPal. We receive subscription, payment and payout IDs and amounts, never your card or bank details.</li>
+        <li><b>Technical:</b> IP address and basic logs for security and to prevent abuse.</li>
+        <li><b>On your device:</b> we store your sign-in token, guest avatar and draft land, pins and settings in your browser's local storage. We do not use advertising or tracking cookies.</li>
+      </ul>
+
+      <h2>Why</h2>
+      <p>
+        To run FlatMeta and your account (contract), to take payments and pay sellers (contract), to keep the service safe
+        and handle reports (legitimate interests), and to meet legal obligations such as tax records.
+      </p>
+
+      <h2>Who we share it with</h2>
+      <p>
+        Your username, avatar and land are public on the map. We use service providers to run FlatMeta: hosting, email
+        delivery, PayPal for payments and payouts, and OpenStreetMap for map tiles and place search. We do not sell your data.
+      </p>
+
+      <h2>How long we keep it</h2>
+      <p>
+        While your account exists. Payment records are kept as long as tax law requires (typically 6–7 years). Logs are
+        kept for up to 90 days.
+      </p>
+
+      <h2>Your rights</h2>
+      <p>
+        You can access, correct, export or delete your data, object to some uses, and complain to your data protection
+        authority. Email {{ contact }} and we will reply within 30 days.
+      </p>
+
+      <h2>Children</h2>
+      <p>FlatMeta is not for children under 16. If you believe a child has an account, tell us and we will remove it.</p>
+    </ng-container>
+
+    <!-- ===================================================================== -->
+    <ng-container *ngIf="doc === 'refunds'">
+      <h2>Monthly land rent</h2>
+      <ul>
+        <li>Your first 100 squares are free. Rent of US$0.10 per square per month applies beyond that.</li>
+        <li>The first payment is taken one month after you approve the PayPal subscription, so you can cancel before paying anything.</li>
+        <li>Cancel any time in PayPal (Settings → Payments → Automatic payments; <i>My land</i> has a direct link). You keep the land until the end of the month you paid for. Payments already taken for the current month are not refunded, except where the law requires.</li>
+        <li>If a payment fails, PayPal retries. After 7 days without payment the land returns to the open map.</li>
+      </ul>
+
+      <h2>Marketplace purchases</h2>
+      <ul>
+        <li>Buying land is a one-time PayPal payment. The land moves to you as soon as PayPal confirms the payment.</li>
+        <li>If the land was sold, changed or withdrawn before your payment completed, we refund you in full automatically.</li>
+        <li>Because the land is delivered immediately, purchases are final once it is yours, unless it was not as described.
+          If something is wrong, email {{ contact }} within 14 days and we will look into it. You can also use PayPal's buyer protection.</li>
+      </ul>
+
+      <h2>Selling</h2>
+      <ul>
+        <li>FlatMeta keeps 10% of each sale. Your 90% is sent by PayPal to your payout email, usually within minutes.</li>
+        <li>If PayPal cannot pay you (for example, the email is not a PayPal account), set the right email in <i>Avatar &amp; profile</i> and we retry. Unclaimed payouts are returned to us by PayPal after 30 days; contact us to have them resent.</li>
+      </ul>
+
+      <p class="note">Your statutory consumer rights are not affected.</p>
+    </ng-container>
+
+    <nav>
+      <a routerLink="/terms">Terms</a>
+      <a routerLink="/privacy">Privacy</a>
+      <a routerLink="/refunds">Payments &amp; refunds</a>
+    </nav>
+  </article>
+</ion-content>

@@ -173,6 +173,14 @@
         </div>
         <ng-container *ngIf="!me.isGuest">
           <div class="input-group">
+            <label class="input-label" for="pf-paypal">PayPal email for land sales</label>
+            <div class="input-field-wrap">
+              <ion-icon name="cash-outline" class="field-icon"></ion-icon>
+              <ion-input id="pf-paypal" name="paypal_email" type="email" [(ngModel)]="form.paypal_email" maxlength="190"></ion-input>
+            </div>
+            <small class="field-hint">When your land sells, your 90% share is sent here by PayPal.</small>
+          </div>
+          <div class="input-group">
             <label class="input-label" for="pf-phone">Phone (optional — for verifying your account later)</label>
             <div class="input-field-wrap">
               <ion-icon name="call-outline" class="field-icon"></ion-icon>
