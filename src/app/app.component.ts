@@ -1,5 +1,8 @@
 import { Component, NgZone, ChangeDetectionStrategy } from '@angular/core';
-import { AlertController, MenuController, Platform } from '@ionic/angular';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { AlertController, IonApp, IonButton, IonContent, IonFooter, IonIcon, IonList, IonMenu, IonRouterOutlet, IonSpinner, IonSplitPane, IonToggle, MenuController, Platform } from '@ionic/angular';
 import { App } from '@capacitor/app';
 import { GeneralService } from './providers/general.service';
 import { SessionService, Identity } from './providers/session.service';
@@ -13,7 +16,7 @@ import { PaymentService } from './providers/payment.service';
     templateUrl: 'app.component.html',
     styleUrls: ['app.component.scss'],
     changeDetection: ChangeDetectionStrategy.Eager,
-    standalone: false
+    imports: [CommonModule, FormsModule, RouterLink, IonApp, IonButton, IonContent, IonFooter, IonIcon, IonList, IonMenu, IonRouterOutlet, IonSpinner, IonSplitPane, IonToggle],
 })
 export class AppComponent {
   readonly FREE_TILE_QUOTA = FREE_TILE_QUOTA;

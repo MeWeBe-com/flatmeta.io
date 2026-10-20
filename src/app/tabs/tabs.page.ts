@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { IonIcon, IonLabel, IonTabBar, IonTabButton, IonTabs } from '@ionic/angular';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { GeneralService } from '../providers/general.service';
@@ -11,7 +12,7 @@ const NON_MAP_PAGES = /^\/(myplaces|salelist|profile|friendrequest|thankyou|open
     templateUrl: 'tabs.page.html',
     styleUrls: ['tabs.page.scss'],
     changeDetection: ChangeDetectionStrategy.Eager,
-    standalone: false
+    imports: [IonIcon, IonLabel, IonTabBar, IonTabButton, IonTabs],
 })
 export class TabsPage {
   onMap = true;

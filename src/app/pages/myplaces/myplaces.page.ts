@@ -1,6 +1,8 @@
 import { Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { Router } from '@angular/router';
-import { AlertController, IonRouterOutlet } from '@ionic/angular';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { AlertController, IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonIcon, IonInput, IonModal, IonRouterLink, IonRouterOutlet, IonTextarea, IonTitle, IonToggle, IonToolbar } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { GeneralService } from 'src/app/providers/general.service';
 import { EventsService } from 'src/app/providers/events.service';
@@ -14,7 +16,7 @@ import { PaymentService } from 'src/app/providers/payment.service';
     templateUrl: './myplaces.page.html',
     styleUrls: ['./myplaces.page.scss'],
     changeDetection: ChangeDetectionStrategy.Eager,
-    standalone: false
+    imports: [CommonModule, FormsModule, RouterLink, IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonIcon, IonInput, IonModal, IonRouterLink, IonTextarea, IonTitle, IonToggle, IonToolbar],
 })
 export class MyplacesPage implements OnInit, OnDestroy {
   readonly FREE_TILE_QUOTA = FREE_TILE_QUOTA;

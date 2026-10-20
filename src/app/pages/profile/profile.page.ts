@@ -1,4 +1,7 @@
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonInput, IonItem, IonSelect, IonSelectOption, IonTitle, IonToggle, IonToolbar } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { AVATAR_OPTIONS, AvatarConfig, avatarDataUrl, createRandomAvatarConfig } from 'src/app/core/avatar';
 import { GeneralService } from 'src/app/providers/general.service';
@@ -10,7 +13,7 @@ import { SettingsService, UserSettings } from 'src/app/providers/settings.servic
     templateUrl: './profile.page.html',
     styleUrls: ['./profile.page.scss'],
     changeDetection: ChangeDetectionStrategy.Eager,
-    standalone: false
+    imports: [CommonModule, FormsModule, IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonInput, IonItem, IonSelect, IonSelectOption, IonTitle, IonToggle, IonToolbar],
 })
 export class ProfilePage implements OnInit, OnDestroy {
   @ViewChild('fileInput') fileInput: ElementRef<HTMLInputElement>;

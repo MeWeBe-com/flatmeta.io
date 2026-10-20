@@ -1,5 +1,7 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonRouterLink, IonTitle, IonToolbar } from '@ionic/angular';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LandService } from 'src/app/providers/land.service';
 
 /**
@@ -11,7 +13,7 @@ import { LandService } from 'src/app/providers/land.service';
     templateUrl: './thankyou.page.html',
     styleUrls: ['./thankyou.page.scss'],
     changeDetection: ChangeDetectionStrategy.Eager,
-    standalone: false
+    imports: [CommonModule, RouterLink, IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonRouterLink, IonTitle, IonToolbar],
 })
 export class ThankyouPage {
   kind: 'rent' | 'sale' = 'rent';

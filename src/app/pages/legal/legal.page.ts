@@ -1,5 +1,7 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
 /**
  * Terms, privacy and refund policies. Text in square brackets must be filled in,
@@ -10,7 +12,7 @@ import { ActivatedRoute } from '@angular/router';
     templateUrl: './legal.page.html',
     styleUrls: ['./legal.page.scss'],
     changeDetection: ChangeDetectionStrategy.Eager,
-    standalone: false
+    imports: [CommonModule, RouterLink, IonBackButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar],
 })
 export class LegalPage {
   doc: 'terms' | 'privacy' | 'refunds' = 'terms';
