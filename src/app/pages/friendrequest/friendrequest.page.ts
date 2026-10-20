@@ -8,9 +8,10 @@ import { Citizen, PresenceService } from 'src/app/providers/presence.service';
 import { SessionService } from 'src/app/providers/session.service';
 
 @Component({
-  selector: 'app-friendrequest',
-  templateUrl: './friendrequest.page.html',
-  styleUrls: ['./friendrequest.page.scss'],
+    selector: 'app-friendrequest',
+    templateUrl: './friendrequest.page.html',
+    styleUrls: ['./friendrequest.page.scss'],
+    standalone: false
 })
 export class FriendrequestPage implements OnInit, OnDestroy {
   requests: FriendRequest[] = [];

@@ -9,9 +9,10 @@ import { FriendsService } from './providers/friends.service';
 import { PaymentService } from './providers/payment.service';
 
 @Component({
-  selector: 'app-root',
-  templateUrl: 'app.component.html',
-  styleUrls: ['app.component.scss'],
+    selector: 'app-root',
+    templateUrl: 'app.component.html',
+    styleUrls: ['app.component.scss'],
+    standalone: false
 })
 export class AppComponent {
   readonly FREE_TILE_QUOTA = FREE_TILE_QUOTA;

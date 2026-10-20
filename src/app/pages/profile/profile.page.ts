@@ -6,9 +6,10 @@ import { DEFAULT_CLAN, Identity, SessionService } from 'src/app/providers/sessio
 import { SettingsService, UserSettings } from 'src/app/providers/settings.service';
 
 @Component({
-  selector: 'app-profile',
-  templateUrl: './profile.page.html',
-  styleUrls: ['./profile.page.scss'],
+    selector: 'app-profile',
+    templateUrl: './profile.page.html',
+    styleUrls: ['./profile.page.scss'],
+    standalone: false
 })
 export class ProfilePage implements OnInit, OnDestroy {
   @ViewChild('fileInput') fileInput: ElementRef<HTMLInputElement>;

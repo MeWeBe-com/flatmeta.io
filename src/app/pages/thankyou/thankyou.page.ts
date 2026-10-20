@@ -7,9 +7,10 @@ import { LandService } from 'src/app/providers/land.service';
  * purchase, with ?kind=rent|sale&status=ok|cancelled|problem&message=...
  */
 @Component({
-  selector: 'app-thankyou',
-  templateUrl: './thankyou.page.html',
-  styleUrls: ['./thankyou.page.scss'],
+    selector: 'app-thankyou',
+    templateUrl: './thankyou.page.html',
+    styleUrls: ['./thankyou.page.scss'],
+    standalone: false
 })
 export class ThankyouPage {
   kind: 'rent' | 'sale' = 'rent';

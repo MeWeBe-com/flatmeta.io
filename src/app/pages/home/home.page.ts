@@ -48,9 +48,10 @@ const LAST_POSITION_KEY = 'flatmeta_last_position';
 const geocoder = new GeoSearch.OpenStreetMapProvider();
 
 @Component({
-  selector: 'app-home',
-  templateUrl: './home.page.html',
-  styleUrls: ['./home.page.scss'],
+    selector: 'app-home',
+    templateUrl: './home.page.html',
+    styleUrls: ['./home.page.scss'],
+    standalone: false
 })
 export class HomePage implements OnDestroy {
   @ViewChild('mapEl', { static: true }) mapEl: ElementRef<HTMLElement>;

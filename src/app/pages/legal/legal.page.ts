@@ -6,9 +6,10 @@ import { ActivatedRoute } from '@angular/router';
  * and the wording should be checked by a lawyer for your country before launch.
  */
 @Component({
-  selector: 'app-legal',
-  templateUrl: './legal.page.html',
-  styleUrls: ['./legal.page.scss'],
+    selector: 'app-legal',
+    templateUrl: './legal.page.html',
+    styleUrls: ['./legal.page.scss'],
+    standalone: false
 })
 export class LegalPage {
   doc: 'terms' | 'privacy' | 'refunds' = 'terms';

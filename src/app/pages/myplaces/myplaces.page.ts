@@ -10,9 +10,10 @@ import { HttpService } from 'src/app/providers/http.service';
 import { PaymentService } from 'src/app/providers/payment.service';
 
 @Component({
-  selector: 'app-myplaces',
-  templateUrl: './myplaces.page.html',
-  styleUrls: ['./myplaces.page.scss'],
+    selector: 'app-myplaces',
+    templateUrl: './myplaces.page.html',
+    styleUrls: ['./myplaces.page.scss'],
+    standalone: false
 })
 export class MyplacesPage implements OnInit, OnDestroy {
   readonly FREE_TILE_QUOTA = FREE_TILE_QUOTA;

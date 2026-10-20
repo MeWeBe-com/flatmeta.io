@@ -7,9 +7,10 @@ import { EventsService } from '../providers/events.service';
 const NON_MAP_PAGES = /^\/(myplaces|salelist|profile|friendrequest|thankyou|opensource|recentpurchases|terms|privacy|refunds)(\/|\?|$)/;
 
 @Component({
-  selector: 'app-tabs',
-  templateUrl: 'tabs.page.html',
-  styleUrls: ['tabs.page.scss'],
+    selector: 'app-tabs',
+    templateUrl: 'tabs.page.html',
+    styleUrls: ['tabs.page.scss'],
+    standalone: false
 })
 export class TabsPage {
   onMap = true;

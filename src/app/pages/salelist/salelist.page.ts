@@ -12,9 +12,10 @@ import { PaymentService } from 'src/app/providers/payment.service';
 type Filter = 'recent' | 'popular' | 'promoted';
 
 @Component({
-  selector: 'app-salelist',
-  templateUrl: './salelist.page.html',
-  styleUrls: ['./salelist.page.scss'],
+    selector: 'app-salelist',
+    templateUrl: './salelist.page.html',
+    styleUrls: ['./salelist.page.scss'],
+    standalone: false
 })
 export class SalelistPage implements OnInit, OnDestroy {
   listings: LandArea[] = [];

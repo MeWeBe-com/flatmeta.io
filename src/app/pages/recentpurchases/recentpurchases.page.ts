@@ -6,9 +6,10 @@ import { LandArea, LandService } from 'src/app/providers/land.service';
 
 /** "Latest tile lands created by other users": click one to fly there. */
 @Component({
-  selector: 'app-recentpurchases',
-  templateUrl: './recentpurchases.page.html',
-  styleUrls: ['./recentpurchases.page.scss'],
+    selector: 'app-recentpurchases',
+    templateUrl: './recentpurchases.page.html',
+    styleUrls: ['./recentpurchases.page.scss'],
+    standalone: false
 })
 export class RecentpurchasesPage {
   areas: LandArea[] = [];

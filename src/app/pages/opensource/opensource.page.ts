@@ -16,9 +16,10 @@ export interface CodeProposal {
 }
 
 @Component({
-  selector: 'app-opensource',
-  templateUrl: './opensource.page.html',
-  styleUrls: ['./opensource.page.scss'],
+    selector: 'app-opensource',
+    templateUrl: './opensource.page.html',
+    styleUrls: ['./opensource.page.scss'],
+    standalone: false
 })
 export class OpensourcePage implements OnInit {
   selectedTemplateKey: string = 'land-widget.js';
