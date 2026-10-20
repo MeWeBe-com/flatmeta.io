@@ -2,7 +2,7 @@ import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { RouteReuseStrategy } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { HttpClientModule } from '@angular/common/http';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { IonicModule, IonicRouteStrategy } from '@ionic/angular';
 
 import { AppRoutingModule } from './app-routing.module';
@@ -18,7 +18,6 @@ import { QuillModule } from 'ngx-quill'
         IonicModule.forRoot(),
         AppRoutingModule,
         FormsModule,
-        HttpClientModule,
         ReactiveFormsModule,
         QuillModule.forRoot(),
         ServiceWorkerModule.register('ngsw-worker.js', {
@@ -29,7 +28,8 @@ import { QuillModule } from 'ngx-quill'
         })
     ],
     providers: [
-        { provide: RouteReuseStrategy, useClass: IonicRouteStrategy }
+        { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
+        provideHttpClient(withInterceptorsFromDi())
     ],
     bootstrap: [AppComponent]
 })
