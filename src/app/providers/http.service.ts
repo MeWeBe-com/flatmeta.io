@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError, finalize, take } from 'rxjs/operators';
+import { Observable, firstValueFrom, throwError } from 'rxjs';
+import { catchError, finalize } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 import { GeneralService } from './general.service';
 import { SessionService } from './session.service';
@@ -33,7 +33,7 @@ export class HttpService {
   /** Promise helpers that never throw: failures resolve to `{ status: false, message }`. */
   async getAsync(link: string): Promise<any> {
     try {
-      return await this.get(link).pipe(take(1)).toPromise();
+      return await firstValueFrom(this.get(link), { defaultValue: undefined });
     } catch (err: any) {
       return this.toFailure(err);
     }
@@ -41,7 +41,7 @@ export class HttpService {
 
   async postAsync(link: string, data: any, loader = false): Promise<any> {
     try {
-      return await this.post(link, data, loader).pipe(take(1)).toPromise();
+      return await firstValueFrom(this.post(link, data, loader), { defaultValue: undefined });
     } catch (err: any) {
       return this.toFailure(err);
     }
@@ -49,7 +49,7 @@ export class HttpService {
 
   async uploadAsync(file: File, link: string): Promise<any> {
     try {
-      return await this.uploadImages(file, link).pipe(take(1)).toPromise();
+      return await firstValueFrom(this.uploadImages(file, link), { defaultValue: undefined });
     } catch (err: any) {
       return this.toFailure(err);
     }
@@ -78,7 +78,7 @@ export class HttpService {
     return obs.pipe(
       catchError((err: HttpErrorResponse) => {
         if (err.status === 401) this.session.handleUnauthorized();
-        return throwError(err);
+        return throwError(() => err);
       }),
       finalize(() => {
         if (loader) this.general.stopLoading();

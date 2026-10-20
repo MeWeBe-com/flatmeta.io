@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
-import { take } from 'rxjs/operators';
+import { BehaviorSubject, Observable, Subject, firstValueFrom } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { AvatarConfig, avatarDataUrl, createRandomAvatarConfig, sanitizeAvatarConfig } from '../core/avatar';
 
@@ -370,7 +369,7 @@ export class SessionService {
     try {
       const req$: Observable<any> =
         method === 'GET' ? this.http.get(this.apiUrl + path, { headers }) : this.http.post(this.apiUrl + path, body ?? {}, { headers });
-      return await req$.pipe(take(1)).toPromise();
+      return await firstValueFrom(req$, { defaultValue: undefined });
     } catch (err: any) {
       if (err?.status === 401) return { status: false, __unauthorized: true, message: 'Please sign in again.' };
       return { status: false, message: err?.error?.message || 'Network error. Please try again.' };

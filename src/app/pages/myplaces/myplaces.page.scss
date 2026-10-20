@@ -398,6 +398,9 @@
 
         ion-input {
           --color: var(--flatmeta-text-primary);
+          // Ionic 8 inputs default to 44px tall with no start padding
+          min-height: 38px;
+          --padding-start: 8px;
           font-size: 15px;
           font-weight: 600;
         }
