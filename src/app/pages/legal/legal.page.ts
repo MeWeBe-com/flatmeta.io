@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 
 /**
@@ -9,6 +9,7 @@ import { ActivatedRoute } from '@angular/router';
     selector: 'app-legal',
     templateUrl: './legal.page.html',
     styleUrls: ['./legal.page.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class LegalPage {

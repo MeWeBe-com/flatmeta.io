@@ -1,4 +1,4 @@
-import { Component, NgZone } from '@angular/core';
+import { Component, NgZone, ChangeDetectionStrategy } from '@angular/core';
 import { AlertController, MenuController, Platform } from '@ionic/angular';
 import { App } from '@capacitor/app';
 import { GeneralService } from './providers/general.service';
@@ -12,6 +12,7 @@ import { PaymentService } from './providers/payment.service';
     selector: 'app-root',
     templateUrl: 'app.component.html',
     styleUrls: ['app.component.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class AppComponent {

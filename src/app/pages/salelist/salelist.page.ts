@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { AlertController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
@@ -15,6 +15,7 @@ type Filter = 'recent' | 'popular' | 'promoted';
     selector: 'app-salelist',
     templateUrl: './salelist.page.html',
     styleUrls: ['./salelist.page.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class SalelistPage implements OnInit, OnDestroy {

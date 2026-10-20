@@ -111,9 +111,9 @@
             <div class="metric-item" *ngIf="c.billing?.subscription as sub">
               <span class="m-lbl">Monthly rent</span>
               <span class="m-val" [class.warn]="sub !== 'ACTIVE'">
-                {{ sub === 'ACTIVE' ? 'Active' + (c.billing?.nextPayment ? ' · next payment ' + (c.billing?.nextPayment | date: 'mediumDate') : '')
-                  : sub === 'SUSPENDED' ? 'Payment failed · update PayPal by ' + (c.billing?.paidUntil | date: 'mediumDate')
-                  : 'Cancelled · land kept until ' + (c.billing?.paidUntil | date: 'mediumDate') }}
+                {{ sub === 'ACTIVE' ? 'Active' + (c.billing?.nextPayment ? ' · next payment ' + ($safeNavigationMigration(c.billing?.nextPayment) | date: 'mediumDate') : '')
+                  : sub === 'SUSPENDED' ? 'Payment failed · update PayPal by ' + ($safeNavigationMigration(c.billing?.paidUntil) | date: 'mediumDate')
+                  : 'Cancelled · land kept until ' + ($safeNavigationMigration(c.billing?.paidUntil) | date: 'mediumDate') }}
               </span>
             </div>
           </div>

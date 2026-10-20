@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { LandService } from 'src/app/providers/land.service';
 
@@ -10,6 +10,7 @@ import { LandService } from 'src/app/providers/land.service';
     selector: 'app-thankyou',
     templateUrl: './thankyou.page.html',
     styleUrls: ['./thankyou.page.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class ThankyouPage {

@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { AVATAR_OPTIONS, AvatarConfig, avatarDataUrl, createRandomAvatarConfig } from 'src/app/core/avatar';
 import { GeneralService } from 'src/app/providers/general.service';
@@ -9,6 +9,7 @@ import { SettingsService, UserSettings } from 'src/app/providers/settings.servic
     selector: 'app-profile',
     templateUrl: './profile.page.html',
     styleUrls: ['./profile.page.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class ProfilePage implements OnInit, OnDestroy {

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { GeneralService } from 'src/app/providers/general.service';
 import { HttpService } from 'src/app/providers/http.service';
 import { SessionService } from 'src/app/providers/session.service';
@@ -19,6 +19,7 @@ export interface CodeProposal {
     selector: 'app-opensource',
     templateUrl: './opensource.page.html',
     styleUrls: ['./opensource.page.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class OpensourcePage implements OnInit {

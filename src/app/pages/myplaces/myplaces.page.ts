@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { AlertController, IonRouterOutlet } from '@ionic/angular';
 import { Subscription } from 'rxjs';
@@ -13,6 +13,7 @@ import { PaymentService } from 'src/app/providers/payment.service';
     selector: 'app-myplaces',
     templateUrl: './myplaces.page.html',
     styleUrls: ['./myplaces.page.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
     standalone: false
 })
 export class MyplacesPage implements OnInit, OnDestroy {
