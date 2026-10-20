@@ -4,21 +4,46 @@
     {
       "name": "web",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["ng", "serve", "--port", "4200"],
+      "runtimeArgs": [
+        "ng",
+        "serve",
+        "--port",
+        "4200"
+      ],
       "port": 4200
     },
     {
       "name": "api",
       "runtimeExecutable": "php",
-      "runtimeArgs": ["/Volumes/NewDrive/laravel/flatmetaAPI/artisan", "serve", "--port=8000"],
+      "runtimeArgs": [
+        "/Volumes/NewDrive/laravel/flatmetaAPI/artisan",
+        "serve",
+        "--port=8000"
+      ],
       "port": 8000,
-      "env": { "MAIL_MAILER": "log" }
+      "env": {
+        "MAIL_MAILER": "log",
+        "DB_PORT": "3307",
+        "DB_DATABASE": "flatmeta_dev",
+        "DB_USERNAME": "root",
+        "DB_PASSWORD": ""
+      }
     },
     {
       "name": "ws",
       "runtimeExecutable": "php",
-      "runtimeArgs": ["/Volumes/NewDrive/laravel/flatmetaAPI/artisan", "websocket:serve", "--port=3500"],
-      "port": 3500
+      "runtimeArgs": [
+        "/Volumes/NewDrive/laravel/flatmetaAPI/artisan",
+        "websocket:serve",
+        "--port=3500"
+      ],
+      "port": 3500,
+      "env": {
+        "DB_PORT": "3307",
+        "DB_DATABASE": "flatmeta_dev",
+        "DB_USERNAME": "root",
+        "DB_PASSWORD": ""
+      }
     }
   ]
 }

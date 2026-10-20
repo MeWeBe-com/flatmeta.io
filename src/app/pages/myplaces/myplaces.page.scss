@@ -398,6 +398,9 @@
 
         ion-input {
           --color: var(--flatmeta-text-primary);
+          // Ionic 8 inputs default to 44px tall with no start padding
+          min-height: 38px;
+          --padding-start: 8px;
           font-size: 15px;
           font-weight: 600;
         }
@@ -440,4 +443,30 @@
       }
     }
   }
+}
+.billing-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.1);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.billing-links {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--flatmeta-text-muted);
+
+  a {
+    color: #38bdf8;
+  }
+}
+
+.m-val.warn {
+  color: #f59e0b;
 }

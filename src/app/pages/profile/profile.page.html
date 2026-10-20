@@ -23,7 +23,7 @@
 
       <div class="avatar-identity-info">
         <h2 class="profile-fullname">{{ me.fullname }}</h2>
-        <span class="profile-username">@{{ me.username }}</span>
+        <span class="profile-username">&#64;{{ me.username }}</span>
       </div>
 
       <div class="avatar-actions-bar">
@@ -58,56 +58,47 @@
 
       <div class="traits-grid">
         <ion-item class="meta-input-item">
-          <ion-label position="stacked">Hair / hat</ion-label>
-          <ion-select [(ngModel)]="avatar.topType" (ionChange)="onTraitChange()" interface="popover">
+          <ion-select label="Hair / hat" labelPlacement="stacked" [(ngModel)]="avatar.topType" (ionChange)="onTraitChange()" interface="popover">
             <ion-select-option *ngFor="let t of options.topType" [value]="t">{{ t }}</ion-select-option>
           </ion-select>
         </ion-item>
         <ion-item class="meta-input-item">
-          <ion-label position="stacked">Hair colour</ion-label>
-          <ion-select [(ngModel)]="avatar.hairColor" (ionChange)="onTraitChange()" interface="popover">
+          <ion-select label="Hair colour" labelPlacement="stacked" [(ngModel)]="avatar.hairColor" (ionChange)="onTraitChange()" interface="popover">
             <ion-select-option *ngFor="let t of options.hairColor" [value]="t">{{ t }}</ion-select-option>
           </ion-select>
         </ion-item>
         <ion-item class="meta-input-item">
-          <ion-label position="stacked">Skin</ion-label>
-          <ion-select [(ngModel)]="avatar.skinColor" (ionChange)="onTraitChange()" interface="popover">
+          <ion-select label="Skin" labelPlacement="stacked" [(ngModel)]="avatar.skinColor" (ionChange)="onTraitChange()" interface="popover">
             <ion-select-option *ngFor="let t of options.skinColor" [value]="t">{{ t }}</ion-select-option>
           </ion-select>
         </ion-item>
         <ion-item class="meta-input-item">
-          <ion-label position="stacked">Mouth</ion-label>
-          <ion-select [(ngModel)]="avatar.mouthType" (ionChange)="onTraitChange()" interface="popover">
+          <ion-select label="Mouth" labelPlacement="stacked" [(ngModel)]="avatar.mouthType" (ionChange)="onTraitChange()" interface="popover">
             <ion-select-option *ngFor="let t of options.mouthType" [value]="t">{{ t }}</ion-select-option>
           </ion-select>
         </ion-item>
         <ion-item class="meta-input-item">
-          <ion-label position="stacked">Eyes</ion-label>
-          <ion-select [(ngModel)]="avatar.eyeType" (ionChange)="onTraitChange()" interface="popover">
+          <ion-select label="Eyes" labelPlacement="stacked" [(ngModel)]="avatar.eyeType" (ionChange)="onTraitChange()" interface="popover">
             <ion-select-option *ngFor="let t of options.eyeType" [value]="t">{{ t }}</ion-select-option>
           </ion-select>
         </ion-item>
         <ion-item class="meta-input-item">
-          <ion-label position="stacked">Eyebrows</ion-label>
-          <ion-select [(ngModel)]="avatar.eyebrowType" (ionChange)="onTraitChange()" interface="popover">
+          <ion-select label="Eyebrows" labelPlacement="stacked" [(ngModel)]="avatar.eyebrowType" (ionChange)="onTraitChange()" interface="popover">
             <ion-select-option *ngFor="let t of options.eyebrowType" [value]="t">{{ t }}</ion-select-option>
           </ion-select>
         </ion-item>
         <ion-item class="meta-input-item">
-          <ion-label position="stacked">Glasses</ion-label>
-          <ion-select [(ngModel)]="avatar.accessoriesType" (ionChange)="onTraitChange()" interface="popover">
+          <ion-select label="Glasses" labelPlacement="stacked" [(ngModel)]="avatar.accessoriesType" (ionChange)="onTraitChange()" interface="popover">
             <ion-select-option *ngFor="let t of options.accessoriesType" [value]="t">{{ t }}</ion-select-option>
           </ion-select>
         </ion-item>
         <ion-item class="meta-input-item">
-          <ion-label position="stacked">Facial hair</ion-label>
-          <ion-select [(ngModel)]="avatar.facialHairType" (ionChange)="onTraitChange()" interface="popover">
+          <ion-select label="Facial hair" labelPlacement="stacked" [(ngModel)]="avatar.facialHairType" (ionChange)="onTraitChange()" interface="popover">
             <ion-select-option *ngFor="let t of options.facialHairType" [value]="t">{{ t }}</ion-select-option>
           </ion-select>
         </ion-item>
         <ion-item class="meta-input-item">
-          <ion-label position="stacked">Clothes</ion-label>
-          <ion-select [(ngModel)]="avatar.clotheType" (ionChange)="onTraitChange()" interface="popover">
+          <ion-select label="Clothes" labelPlacement="stacked" [(ngModel)]="avatar.clotheType" (ionChange)="onTraitChange()" interface="popover">
             <ion-select-option *ngFor="let t of options.clotheType" [value]="t">{{ t }}</ion-select-option>
           </ion-select>
         </ion-item>
@@ -121,23 +112,20 @@
         <h3>Who you see and hear</h3>
       </div>
       <ion-item class="meta-input-item">
-        <ion-label>Avatars on the map</ion-label>
-        <ion-select [value]="settings.avatarVisibility" (ionChange)="updateSetting('avatarVisibility', $any($event).detail.value)" interface="popover">
+        <ion-select label="Avatars on the map" justify="space-between" [value]="settings.avatarVisibility" (ionChange)="updateSetting('avatarVisibility', $any($event).detail.value)" interface="popover">
           <ion-select-option value="all">Everyone</ion-select-option>
           <ion-select-option value="friends">Connections only</ion-select-option>
           <ion-select-option value="none">Hide other avatars</ion-select-option>
         </ion-select>
       </ion-item>
       <ion-item class="meta-input-item">
-        <ion-label>Nearby chat</ion-label>
-        <ion-select [value]="settings.chatScope" (ionChange)="updateSetting('chatScope', $any($event).detail.value)" interface="popover">
+        <ion-select label="Nearby chat" justify="space-between" [value]="settings.chatScope" (ionChange)="updateSetting('chatScope', $any($event).detail.value)" interface="popover">
           <ion-select-option value="everyone">Everyone nearby</ion-select-option>
           <ion-select-option value="friends">Connections only</ion-select-option>
         </ion-select>
       </ion-item>
       <ion-item class="meta-input-item" lines="none">
-        <ion-label>Show square outlines on artwork</ion-label>
-        <ion-toggle slot="end" [checked]="settings.showGridOnImages" (ionChange)="updateSetting('showGridOnImages', $any($event).detail.checked)"></ion-toggle>
+        <ion-toggle justify="space-between" [checked]="settings.showGridOnImages" (ionChange)="updateSetting('showGridOnImages', $any($event).detail.checked)">Show square outlines on artwork</ion-toggle>
       </ion-item>
     </div>
 
@@ -173,6 +161,14 @@
         </div>
         <ng-container *ngIf="!me.isGuest">
           <div class="input-group">
+            <label class="input-label" for="pf-paypal">PayPal email for land sales</label>
+            <div class="input-field-wrap">
+              <ion-icon name="cash-outline" class="field-icon"></ion-icon>
+              <ion-input id="pf-paypal" name="paypal_email" type="email" [(ngModel)]="form.paypal_email" maxlength="190"></ion-input>
+            </div>
+            <small class="field-hint">When your land sells, your 90% share is sent here by PayPal.</small>
+          </div>
+          <div class="input-group">
             <label class="input-label" for="pf-phone">Phone (optional — for verifying your account later)</label>
             <div class="input-field-wrap">
               <ion-icon name="call-outline" class="field-icon"></ion-icon>
@@ -180,8 +176,7 @@
             </div>
           </div>
           <ion-item class="meta-input-item">
-            <ion-label>Clan</ion-label>
-        <ion-select name="clan" [(ngModel)]="form.clan" interface="popover">
+            <ion-select label="Clan" justify="space-between" name="clan" [(ngModel)]="form.clan" interface="popover">
               <ion-select-option *ngFor="let c of clans" [value]="c">{{ c }}</ion-select-option>
             </ion-select>
           </ion-item>

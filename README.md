@@ -46,6 +46,17 @@ the code then appears in `storage/logs/laravel.log`.
 Production build: `npx ng build` (writes optimised files to `www/`). For the phone apps run
 `npx cap sync` and open `android/` or `ios/`.
 
+## Going live
+
+Deployment (nginx, HTTPS, the real-time server, scheduled jobs), PayPal setup and the
+sandbox test plan are in the API repo: `deploy/README.md`. What only the business can do
+(keys, PayPal Payouts approval, legal details) is in `deploy/LAUNCH-CHECKLIST.md`.
+
+Money in short: first 100 squares free; $0.10 per extra square per month by PayPal
+subscription (first payment after one month); marketplace sales are one-time PayPal
+payments, the seller gets 90% by PayPal Payout. Terms, Privacy and Refund pages are at
+`/terms`, `/privacy` and `/refunds` (fill in the [placeholders] in `src/app/pages/legal/`).
+
 ## How the code is organised
 
 | Where | What |

@@ -19,7 +19,7 @@
           </div>
           <div class="citizen-details">
             <h4 class="citizen-name">{{ me.fullname }}</h4>
-            <span class="citizen-handle">@{{ me.username }}</span>
+            <span class="citizen-handle">&#64;{{ me.username }}</span>
             <div class="citizen-status">
               <span class="meta-badge badge-emerald" *ngIf="!me.isGuest">Verified · {{ me.clan }}</span>
               <span class="meta-badge badge-amber" *ngIf="me.isGuest">Guest — not saved yet</span>
@@ -77,6 +77,10 @@
           </div>
         </ion-list>
       </ion-content>
+
+      <div class="menu-legal">
+        <a (click)="goTo('terms')">Terms</a> · <a (click)="goTo('privacy')">Privacy</a> · <a (click)="goTo('refunds')">Payments &amp; refunds</a>
+      </div>
 
       <ion-footer class="menu-footer ion-no-border">
         <div class="theme-toggle-container">
@@ -153,6 +157,11 @@
           <ion-button type="submit" expand="block" class="meta-btn-gradient" [disabled]="authBusy">Sign in</ion-button>
         </div>
       </form>
+
+      <p class="qa-legal">
+        By continuing you agree to the <a routerLink="/terms" (click)="closeAuth()">Terms</a> and
+        <a routerLink="/privacy" (click)="closeAuth()">Privacy policy</a>.
+      </p>
 
       <div class="qa-footer">
         <span>Not ready to save?</span>

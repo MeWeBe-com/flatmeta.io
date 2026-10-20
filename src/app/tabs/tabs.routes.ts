@@ -1,9 +1,8 @@
-import { NgModule } from '@angular/core';
-import { RouterModule, Routes, UrlMatchResult, UrlSegment } from '@angular/router';
+import { Routes, UrlMatchResult, UrlSegment } from '@angular/router';
 import { TabsPage } from './tabs.page';
 import { authRedirect } from '../core/auth-redirect.guard';
 
-const PAGES = ['login', 'signup', 'myplaces', 'salelist', 'profile', 'friendrequest', 'thankyou', 'opensource', 'recentpurchases'];
+const PAGES = ['login', 'signup', 'terms', 'privacy', 'refunds', 'myplaces', 'salelist', 'profile', 'friendrequest', 'thankyou', 'opensource', 'recentpurchases'];
 
 /**
  * Every map URL is handled by ONE route so the map page (and its Leaflet map)
@@ -31,23 +30,28 @@ export function mapMatcher(segments: UrlSegment[]): UrlMatchResult | null {
   return null;
 }
 
-const page = (path: string, load: () => Promise<any>) => ({ path, loadChildren: load });
+const page = (path: string, load: () => Promise<any>) => ({ path, loadComponent: load });
 
-const routes: Routes = [
+export const routes: Routes = [
   {
     path: '',
     component: TabsPage,
     children: [
       { path: 'login', canActivate: [authRedirect], children: [] },
       { path: 'signup', canActivate: [authRedirect], children: [] },
-      page('myplaces', () => import('../pages/myplaces/myplaces.module').then((m) => m.MyplacesPageModule)),
-      page('salelist', () => import('../pages/salelist/salelist.module').then((m) => m.SalelistPageModule)),
-      page('profile', () => import('../pages/profile/profile.module').then((m) => m.ProfilePageModule)),
-      page('friendrequest', () => import('../pages/friendrequest/friendrequest.module').then((m) => m.FriendrequestPageModule)),
-      page('thankyou', () => import('../pages/thankyou/thankyou.module').then((m) => m.ThankyouPageModule)),
-      page('opensource', () => import('../pages/opensource/opensource.module').then((m) => m.OpensourcePageModule)),
-      page('recentpurchases', () => import('../pages/recentpurchases/recentpurchases.module').then((m) => m.RecentpurchasesPageModule)),
-      { matcher: mapMatcher, loadChildren: () => import('../pages/home/home.module').then((m) => m.HomePageModule) },
+      page('myplaces', () => import('../pages/myplaces/myplaces.page').then((m) => m.MyplacesPage)),
+      page('salelist', () => import('../pages/salelist/salelist.page').then((m) => m.SalelistPage)),
+      page('profile', () => import('../pages/profile/profile.page').then((m) => m.ProfilePage)),
+      page('friendrequest', () => import('../pages/friendrequest/friendrequest.page').then((m) => m.FriendrequestPage)),
+      page('thankyou', () => import('../pages/thankyou/thankyou.page').then((m) => m.ThankyouPage)),
+      page('opensource', () => import('../pages/opensource/opensource.page').then((m) => m.OpensourcePage)),
+      ...(['terms', 'privacy', 'refunds'] as const).map((doc) => ({
+        path: doc,
+        data: { doc },
+        loadComponent: () => import('../pages/legal/legal.page').then((m) => m.LegalPage),
+      })),
+      page('recentpurchases', () => import('../pages/recentpurchases/recentpurchases.page').then((m) => m.RecentpurchasesPage)),
+      { matcher: mapMatcher, loadComponent: () => import('../pages/home/home.page').then((m) => m.HomePage) },
     ],
   },
   // Old links: /tabs/..., /flatmeta/... (PayPal used to return to /flatmeta/thankyou).
@@ -56,7 +60,3 @@ const routes: Routes = [
   { path: 'flatmeta', redirectTo: '', pathMatch: 'prefix' },
 ];
 
-@NgModule({
-  imports: [RouterModule.forChild(routes)],
-})
-export class TabsPageRoutingModule {}

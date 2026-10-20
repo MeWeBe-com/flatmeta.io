@@ -1,4 +1,7 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonInput, IonItem, IonSelect, IonSelectOption, IonTitle, IonToggle, IonToolbar } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { AVATAR_OPTIONS, AvatarConfig, avatarDataUrl, createRandomAvatarConfig } from 'src/app/core/avatar';
 import { GeneralService } from 'src/app/providers/general.service';
@@ -6,9 +9,11 @@ import { DEFAULT_CLAN, Identity, SessionService } from 'src/app/providers/sessio
 import { SettingsService, UserSettings } from 'src/app/providers/settings.service';
 
 @Component({
-  selector: 'app-profile',
-  templateUrl: './profile.page.html',
-  styleUrls: ['./profile.page.scss'],
+    selector: 'app-profile',
+    templateUrl: './profile.page.html',
+    styleUrls: ['./profile.page.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    imports: [CommonModule, FormsModule, IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonInput, IonItem, IonSelect, IonSelectOption, IonTitle, IonToggle, IonToolbar],
 })
 export class ProfilePage implements OnInit, OnDestroy {
   @ViewChild('fileInput') fileInput: ElementRef<HTMLInputElement>;
@@ -20,7 +25,7 @@ export class ProfilePage implements OnInit, OnDestroy {
   avatar: AvatarConfig;
   preview = '';
   settings: UserSettings;
-  form = { fullname: '', username: '', phone: '', clan: DEFAULT_CLAN };
+  form = { fullname: '', username: '', phone: '', clan: DEFAULT_CLAN, paypal_email: '' };
   busy = false;
   private subs = new Subscription();
 
@@ -36,7 +41,7 @@ export class ProfilePage implements OnInit, OnDestroy {
         this.me = id;
         this.avatar = { ...id.avatarConfig };
         this.preview = id.avatarUrl;
-        this.form = { fullname: id.fullname, username: id.username, phone: id.phone, clan: id.clan };
+        this.form = { fullname: id.fullname, username: id.username, phone: id.phone, clan: id.clan, paypal_email: id.paypalEmail };
       })
     );
     this.subs.add(this.settingsService.settings$.subscribe((s) => (this.settings = s)));

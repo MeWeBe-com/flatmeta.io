@@ -254,6 +254,9 @@
 
         ion-input {
           --color: var(--flatmeta-text-primary);
+          // Ionic 8 inputs default to 44px tall with no start padding
+          min-height: 38px;
+          --padding-start: 8px;
           font-size: 14px;
         }
       }
@@ -334,4 +337,11 @@
   a {
     color: #38bdf8;
   }
+}
+
+.field-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--flatmeta-text-muted);
 }

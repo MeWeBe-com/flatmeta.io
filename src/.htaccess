@@ -1,0 +1,17 @@
+# For Apache hosting (e.g. HestiaCP's default nginx + Apache stack); nginx-only servers
+# use the try_files rule in flatmetaAPI/deploy/nginx-flatmeta.io.conf instead.
+
+# Every map link (/u/name, /at/..., /home, /thankyou...) is handled by the app.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# Always fetch the latest index.html and service-worker manifest, so updates reach people.
+<IfModule mod_headers.c>
+  <FilesMatch "^(index\.html|ngsw\.json|ngsw-worker\.js)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

@@ -1,6 +1,7 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
-import { AlertController } from '@ionic/angular';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Router, RouterLink } from '@angular/router';
+import { AlertController, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonRouterLink, IonTitle, IonToolbar } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { distinctUntilChanged, map, skip } from 'rxjs/operators';
 import { GeneralService } from 'src/app/providers/general.service';
@@ -12,9 +13,11 @@ import { PaymentService } from 'src/app/providers/payment.service';
 type Filter = 'recent' | 'popular' | 'promoted';
 
 @Component({
-  selector: 'app-salelist',
-  templateUrl: './salelist.page.html',
-  styleUrls: ['./salelist.page.scss'],
+    selector: 'app-salelist',
+    templateUrl: './salelist.page.html',
+    styleUrls: ['./salelist.page.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    imports: [CommonModule, RouterLink, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonRouterLink, IonTitle, IonToolbar],
 })
 export class SalelistPage implements OnInit, OnDestroy {
   listings: LandArea[] = [];

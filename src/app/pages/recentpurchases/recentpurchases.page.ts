@@ -1,14 +1,18 @@
-import { Component } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonRouterLink, IonTitle, IonToolbar } from '@ionic/angular';
+import { Router, RouterLink } from '@angular/router';
 import { GeneralService } from 'src/app/providers/general.service';
 import { EventsService } from 'src/app/providers/events.service';
 import { LandArea, LandService } from 'src/app/providers/land.service';
 
 /** "Latest tile lands created by other users": click one to fly there. */
 @Component({
-  selector: 'app-recentpurchases',
-  templateUrl: './recentpurchases.page.html',
-  styleUrls: ['./recentpurchases.page.scss'],
+    selector: 'app-recentpurchases',
+    templateUrl: './recentpurchases.page.html',
+    styleUrls: ['./recentpurchases.page.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    imports: [CommonModule, RouterLink, IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonRouterLink, IonTitle, IonToolbar],
 })
 export class RecentpurchasesPage {
   areas: LandArea[] = [];

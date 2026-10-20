@@ -1,16 +1,35 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonRouterLink, IonTitle, IonToolbar } from '@ionic/angular';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LandService } from 'src/app/providers/land.service';
 
-/** PayPal returns here after a subscription or marketplace purchase. */
+/**
+ * PayPal returns here (via the API) after a rent subscription or a marketplace
+ * purchase, with ?kind=rent|sale&status=ok|cancelled|problem&message=...
+ */
 @Component({
-  selector: 'app-thankyou',
-  templateUrl: './thankyou.page.html',
-  styleUrls: ['./thankyou.page.scss'],
+    selector: 'app-thankyou',
+    templateUrl: './thankyou.page.html',
+    styleUrls: ['./thankyou.page.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    imports: [CommonModule, RouterLink, IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonRouterLink, IonTitle, IonToolbar],
 })
 export class ThankyouPage {
-  constructor(private land: LandService) {}
+  kind: 'rent' | 'sale' = 'rent';
+  status: 'ok' | 'cancelled' | 'problem' = 'ok';
+  message = '';
+
+  constructor(private land: LandService, private route: ActivatedRoute) {}
 
   ionViewWillEnter() {
+    const q = this.route.snapshot.queryParamMap;
+    this.kind = q.get('kind') === 'sale' ? 'sale' : 'rent';
+    const status = q.get('status');
+    this.status = status === 'cancelled' || status === 'problem' ? status : 'ok';
+    // Shown with text interpolation only (never as HTML), and kept short.
+    this.message = (q.get('message') || '').slice(0, 300);
     this.land.refresh();
+    this.land.refreshMine();
   }
 }

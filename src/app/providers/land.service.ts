@@ -94,6 +94,17 @@ export interface LandArea {
   draft: boolean;
   official: boolean;
   tiles: LandTile[];
+  /** Rent for squares past the free 100 (only on my own areas, from MyPlaces). */
+  billing?: AreaBilling;
+}
+
+export interface AreaBilling {
+  /** PayPal subscription state: ACTIVE, CANCELLED, SUSPENDED, or null when none is needed. */
+  subscription: string | null;
+  nextPayment: string | null;
+  paidUntil: string | null;
+  /** Past the free squares with no subscription yet (e.g. bought on the marketplace). */
+  required: boolean;
 }
 
 export interface AreaDetails {
@@ -450,7 +461,17 @@ export class LandService {
       const tiles = (Array.isArray(r?.tiles) ? r.tiles : [])
         .map((t: any) => this.fromApi({ ...r, ...t, order_id: r.order_id ?? r.id, span_bounds: t.span_bounds ?? r.span_bounds }))
         .filter((t: LandTile | null): t is LandTile => !!t);
-      if (tiles.length) out.push(this.buildArea(String(r.order_id ?? r.id), tiles));
+      if (!tiles.length) continue;
+      const area = this.buildArea(String(r.order_id ?? r.id), tiles);
+      if ('subscription_status' in r || 'billing_required' in r) {
+        area.billing = {
+          subscription: r.subscription_status || null,
+          nextPayment: r.next_due_date || null,
+          paidUntil: r.paid_until || null,
+          required: !!r.billing_required,
+        };
+      }
+      out.push(area);
     }
     return out;
   }
@@ -848,6 +869,15 @@ export class LandService {
   }
 
   /** Starts a marketplace purchase. Ownership moves once the PayPal checkout completes. */
+  /** Sets up monthly rent for land past the free squares (e.g. land bought on the marketplace). */
+  async startBilling(orderId: string): Promise<ActionResult> {
+    const res = await this.http.postAsync('StartBilling', { order_id: orderId });
+    if (res?.status === true) {
+      return { ok: true, paymentUrl: res.data?.url || null, message: res.data?.message || 'Continue to PayPal.' };
+    }
+    return { ok: false, message: this.errorMessage(res, 'Could not start billing.') };
+  }
+
   async buy(orderId: string): Promise<ActionResult> {
     if (this.session.isGuest) {
       return { ok: false, needsAuth: true, message: 'Verify your email to buy land.' };

@@ -3,7 +3,6 @@ export const environment = {
   apiUrl: 'http://localhost:8000/api/',
   socketUrl: 'ws://localhost:3500',
   wsUrl: 'ws://localhost:3500',
-  mapboxToken: 'pk.eyJ1IjoiaWRldmUiLCJhIjoiY2wxZ2o1cnlhMWFjbTNkcGNpbGZ3djI1bSJ9.H-6HJziV9Wu75UT4gQu5Bw',
   /** Link to the FlatMeta how-to video; the welcome popup hides the link while empty. */
   howToVideoUrl: '',
   fallbackAvatar: 'assets/icon/avatar-default.svg',

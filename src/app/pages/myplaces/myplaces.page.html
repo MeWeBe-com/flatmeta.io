@@ -61,6 +61,11 @@
       </ion-button>
     </div>
 
+    <div class="billing-links" *ngIf="!session.isGuest">
+      <a [href]="manageUrl" target="_blank" rel="noopener">Manage or cancel PayPal subscriptions</a>
+      <span *ngIf="payments.length"> · {{ payments.length }} payment{{ payments.length === 1 ? '' : 's' }} on record</span>
+    </div>
+
     <!-- Portfolio Grid -->
     <div class="portfolio-grid" *ngIf="areas.length">
       <div class="portfolio-card meta-card" *ngFor="let c of areas; let i = index">
@@ -103,6 +108,19 @@
               <span class="m-lbl">Asking price</span>
               <span class="m-val highlight">{{ c.on_sale ? ('$' + c.total_sale_value.toFixed(2) + ' total') : 'Not listed' }}</span>
             </div>
+            <div class="metric-item" *ngIf="c.billing?.subscription as sub">
+              <span class="m-lbl">Monthly rent</span>
+              <span class="m-val" [class.warn]="sub !== 'ACTIVE'">
+                {{ sub === 'ACTIVE' ? 'Active' + (c.billing?.nextPayment ? ' · next payment ' + ($safeNavigationMigration(c.billing?.nextPayment) | date: 'mediumDate') : '')
+                  : sub === 'SUSPENDED' ? 'Payment failed · update PayPal by ' + ($safeNavigationMigration(c.billing?.paidUntil) | date: 'mediumDate')
+                  : 'Cancelled · land kept until ' + ($safeNavigationMigration(c.billing?.paidUntil) | date: 'mediumDate') }}
+              </span>
+            </div>
+          </div>
+
+          <div class="billing-alert" *ngIf="c.billing?.required">
+            <span>This land takes you past your {{ FREE_TILE_QUOTA }} free squares. Set up monthly billing ($0.10 per extra square, first payment in a month) to keep it.</span>
+            <ion-button size="small" [disabled]="busy" (click)="startBilling(c)">Set up billing</ion-button>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto;">
@@ -193,7 +211,8 @@
             <ion-icon name="information-circle-outline"></ion-icon>
             <span>
               Buyer pays <strong>${{ ((form.sale_price || 0) * selected.no_of_tiles).toFixed(2) }}</strong>;
-              you receive ${{ ((form.sale_price || 0) * selected.no_of_tiles * (1 - COMMISSION)).toFixed(2) }} after FlatMeta's {{ COMMISSION * 100 }}% fee.
+              you receive ${{ ((form.sale_price || 0) * selected.no_of_tiles * (1 - COMMISSION)).toFixed(2) }} after FlatMeta's {{ COMMISSION * 100 }}% fee,
+              paid by PayPal to {{ session.identity.paypalEmail }}.
             </span>
           </div>
 

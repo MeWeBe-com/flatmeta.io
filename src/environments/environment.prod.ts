@@ -1,9 +1,9 @@
 export const environment = {
   production: true,
   apiUrl: 'https://api.flatmeta.io/api/',
-  socketUrl: 'wss://api.flatmeta.io:3500',
-  wsUrl: 'wss://api.flatmeta.io:3500',
-  mapboxToken: 'pk.eyJ1IjoiaWRldmUiLCJhIjoiY2wxZ2o1cnlhMWFjbTNkcGNpbGZ3djI1bSJ9.H-6HJziV9Wu75UT4gQu5Bw',
+  /** Real-time server, proxied by nginx on the API host (deploy/nginx-api.flatmeta.io.conf). */
+  socketUrl: 'wss://api.flatmeta.io/ws',
+  wsUrl: 'wss://api.flatmeta.io/ws',
   /** Link to the FlatMeta how-to video; the welcome popup hides the link while empty. */
   howToVideoUrl: '',
   fallbackAvatar: 'assets/icon/avatar-default.svg',

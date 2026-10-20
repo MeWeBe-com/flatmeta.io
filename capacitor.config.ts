@@ -5,8 +5,8 @@ const config: CapacitorConfig = {
   appName: 'FlatMeta',
   webDir: 'www',
   server: {
+    // The app talks to https://api.flatmeta.io and wss://api.flatmeta.io/ws only; no plain-HTTP traffic.
     androidScheme: 'https',
-    cleartext: true,
   },
 };
 

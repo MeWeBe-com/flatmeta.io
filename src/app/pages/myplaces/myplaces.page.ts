@@ -1,16 +1,22 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
-import { AlertController, IonRouterOutlet } from '@ionic/angular';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { AlertController, IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonIcon, IonInput, IonModal, IonRouterLink, IonRouterOutlet, IonTextarea, IonTitle, IonToggle, IonToolbar } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { GeneralService } from 'src/app/providers/general.service';
 import { EventsService } from 'src/app/providers/events.service';
 import { LandArea, LandService, PortfolioStats, FREE_TILE_QUOTA, PLATFORM_COMMISSION_RATE } from 'src/app/providers/land.service';
 import { SessionService } from 'src/app/providers/session.service';
+import { HttpService } from 'src/app/providers/http.service';
+import { PaymentService } from 'src/app/providers/payment.service';
 
 @Component({
-  selector: 'app-myplaces',
-  templateUrl: './myplaces.page.html',
-  styleUrls: ['./myplaces.page.scss'],
+    selector: 'app-myplaces',
+    templateUrl: './myplaces.page.html',
+    styleUrls: ['./myplaces.page.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    imports: [CommonModule, FormsModule, RouterLink, IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonIcon, IonInput, IonModal, IonRouterLink, IonTextarea, IonTitle, IonToggle, IonToolbar],
 })
 export class MyplacesPage implements OnInit, OnDestroy {
   readonly FREE_TILE_QUOTA = FREE_TILE_QUOTA;
@@ -21,6 +27,8 @@ export class MyplacesPage implements OnInit, OnDestroy {
   selected: LandArea | null = null;
   form = { area_title: '', slug: '', three_words: '', custom_details: '', on_sale: false, sale_price: 1 };
   busy = false;
+  payments: any[] = [];
+  manageUrl = 'https://www.paypal.com/myaccount/autopay/';
   private subs = new Subscription();
 
   constructor(
@@ -30,7 +38,9 @@ export class MyplacesPage implements OnInit, OnDestroy {
     private events: EventsService,
     private land: LandService,
     private router: Router,
-    private alerts: AlertController
+    private alerts: AlertController,
+    private http: HttpService,
+    private paymentsService: PaymentService
   ) {
     this.stats = land.stats$.value;
   }
@@ -46,6 +56,24 @@ export class MyplacesPage implements OnInit, OnDestroy {
 
   ionViewWillEnter() {
     this.land.refreshMine();
+    this.loadPayments();
+  }
+
+  async loadPayments() {
+    if (this.session.isGuest) return;
+    const res = await this.http.getAsync('MyPayments');
+    if (res?.status === true) {
+      this.payments = res.data?.payments || [];
+      if (res.data?.manage_url) this.manageUrl = res.data.manage_url;
+    }
+  }
+
+  async startBilling(area: LandArea) {
+    this.busy = true;
+    const res = await this.land.startBilling(area.order_id);
+    this.busy = false;
+    if (res.ok && res.paymentUrl) this.paymentsService.open(res.paymentUrl);
+    else this.general.presentToast(res.message);
   }
 
   refresh() {

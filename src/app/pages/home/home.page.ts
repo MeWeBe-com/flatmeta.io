@@ -1,4 +1,8 @@
-import { ChangeDetectorRef, Component, HostListener, NgZone, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, NgZone, OnDestroy, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { QuillEditorComponent } from 'ngx-quill';
+import { IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonIcon, IonModal, IonSegment, IonSegmentButton, IonTitle, IonToggle, IonToolbar } from '@ionic/angular';
 import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import { Geolocation } from '@capacitor/geolocation';
@@ -48,9 +52,11 @@ const LAST_POSITION_KEY = 'flatmeta_last_position';
 const geocoder = new GeoSearch.OpenStreetMapProvider();
 
 @Component({
-  selector: 'app-home',
-  templateUrl: './home.page.html',
-  styleUrls: ['./home.page.scss'],
+    selector: 'app-home',
+    templateUrl: './home.page.html',
+    styleUrls: ['./home.page.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    imports: [CommonModule, FormsModule, IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonIcon, IonModal, IonSegment, IonSegmentButton, IonTitle, IonToggle, IonToolbar, QuillEditorComponent],
 })
 export class HomePage implements OnDestroy {
   @ViewChild('mapEl', { static: true }) mapEl: ElementRef<HTMLElement>;

@@ -108,7 +108,7 @@
               </span>
             </div>
             <span class="r-desc" style="font-family: monospace; margin-top: 3px;">
-              {{ p.fileName }} • by @{{ p.author }} • {{ p.createdAt }}
+              {{ p.fileName }} • by &#64;{{ p.author }} • {{ p.createdAt }}
             </span>
           </div>
           <ion-button size="small" [fill]="p.votedByMe ? 'solid' : 'outline'" color="primary" (click)="toggleVote(p)">

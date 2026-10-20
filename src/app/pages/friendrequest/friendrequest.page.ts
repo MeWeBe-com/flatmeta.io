@@ -1,4 +1,6 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonTitle, IonToolbar } from '@ionic/angular';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { GeneralService } from 'src/app/providers/general.service';
@@ -8,9 +10,11 @@ import { Citizen, PresenceService } from 'src/app/providers/presence.service';
 import { SessionService } from 'src/app/providers/session.service';
 
 @Component({
-  selector: 'app-friendrequest',
-  templateUrl: './friendrequest.page.html',
-  styleUrls: ['./friendrequest.page.scss'],
+    selector: 'app-friendrequest',
+    templateUrl: './friendrequest.page.html',
+    styleUrls: ['./friendrequest.page.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    imports: [CommonModule, IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonTitle, IonToolbar],
 })
 export class FriendrequestPage implements OnInit, OnDestroy {
   requests: FriendRequest[] = [];

@@ -1,15 +1,18 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { IonIcon, IonLabel, IonTabBar, IonTabButton, IonTabs } from '@ionic/angular';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { GeneralService } from '../providers/general.service';
 import { EventsService } from '../providers/events.service';
 
-const NON_MAP_PAGES = /^\/(myplaces|salelist|profile|friendrequest|thankyou|opensource|recentpurchases)(\/|\?|$)/;
+const NON_MAP_PAGES = /^\/(myplaces|salelist|profile|friendrequest|thankyou|opensource|recentpurchases|terms|privacy|refunds)(\/|\?|$)/;
 
 @Component({
-  selector: 'app-tabs',
-  templateUrl: 'tabs.page.html',
-  styleUrls: ['tabs.page.scss'],
+    selector: 'app-tabs',
+    templateUrl: 'tabs.page.html',
+    styleUrls: ['tabs.page.scss'],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    imports: [IonIcon, IonLabel, IonTabBar, IonTabButton, IonTabs],
 })
 export class TabsPage {
   onMap = true;

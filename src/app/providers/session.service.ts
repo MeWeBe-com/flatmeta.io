@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
-import { take } from 'rxjs/operators';
+import { BehaviorSubject, Observable, Subject, firstValueFrom } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { AvatarConfig, avatarDataUrl, createRandomAvatarConfig, sanitizeAvatarConfig } from '../core/avatar';
 
@@ -15,6 +14,7 @@ export interface ApiUser {
   status?: string;
   phone?: string;
   clan?: string;
+  paypal_email?: string;
   avatar_config?: AvatarConfig | string | null;
 }
 
@@ -32,6 +32,8 @@ export interface Identity {
   email: string;
   clan: string;
   phone: string;
+  /** Where marketplace sale money is paid (PayPal account email). */
+  paypalEmail: string;
   avatarConfig: AvatarConfig;
   /** Rendered avatar (SVG data URI or uploaded photo URL). */
   avatarUrl: string;
@@ -183,7 +185,7 @@ export class SessionService {
   // Profile & avatar
   // ---------------------------------------------------------------------------
 
-  async updateProfile(changes: { fullname?: string; username?: string; email?: string; phone?: string; clan?: string }) {
+  async updateProfile(changes: { fullname?: string; username?: string; email?: string; phone?: string; clan?: string; paypal_email?: string }) {
     const clean = {
       ...changes,
       username: changes.username !== undefined ? this.cleanHandle(changes.username) : undefined,
@@ -284,6 +286,7 @@ export class SessionService {
         email: this.user.email || '',
         clan: this.user.clan || DEFAULT_CLAN,
         phone: this.user.phone || '',
+        paypalEmail: this.user.paypal_email || this.user.email || '',
         avatarConfig,
         avatarUrl: avatarDataUrl(avatarConfig),
       };
@@ -297,6 +300,7 @@ export class SessionService {
       email: '',
       clan: DEFAULT_CLAN,
       phone: '',
+      paypalEmail: '',
       avatarConfig: this.guest.avatarConfig,
       avatarUrl: avatarDataUrl(this.guest.avatarConfig),
     };
@@ -365,7 +369,7 @@ export class SessionService {
     try {
       const req$: Observable<any> =
         method === 'GET' ? this.http.get(this.apiUrl + path, { headers }) : this.http.post(this.apiUrl + path, body ?? {}, { headers });
-      return await req$.pipe(take(1)).toPromise();
+      return await firstValueFrom(req$, { defaultValue: undefined });
     } catch (err: any) {
       if (err?.status === 401) return { status: false, __unauthorized: true, message: 'Please sign in again.' };
       return { status: false, message: err?.error?.message || 'Network error. Please try again.' };
