@@ -5,6 +5,8 @@ const API = process.env.API_INTERNAL_URL ?? 'http://127.0.0.1:4000';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // scripts/deploy.sh builds into a side directory, then swaps it in.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   images: { unoptimized: true },
   // In production nginx routes /api and /media before they reach Next; these rewrites make dev (and a bare `next start`) work the same way.
   async rewrites() {

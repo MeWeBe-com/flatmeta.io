@@ -1,0 +1,24 @@
+name: CI
+on:
+  push:
+    branches: [v2, main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      # No API in CI: pages that read it at build time fall back gracefully and revalidate at runtime.
+      API_INTERNAL_URL: http://127.0.0.1:9
+      NEXT_PUBLIC_SITE_URL: https://flatmeta.io
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build

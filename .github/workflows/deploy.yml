@@ -1,0 +1,51 @@
+name: Deploy
+# Push to v2 → staging. Manual run → choose staging or production.
+# Needs repo secrets: DEPLOY_HOST, DEPLOY_USER, DEPLOY_KEY (private key), DEPLOY_PATH (e.g. /srv/flatmeta).
+# Skips cleanly while the secrets are not set. Deploy the API first when a change spans both repos.
+on:
+  push:
+    branches: [v2]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [staging, production]
+        default: staging
+
+concurrency:
+  group: deploy-web-${{ github.event.inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    env:
+      APP_ENV: ${{ github.event.inputs.environment || 'staging' }}
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+    steps:
+      - name: Check deploy secrets
+        id: check
+        run: |
+          if [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_USER" ] || [ -z "$DEPLOY_PATH" ]; then
+            echo "Deploy secrets are not set yet; skipping deploy."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Set up SSH
+        if: steps.check.outputs.skip != 'true'
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+      - name: Deploy over SSH
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          if [ "$APP_ENV" = "production" ]; then DIR="$DEPLOY_PATH/web"; else DIR="$DEPLOY_PATH/staging/web"; fi
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" \
+            "set -e; cd '$DIR' && git fetch --all --prune --quiet && APP_ENV='$APP_ENV' bash scripts/deploy.sh '${{ github.sha }}'"

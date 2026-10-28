@@ -13,3 +13,5 @@ coverage/
 public/vendor/
 test-results/
 playwright-report/
+.next-build/
+.next-prev/
