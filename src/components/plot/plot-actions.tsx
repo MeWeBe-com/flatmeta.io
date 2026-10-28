@@ -111,7 +111,7 @@ export function PlotActions({ plot: initial }: { plot: Plot }) {
         <Flag size={12} /> {t('plot.report')}
       </button>
       <Modal open={report} onClose={() => setReport(false)} title="Report this plot">
-        <p className="text-sm muted mb-3">Tell us what's wrong. Reports are confidential.</p>
+        <p className="text-sm muted mb-3">Tell us what’s wrong. Reports are confidential.</p>
         <textarea className="input" rows={4} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. offensive image, scam link, impersonation…" />
         <button className="btn-danger w-full mt-3" disabled={reason.trim().length < 3} onClick={() => void sendReport()}>Send report</button>
       </Modal>

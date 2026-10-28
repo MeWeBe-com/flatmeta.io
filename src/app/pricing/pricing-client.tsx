@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check } from 'lucide-react';
@@ -36,7 +37,7 @@ export function PricingClient({ data }: { data: Plans }) {
     setBusy(plan);
     try {
       const r = await post<{ url: string }>('/billing/checkout', { plan, interval: yearly ? 'year' : 'month', orgId });
-      window.location.href = r.url;
+      window.location.assign(r.url);
     } catch (e) {
       toast({ kind: 'error', title: e instanceof ApiError ? e.message : 'Checkout unavailable' });
     } finally {
@@ -72,7 +73,7 @@ export function PricingClient({ data }: { data: Plans }) {
                 ))}
               </ul>
               {p.key === 'free' ? (
-                <a href="/?claim" className="btn-ghost mt-6">Claim your free plot</a>
+                <Link href="/?claim" className="btn-ghost mt-6">Claim your free plot</Link>
               ) : (
                 <button className={clsx('mt-6', highlight ? 'btn-primary' : 'btn-ghost')} disabled={busy === p.key} onClick={() => void subscribe(p.key, p.org)}>
                   {busy === p.key && <Spinner />} {p.org ? `Get ${p.name} for my organisation` : `Get ${p.name}`}

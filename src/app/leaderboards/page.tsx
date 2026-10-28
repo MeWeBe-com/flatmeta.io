@@ -14,7 +14,7 @@ export default async function LeaderboardsPage() {
       <div id="main" className="space-y-8">
         <div>
           <h1 className="text-4xl md:text-5xl font-bold">Leaderboards</h1>
-          <p className="muted mt-2">Weekly boards reset every Monday. Top 10 each week earn a badge. XP can't be bought.</p>
+          <p className="muted mt-2">Weekly boards reset every Monday. Top 10 each week earn a badge. XP can’t be bought.</p>
         </div>
         <Suspense>
           <LeaderboardClient countries={countries?.countries ?? []} />

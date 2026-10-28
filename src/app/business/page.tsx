@@ -48,7 +48,7 @@ export default async function BusinessPage() {
         <section className="space-y-6">
           <div className="max-w-2xl">
             <h2 className="text-3xl font-bold">Brands: your landmark is waiting</h2>
-            <p className="muted mt-2">We've built sample showcase plots for well-known organisations to show what's possible. They're clearly labelled as unclaimed and not affiliated. If one is yours, verify with your work email and make it official, or ask us to remove it.</p>
+            <p className="muted mt-2">We’ve built sample showcase plots for well-known organisations to show what’s possible. They’re clearly labelled as unclaimed and not affiliated. If one is yours, verify with your work email and make it official, or ask us to remove it.</p>
           </div>
           {showcase && <PlotGrid plots={showcase.plots} />}
           <div className="surface p-6 flex flex-col md:flex-row gap-4 md:items-center">

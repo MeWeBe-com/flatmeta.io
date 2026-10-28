@@ -14,7 +14,7 @@ export default function AdminOrders() {
   const [status, setStatus] = useState('');
   const { toast } = useGame();
   const load = () => void api<{ orders: Order[] }>(`/admin/orders?limit=100${status ? `&status=${status}` : ''}`).then((r) => setOrders(r.orders));
-  useEffect(load, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(load, [status]);
   const refund = async (o: Order) => {
     const reason = prompt('Refund reason', 'Customer request');
     if (reason === null) return;

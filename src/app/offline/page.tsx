@@ -11,6 +11,8 @@ export default function Offline() {
         <Logo size={40} className="justify-center" />
         <h1 className="text-2xl font-bold">You’re offline</h1>
         <p className="muted">The world will still be here. Check your connection and try again; pages you’ve visited recently are still available.</p>
+        {/* A full reload on purpose: client navigation would not retry the network. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a href="/" className="btn-primary inline-flex">Try again</a>
       </div>
     </main>

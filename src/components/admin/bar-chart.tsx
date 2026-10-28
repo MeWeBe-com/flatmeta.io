@@ -9,10 +9,11 @@ import { useState } from 'react';
  */
 export function DailyBars({ title, data, days = 14, format = (v: number) => String(v), color = 'var(--color-teal)' }: { title: string; data: { day: string; value: number }[]; days?: number; format?: (v: number) => string; color?: string }) {
   const [hover, setHover] = useState<number | null>(null);
+  const [now] = useState(() => Date.now());
   const series: { day: string; value: number }[] = [];
   const byDay = new Map(data.map((d) => [d.day, d.value]));
   for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400_000).toISOString().slice(0, 10);
+    const d = new Date(now - i * 86400_000).toISOString().slice(0, 10);
     series.push({ day: d, value: byDay.get(d) ?? 0 });
   }
   const max = Math.max(1, ...series.map((s) => s.value));

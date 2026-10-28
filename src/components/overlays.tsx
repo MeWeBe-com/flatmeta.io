@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { Mail, Sparkles, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 import { ApiError, post } from '@/lib/api';
@@ -148,7 +149,7 @@ function SignInDialog() {
               {t('auth.google')}
             </a>
           )}
-          <p className="text-[11px] muted text-center">By continuing you agree to our <a className="underline" href="/legal/terms">Terms</a> and <a className="underline" href="/legal/privacy">Privacy policy</a>.</p>
+          <p className="text-[11px] muted text-center">By continuing you agree to our <Link className="underline" href="/legal/terms">Terms</Link> and <Link className="underline" href="/legal/privacy">Privacy policy</Link>.</p>
         </form>
       ) : (
         <form

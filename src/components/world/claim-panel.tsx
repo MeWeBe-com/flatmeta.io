@@ -80,7 +80,7 @@ export function ClaimPanel({
     try {
       const r = await post<{ plot?: Plot; game?: GameResult; checkoutUrl?: string }>('/plots/claim', { rect: selection, ...(title.trim().length >= 2 ? { title: title.trim() } : {}) });
       if (r.checkoutUrl) {
-        window.location.href = r.checkoutUrl;
+        window.location.assign(r.checkoutUrl);
         return;
       }
       if (r.plot) {
