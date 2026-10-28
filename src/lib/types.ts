@@ -61,6 +61,8 @@ export interface Plot {
   guestbookCount: number;
   spotlight: boolean;
   beacon: boolean;
+  spotlightUntil: string | null;
+  beaconUntil: string | null;
   dormant: boolean;
   brokenLinks: string[];
   threeWords: string;
