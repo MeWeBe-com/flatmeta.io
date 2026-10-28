@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   openGraph: { type: 'website', siteName: 'FlatMeta', title: `${t('app.name')} · ${t('app.tagline')}`, description: t('app.description') },
   twitter: { card: 'summary_large_image' },
   appleWebApp: { capable: true, title: 'FlatMeta', statusBarStyle: 'black-translucent' },
-  icons: { icon: [{ url: '/icons/icon-192.png', sizes: '192x192' }, { url: '/favicon.svg', type: 'image/svg+xml' }], apple: '/icons/apple-touch-icon.png' },
+  icons: { icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }, { url: '/icons/icon-192.png', sizes: '192x192' }], apple: '/icons/apple-touch-icon.png' },
 };
 
 export const viewport: Viewport = {
