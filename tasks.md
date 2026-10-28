@@ -18,48 +18,48 @@ Repos: **web** = `flatmeta.io` · **api** = `flatmetaAPI` (both on branch `v2`).
 
 | | Task | Owner | Status |
 | --- | --- | --- | --- |
-| [ ] | P1-A1 Scaffold: TS, Fastify, config (zod env), logging, docker-compose, ecosystem, .env.example | claude-lead | todo |
-| [ ] | P1-A2 DB schema (Drizzle) + migrations + extensions | claude-lead | todo |
-| [ ] | P1-A3 Seeds: pricing tiers, countries, featured cities, admin, HQ + demo plots | claude-lead | todo |
-| [ ] | P1-A4 Libs: grid, geo (country lookup), pricing/tiers, slug, markdown sanitising, storage, mail | claude-lead | todo |
-| [ ] | P1-A5 Auth: email codes, sessions, API keys, Google OAuth (optional), rate limits | claude-lead | todo |
-| [ ] | P1-A6 Plots: world bbox, quote, claim, update, publish, media upload, neighbours | claude-lead | todo |
-| [ ] | P1-A7 Regions + countries + search (incl. geocoder) | claude-lead | todo |
-| [ ] | P1-A8 Game: XP, levels, achievements, quests, leaderboards, check-in | claude-lead | todo |
-| [ ] | P1-A9 Social: likes, visits, waves, guestbook, follows, notifications, reports | claude-lead | todo |
-| [ ] | P1-A10 Live: activity feed + WebSocket + presence | claude-lead | todo |
-| [ ] | P1-A11 Stripe: checkout (land/upgrade/landmark/credits/plans), webhook, portal, mock mode | claude-lead | todo |
-| [ ] | P1-A12 Organisations: create, members, invites, verification | claude-lead | todo |
-| [ ] | P1-A13 AI layer: text providers, image providers (procedural art), moderation, designer, search intent, suggestions, credits | claude-lead | todo |
-| [ ] | P1-A14 Showcase generator + CLI + external image import; run first batch | claude-lead | todo |
-| [ ] | P1-A15 Showcase claim + takedown flows | claude-lead | todo |
-| [ ] | P1-A16 Admin API (stats, users, plots, moderation, orders/refunds, pricing, showcase, claims, takedowns, audit) | claude-lead | todo |
-| [ ] | P1-A17 OpenAPI + Swagger UI | claude-lead | todo |
-| [ ] | P1-A18 MCP server (HTTP + stdio) | claude-lead | todo |
-| [ ] | P1-A19 Worker: repeatable jobs (expiry, stats, leaderboards, link checks, dormant, image import, cleanup) | claude-lead | todo |
-| [ ] | P1-A20 Tests (Vitest, real Postgres/Redis) | claude-lead | todo |
-| [ ] | P1-A21 CI + deploy workflow + deploy/backup scripts + README (Ubuntu setup) | claude-lead | todo |
+| [x] | P1-A1 Scaffold: TS, Fastify, config (zod env), logging, docker-compose, ecosystem, .env.example | claude-lead | done |
+| [x] | P1-A2 DB schema (Drizzle) + migrations + extensions | claude-lead | done |
+| [x] | P1-A3 Seeds: pricing tiers, countries, featured cities, admin, HQ + demo plots | claude-lead | done |
+| [x] | P1-A4 Libs: grid, geo (country lookup), pricing/tiers, slug, markdown sanitising, storage, mail | claude-lead | done |
+| [x] | P1-A5 Auth: email codes, sessions, API keys, Google OAuth (optional), rate limits | claude-lead | done |
+| [x] | P1-A6 Plots: world bbox, quote, claim, update, publish, media upload, neighbours | claude-lead | done |
+| [x] | P1-A7 Regions + countries + search (incl. geocoder) | claude-lead | done |
+| [x] | P1-A8 Game: XP, levels, achievements, quests, leaderboards, check-in | claude-lead | done |
+| [x] | P1-A9 Social: likes, visits, waves, guestbook, follows, notifications, reports | claude-lead | done |
+| [x] | P1-A10 Live: activity feed + WebSocket + presence | claude-lead | done |
+| [x] | P1-A11 Stripe: checkout (land/upgrade/landmark/credits/plans), webhook, portal, mock mode | claude-lead | done |
+| [x] | P1-A12 Organisations: create, members, invites, verification | claude-lead | done |
+| [x] | P1-A13 AI layer: text providers, image providers (procedural art), moderation, designer, search intent, suggestions, credits | claude-lead | done |
+| [x] | P1-A14 Showcase generator + CLI + external image import; run first batch | claude-lead | done |
+| [x] | P1-A15 Showcase claim + takedown flows | claude-lead | done |
+| [x] | P1-A16 Admin API (stats, users, plots, moderation, orders/refunds, pricing, showcase, claims, takedowns, audit) | claude-lead | done |
+| [x] | P1-A17 OpenAPI + Swagger UI | claude-lead | done |
+| [x] | P1-A18 MCP server (HTTP + stdio) | claude-lead | done |
+| [x] | P1-A19 Worker: repeatable jobs (expiry, stats, leaderboards, link checks, dormant, image import, cleanup) | claude-lead | done |
+| [x] | P1-A20 Tests (Vitest, real Postgres/Redis) | claude-lead | done |
+| [x] | P1-A21 CI + deploy workflow + deploy/backup scripts + README (Ubuntu setup) | claude-lead | done |
 
 ## Phase 1 — Web (`flatmeta.io`)
 
 | | Task | Owner | Status |
 | --- | --- | --- | --- |
-| [ ] | P1-W1 Scaffold: Next.js 16, Tailwind 4, fonts, design tokens, i18n, API client, ecosystem, .env.example | claude-lead | todo |
-| [ ] | P1-W2 UI kit: buttons, chips, sheets, dialogs, toasts, avatar, level ring, XP bar, skeletons, command palette | claude-lead | todo |
-| [ ] | P1-W3 Map: MapLibre globe, custom dark/light styles, plot layers, artwork, beacons, hover/click | claude-lead | todo |
-| [ ] | P1-W4 Claim mode: grid, drag-select, quote, sign-in dialog, free claim, Stripe redirect | claude-lead | todo |
-| [ ] | P1-W5 HUD: XP/level, quest tracker, live ticker, explorers online, toasts, guided tour | claude-lead | todo |
-| [ ] | P1-W6 Search (⌘K) with AI intent | claude-lead | todo |
-| [ ] | P1-W7 Plot mini-page + JSON-LD + OG image + guestbook/likes/share | claude-lead | todo |
-| [ ] | P1-W8 Country / region pages, explore, leaderboards, profiles (user/org) | claude-lead | todo |
-| [ ] | P1-W9 Pricing, business landing, legal pages, login | claude-lead | todo |
-| [ ] | P1-W10 Dashboard: overview, plots, editor + AI designer, progress, orgs, billing, developers | claude-lead | todo |
-| [ ] | P1-W11 Showcase claim wizard + takedown form | claude-lead | todo |
-| [ ] | P1-W12 Admin panel | claude-lead | todo |
-| [ ] | P1-W13 SEO: sitemap, robots, metadata, canonical | claude-lead | todo |
-| [ ] | P1-W14 PWA: manifest, icons, service worker, offline page | claude-lead | todo |
-| [ ] | P1-W15 Tests (Vitest + Playwright smoke), CI, deploy workflow, README | claude-lead | todo |
-| [ ] | P1-W16 QA pass: a11y, performance, mobile, empty states | claude-lead | todo |
+| [x] | P1-W1 Scaffold: Next.js 16, Tailwind 4, fonts, design tokens, i18n, API client, ecosystem, .env.example | claude-lead | done |
+| [x] | P1-W2 UI kit: buttons, chips, sheets, dialogs, toasts, avatar, level ring, XP bar, skeletons, command palette | claude-lead | done |
+| [x] | P1-W3 Map: MapLibre globe, custom dark/light styles, plot layers, artwork, beacons, hover/click | claude-lead | done |
+| [x] | P1-W4 Claim mode: grid, drag-select, quote, sign-in dialog, free claim, Stripe redirect | claude-lead | done |
+| [x] | P1-W5 HUD: XP/level, quest tracker, live ticker, explorers online, toasts, guided tour | claude-lead | done |
+| [x] | P1-W6 Search (⌘K) with AI intent | claude-lead | done |
+| [x] | P1-W7 Plot mini-page + JSON-LD + OG image + guestbook/likes/share | claude-lead | done |
+| [x] | P1-W8 Country / region pages, explore, leaderboards, profiles (user/org) | claude-lead | done |
+| [x] | P1-W9 Pricing, business landing, legal pages, login | claude-lead | done |
+| [x] | P1-W10 Dashboard: overview, plots, editor + AI designer, progress, orgs, billing, developers | claude-lead | done |
+| [x] | P1-W11 Showcase claim wizard + takedown form | claude-lead | done |
+| [x] | P1-W12 Admin panel | claude-lead | done |
+| [x] | P1-W13 SEO: sitemap, robots, metadata, canonical | claude-lead | done |
+| [x] | P1-W14 PWA: manifest, icons, service worker, offline page | claude-lead | done |
+| [x] | P1-W15 Tests (Vitest + Playwright smoke), CI, deploy workflow, README | claude-lead | done |
+| [x] | P1-W16 QA pass: a11y, performance, mobile, empty states (Lighthouse run on staging still to do) | claude-lead | done |
 
 ## Phase 1 — Owner actions (humans)
 
@@ -72,6 +72,17 @@ Repos: **web** = `flatmeta.io` · **api** = `flatmetaAPI` (both on branch `v2`).
 | [ ] | SMTP provider + DNS (SPF/DKIM) for `flatmeta.io` | owner | todo |
 | [ ] | DNS: `flatmeta.io`, `www`, `api`, `staging`, `api.staging` → server | owner | todo |
 | [ ] | Legal review: terms, privacy, showcase/trademark approach | owner | todo |
+| [ ] | Fill the legal placeholders `[COMPANY NAME]`, `[COUNTRY]`, `[CONTACT EMAIL]` in `src/app/legal/[doc]/page.tsx` | owner | todo |
+| [ ] | Stand up the server per README, then run Lighthouse (mobile) on a staging plot page | owner | todo |
+
+## Phase 1 — Follow-ups found during the build
+
+| | Task | Repo | Owner | Status |
+| --- | --- | --- | --- | --- |
+| [ ] | End-to-end Stripe test-mode run with real keys (tested so far: mock checkout and signed webhook payloads) | api | — | todo |
+| [ ] | Verify curated showcase coordinates in admin (written from memory; some may sit a few blocks off) | api | — | todo |
+| [ ] | Self-host map tiles (PMTiles) and the geocoder before heavy traffic | ops | — | todo |
+| [ ] | Translate `messages/en.json` when a second locale is chosen | web | — | todo |
 
 ## Phase 2 — see `docs/03-masterprompt-phase2.md`
 
