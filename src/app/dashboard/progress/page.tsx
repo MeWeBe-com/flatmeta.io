@@ -36,7 +36,7 @@ export default function ProgressPage() {
         <LevelRing level={p.level} progress={p.progress} size={96} />
         <div className="flex-1">
           <h1 className="text-3xl font-bold">{p.title}</h1>
-          <p className="muted">Level {p.level} · {p.xp.toLocaleString()} XP · {p.nextLevelXp - p.xp} XP to next level · {p.streak}-day streak</p>
+          <p className="muted">Level {p.level} · {p.xp.toLocaleString()} XP · {p.nextLevelXp - p.xp} XP to next level · {p.streak > 0 ? `${p.streak}-day streak` : 'Start a streak today'}</p>
           <div className="h-2 rounded-full bg-white/10 mt-3 overflow-hidden max-w-md"><div className="h-full bg-gradient-to-r from-[var(--color-teal)] to-[var(--color-violet)]" style={{ width: `${p.progress * 100}%` }} /></div>
         </div>
       </header>

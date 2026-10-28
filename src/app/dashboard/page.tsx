@@ -52,7 +52,7 @@ export default function DashboardHome() {
         {progress && <LevelRing level={progress.level} progress={progress.progress} size={84} />}
         <div className="flex-1">
           <h1 className="text-2xl font-bold">Welcome back, {u.displayName}</h1>
-          {progress && <p className="muted text-sm mt-1">Level {progress.level} {progress.title} · {progress.nextLevelXp - progress.xp} XP to level {progress.level + 1} · {progress.streak}-day streak</p>}
+          {progress && <p className="muted text-sm mt-1">Level {progress.level} {progress.title} · {progress.nextLevelXp - progress.xp} XP to level {progress.level + 1} · {progress.streak > 0 ? `${progress.streak}-day streak` : 'Start a streak today'}</p>}
         </div>
         <div className="flex gap-2">
           <Link href="/?claim" className="btn-primary"><Compass size={16} /> Claim land</Link>
