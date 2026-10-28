@@ -1,0 +1,197 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/space-grotesk';
+@import 'maplibre-gl/dist/maplibre-gl.css';
+
+/* ───────────── FlatMeta design tokens: "night-flight cartography" ───────────── */
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Space Grotesk Variable', 'Inter Variable', ui-sans-serif, sans-serif;
+
+  --color-night: #0b1020;
+  --color-night-2: #111830;
+  --color-night-3: #18213f;
+  --color-ink: #e8ecf8;
+  --color-muted: #9aa5c7;
+  --color-faint: #5d6890;
+  --color-teal: #2de2c4;
+  --color-gold: #ffc94d;
+  --color-coral: #ff6b6b;
+  --color-violet: #8b7cff;
+  --color-sky: #3fa9f5;
+  --color-leaf: #4ade80;
+
+  --radius-card: 18px;
+  --shadow-glow: 0 0 0 1px rgb(255 255 255 / 0.06), 0 10px 40px -10px rgb(0 0 0 / 0.6);
+  --shadow-teal: 0 0 24px -4px rgb(45 226 196 / 0.55);
+  --shadow-gold: 0 0 24px -4px rgb(255 201 77 / 0.55);
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pop: pop 360ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  --animate-rise: rise 420ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-pulse-ring: pulse-ring 2.2s ease-out infinite;
+
+  @keyframes float { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
+  @keyframes pop { 0% { transform: scale(.85); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
+  @keyframes rise { 0% { transform: translateY(12px); opacity: 0 } 100% { transform: translateY(0); opacity: 1 } }
+  @keyframes shimmer { 0% { background-position: -400px 0 } 100% { background-position: 400px 0 } }
+  @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgb(45 226 196 / .55) } 100% { box-shadow: 0 0 0 18px rgb(45 226 196 / 0) } }
+}
+
+:root {
+  --bg: var(--color-night);
+  --panel: rgb(17 24 48 / 0.78);
+  --panel-solid: #121a35;
+  --line: rgb(255 255 255 / 0.08);
+  --line-strong: rgb(255 255 255 / 0.16);
+  --text: var(--color-ink);
+  --text-muted: var(--color-muted);
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --bg: #f6f1e7;
+  --panel: rgb(255 252 245 / 0.86);
+  --panel-solid: #fffaf0;
+  --line: rgb(20 24 50 / 0.1);
+  --line-strong: rgb(20 24 50 / 0.2);
+  --text: #141832;
+  --text-muted: #5b6185;
+  color-scheme: light;
+}
+
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0.02em; }
+
+::selection { background: rgb(45 226 196 / 0.35); }
+:focus-visible { outline: 2px solid var(--color-teal); outline-offset: 2px; border-radius: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+}
+
+/* ───────────── Reusable surfaces (Tailwind v4 utilities, usable with @apply and variants) ───────────── */
+@utility glass {
+  background: var(--panel);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-glow);
+}
+@utility card {
+  @apply glass rounded-[var(--radius-card)];
+}
+@utility surface {
+  background: var(--panel-solid);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-4 h-10 text-sm font-semibold transition select-none whitespace-nowrap;
+  &:disabled { opacity: .5; pointer-events: none; }
+}
+@utility btn-primary {
+  @apply btn text-[#04141a];
+  background: linear-gradient(135deg, var(--color-teal), #7cf5de);
+  box-shadow: var(--shadow-teal);
+  &:hover { filter: brightness(1.06); transform: translateY(-1px); }
+}
+@utility btn-gold {
+  @apply btn text-[#231600];
+  background: linear-gradient(135deg, var(--color-gold), #ffe08a);
+  box-shadow: var(--shadow-gold);
+  &:hover { filter: brightness(1.05); transform: translateY(-1px); }
+}
+@utility btn-ghost {
+  @apply btn;
+  border: 1px solid var(--line-strong);
+  background: rgb(255 255 255 / 0.04);
+  &:hover { background: rgb(255 255 255 / 0.09); }
+}
+@utility btn-danger {
+  @apply btn text-white bg-[var(--color-coral)];
+}
+@utility btn-lg {
+  @apply h-12 px-6 text-base;
+}
+@utility btn-sm {
+  @apply h-8 px-3 text-xs;
+}
+@utility icon-btn {
+  @apply inline-flex items-center justify-center size-10 rounded-full transition;
+  &:hover { background: rgb(255 255 255 / 0.1); }
+}
+@utility chip {
+  @apply inline-flex items-center gap-1 rounded-full px-2.5 h-6 text-[11px] font-semibold tracking-wide uppercase;
+  background: rgb(255 255 255 / 0.07);
+  border: 1px solid var(--line);
+}
+@utility chip-gold { color: var(--color-gold); border-color: rgb(255 201 77 / 0.35); background: rgb(255 201 77 / 0.1); }
+@utility chip-teal { color: var(--color-teal); border-color: rgb(45 226 196 / 0.35); background: rgb(45 226 196 / 0.08); }
+@utility chip-violet { color: var(--color-violet); border-color: rgb(139 124 255 / 0.35); background: rgb(139 124 255 / 0.1); }
+@utility chip-coral { color: var(--color-coral); border-color: rgb(255 107 107 / 0.35); background: rgb(255 107 107 / 0.1); }
+@utility input {
+  @apply w-full rounded-xl px-3.5 h-11 text-sm outline-none transition;
+  background: rgb(255 255 255 / 0.05);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  &:focus { border-color: var(--color-teal); box-shadow: 0 0 0 3px rgb(45 226 196 / 0.18); }
+  &:is(textarea) { height: auto; padding-top: .75rem; padding-bottom: .75rem; line-height: 1.6; }
+}
+@utility label {
+  @apply block text-xs font-semibold mb-1.5;
+  color: var(--text-muted);
+}
+@utility muted { color: var(--text-muted); }
+@utility skeleton {
+  background: linear-gradient(90deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.04));
+  background-size: 800px 100%;
+  @apply animate-shimmer rounded-xl;
+}
+@utility text-gradient {
+  background: linear-gradient(120deg, var(--color-teal), var(--color-violet) 55%, var(--color-gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@utility prose-plot {
+  @apply text-[15px] leading-relaxed;
+  color: var(--text);
+  & p { margin-bottom: .75rem; }
+  & ul { list-style: disc; padding-left: 1.25rem; margin-bottom: .75rem; }
+  & ol { list-style: decimal; padding-left: 1.25rem; margin-bottom: .75rem; }
+  & li { margin-bottom: .25rem; }
+  & h2, & h3 { font-weight: 600; font-size: 1.125rem; margin: 1rem 0 .5rem; }
+  & a { color: var(--color-teal); text-decoration: underline; text-underline-offset: 3px; }
+  & blockquote { border-left: 2px solid var(--color-violet); padding-left: .75rem; font-style: italic; }
+}
+
+/* Plot frames (cosmetics) */
+.frame-glow { box-shadow: 0 0 0 2px rgb(45 226 196 / .6), 0 0 30px rgb(45 226 196 / .35); }
+.frame-gold { box-shadow: 0 0 0 2px var(--color-gold), 0 0 30px rgb(255 201 77 / .4); }
+.frame-neon { box-shadow: 0 0 0 2px #ff4fd8, 0 0 34px rgb(255 79 216 / .5); }
+.frame-aurora { box-shadow: 0 0 0 2px #7cf5de, 0 0 40px rgb(139 124 255 / .5); }
+.frame-pixel { outline: 3px dashed var(--color-teal); outline-offset: 3px; }
+.frame-royal { box-shadow: 0 0 0 3px #b48cff, 0 0 0 6px rgb(255 201 77 / .6); }
+.frame-cosmic { box-shadow: 0 0 0 2px #fff, 0 0 50px rgb(139 124 255 / .7); }
+.frame-prism { box-shadow: 0 0 0 2px #ff6b6b, 3px 3px 0 2px #ffc94d, 6px 6px 0 2px #2de2c4; }
+.frame-holo { box-shadow: 0 0 0 2px #a5f3fc, 0 0 40px rgb(240 171 252 / .55); }
+
+/* MapLibre tweaks */
+.maplibregl-ctrl-attrib { background: rgb(11 16 32 / 0.6) !important; color: var(--color-muted) !important; font-size: 10px; }
+.maplibregl-ctrl-attrib a { color: var(--color-muted) !important; }
+.maplibregl-canvas:focus-visible { outline: none; }
+.maplibregl-popup-content { background: transparent; box-shadow: none; padding: 0; }
+.maplibregl-popup-tip { display: none; }
+
+/* Confetti */
+.confetti-piece { position: fixed; width: 8px; height: 14px; top: -20px; z-index: 100; pointer-events: none; animation: confetti-fall linear forwards; }
+@keyframes confetti-fall { to { transform: translateY(110vh) rotate(720deg); opacity: .9; } }

@@ -1,8 +1,0 @@
-{
-	"appId": "com.flatmeta.app",
-	"appName": "FlatMeta",
-	"webDir": "www",
-	"server": {
-		"androidScheme": "https"
-	}
-}

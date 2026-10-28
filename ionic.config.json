@@ -1,7 +1,0 @@
-{
-  "name": "leafletmap",
-  "integrations": {
-    "capacitor": {}
-  },
-  "type": "angular"
-}
