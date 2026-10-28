@@ -27,6 +27,18 @@ Each step appends a short summary: what was done, decisions made, what's next.
 
 **Next:** Phase 1 and Phase 2 masterprompts.
 
+## Step 3 — Masterprompts (2026-10-28)
+
+**Done:** `docs/02-masterprompt-phase1.md` (the Phase 1 build spec: architecture, domain rules, data model, REST API, AI layer, MCP, web app, ops, tests, acceptance checklist, order of work) and `docs/03-masterprompt-phase2.md` (10 tracks over ~2 weeks: seasons/events/guilds, marketplace/rentals/plot ads on Stripe Connect, 3D views, brand campaigns + analytics, creator economy, public API platform + webhooks, outreach CRM, AI growth agent, AI support agent, observability/performance/scaling). Created `tasks.md`.
+
+**Decisions:**
+- First showcase batch: GB, US, FR, DE, JP, IN, BR, AE, AU, ES (14 organisations each), curated JSON in `flatmetaAPI/seed/showcase/` written by data agents, with coordinates from memory that admins can correct.
+- The browser calls the API at `/api/*` on the same origin; `api.flatmeta.io` serves docs and MCP.
+- Showcase claims require a work email at the brand's domain, or manual review.
+- The default text model is `claude-opus-5-5` (configurable). The app runs fully without keys (heuristic AI, procedural art, mock payments).
+
+**Next:** build Phase 1 (API first, then web).
+
 ## Open questions
 
 1. The planning gdoc (y3.0 "Logins" tab) is not in the repos. Assumed the login model stays email + one-time code (no passwords), plus optional Google sign-in.
@@ -35,3 +47,5 @@ Each step appends a short summary: what was done, decisions made, what's next.
 4. **Pricing** in the brief ($1–25/cell, Plus $5, Business $29, Brand $249, Landmark claim $990) is a starting proposal; all values are config.
 5. **Plot terms:** plots are a licence to display content, not property. Terms of Service need a lawyer.
 6. **One-time land vs rent:** v1 charged rent; v2 proposes one-time purchases plus subscriptions. Measure repeat revenue early.
+7. **GitHub push access:** pushes to `MeWeBe-com/flatmeta.io` and `MeWeBe-com/flatmetaAPI` fail with 403 (the Claude GitHub App has no write access). Commits are kept locally on `v2` until access is granted.
+8. **AI model costs:** moderation and search intent default to the same model as the designer (`claude-opus-5-5`). Set `ANTHROPIC_MODEL_FAST` (e.g. `claude-haiku-5-5`) to cut cost on high-volume calls.
