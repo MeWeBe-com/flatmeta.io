@@ -8,7 +8,7 @@ set -euo pipefail
 REF="${1:-origin/v2}"
 APP_ENV="${APP_ENV:-production}"
 cd "$(dirname "$0")/.."
-PORT="$(grep -E '^PORT=' .env 2>/dev/null | cut -d= -f2 | tr -d '[:space:]' || true)"
+PORT="$(sed -nE 's/^PORT=([0-9]+).*/\1/p' .env 2>/dev/null | tail -1)"
 PORT="${PORT:-3000}"
 PREV="$(git rev-parse HEAD 2>/dev/null || echo '')"
 
