@@ -86,6 +86,14 @@ Each step appends a short summary: what was done, decisions made, what's next.
 
 **Next:** the remaining Phase 1 tasks in `tasks.md` order: DB additions (listings, ledger, connections, chat, clans, avatar, password), auth password, land content (sandboxed HTML, `/u/`), marketplace, payments provider interface, real-time presence and chat, clans, then web UI for them, `ci.yml` with the deploy job, PM2/Hestia, e2e, polish.
 
+## Step 4 — M1–M2 API completion (2026-10-30)
+
+**Done (`apps/api`):** migration `0002` (listings, ledger_entries, payout_accounts, connections, chat_messages, clans, clan_members, clan_requests, users.avatar/password_hash, plots.custom_html); optional scrypt password sign-in (`/v1/auth/password-login`, `PUT /v1/me/password`) and an avatar field; sandboxed custom HTML (screened, Plus and above, served only as a CSP-wrapped `srcdoc` document); the **marketplace** (list, change price, cancel, buy with Stripe or mock checkout bound to the listing version, 10% fee, append-only zero-sum ledger, automatic refund when the listing changed or sold, 7-day hold and 30-day price-cap rules, homesteads excluded, seller balance, Stripe Connect payouts job, admin overview and manual payouts); a `PaymentProvider` interface (Stripe, Mock; PayPal documented only); the **realtime hub** (Redis geo presence, viewport avatars at 1 Hz, throttled position updates, nearby chat within 2 km, private chat for connections, clan chat, 5 messages per 10 s, moderation, 24 h nearby retention job); **connections** with block/report; **clans** (found at level 2, join requests, invites, officer/leader roles, kick, leadership transfer, leaderboard by member XP, activity and achievements Clan Founder, Together, Ten Strong, Dealmaker). 50 API tests pass (real Postgres, Redis and WebSockets); lint and typecheck clean.
+
+**Decisions:** nearby chat is delivered by distance from the sender (2 km), stored per ~5 km cell for history; guests can read and appear as anonymous avatars but must sign in to write; DMs require an accepted connection; marketplace money is only ever moved by ledger entries that sum to zero per order; payouts are skipped quietly where payments aren't configured; the wire protocol is documented in code comments in `realtime/hub.ts` and will be added to the OpenAPI/README.
+
+**Next:** the web UI for all of this (zoom levels, avatars and walking, chat, connections, marketplace, clans, custom HTML, password and avatar settings, `/u/` fallback), then `ci.yml` with the deploy job, PM2 and the HestiaCP guide, e2e tests, and polish.
+
 ## Open questions
 
 0. **URGENT: rotate the Laravel `APP_KEY`.** `flatmetaAPI/.env.example` (all v1 branches, since commit `363faab`) contains a real key: `APP_KEY=base64:ah1EUh…`. Rotate it on every server that ever ran it. It is removed from `v2`; it stays in v1 history unless you rewrite it.
