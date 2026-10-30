@@ -6,7 +6,7 @@ import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
 import { PLANS, type PlanKey } from '../lib/pricing.js';
 import { notify, publishActivity } from '../game/activity.js';
-import { recordAction } from '../game/engine.js';
+import { recordAction, unlock } from '../game/engine.js';
 import { effectivePlan } from '../lib/users.js';
 import { canEditPlot } from '../routes/views.js';
 import { createCheckout, refundOrder } from './billing.js';
@@ -168,6 +168,7 @@ export async function fulfilListing(order: Order): Promise<'sold' | 'refunded'> 
   const { plot, sellerId } = outcome;
   try {
     await publishActivity({ kind: 'sale', actorUserId: buyerId, plotId: plot.id, countryCode: plot.countryCode, lat: plot.centerLat, lng: plot.centerLng, payload: { title: plot.title, slug: plot.slug, priceCents: order.amountCents } });
+    if (sellerId) await unlock(sellerId, 'first-sale').catch(() => undefined);
     if (sellerId) await notify(sellerId, 'sold', { plotId: plot.id, title: plot.title, slug: plot.slug, priceCents: order.amountCents, feeCents: outcome.fee });
     await notify(buyerId, 'purchased', { plotId: plot.id, title: plot.title, slug: plot.slug });
     await recordAction(buyerId, 'claim_plot', { ref: order.id, noXp: true });

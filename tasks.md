@@ -27,14 +27,14 @@ Status note: milestones M1–M12 were first built **before** the kickoff file wa
 | ✓ | Task | Owner | Status |
 |---|------|-------|--------|
 | [x] | M1 Monorepo scaffold (`apps/web`, `apps/api`, `packages/shared`), typed config, root `.env.example`, `APP_URL`/`STAGING_DOMAIN`/port env, flatmetaAPI pointer [§12.1] | claude | done |
-| [ ] | M1 DB schema + migrations (users, orgs, plots/tiles, regions, listings, orders, subscriptions, XP, quests, achievements, chat, showcase) [§3, §12.3–12.5]. Built: all except `listings`, `ledger_entries`, `connections`, `chat_messages`, `clans*`, `users.avatar/password_hash` *(new)* | claude | todo |
+| [x] | M1 DB schema + migrations (users, orgs, plots/tiles, regions, listings, orders, subscriptions, XP, quests, achievements, chat, showcase) [§3, §12.3–12.5]. Built: all except `listings`, `ledger_entries`, `connections`, `chat_messages`, `clans*`, `users.avatar/password_hash` *(new)* | claude | done (0002: listings, ledger, payouts, connections, chat, clans, avatar, password, custom HTML) |
 | [x] | M1 Seed data: regions/countries, demo users, plots (listings come with the marketplace task) | claude | done |
-| [ ] | M2 Auth: guest-first identity, email code, password, sessions, API keys [§12.1]. Built: all except the optional password *(new)* | claude | todo |
-| [ ] | M2 Land service: grid maths, claim, edit, image across tiles, 3-word address, /u/ links, sandboxed HTML [§2, §12.6]. Built: all except `/u/` redirect and sandboxed custom HTML *(new)* | claude | todo |
-| [ ] | M2 Marketplace: list, buy, sell, platform fee, ledger [§12.4] *(new)* | — | todo |
-| [ ] | M2 Payments: Stripe checkout, subscriptions, webhooks (PayPal adapter optional) [§12.4]. Built: Stripe, mock; provider interface to add | claude | todo |
-| [ ] | M2 Real-time: presence, avatars, nearby + private chat, connections [§12.3]. Built: online count and live activity only *(new)* | — | todo |
-| [ ] | M2 Game layer: XP, levels, quests, achievements, leaderboards, clans [§2.4, §12.5]. Built: all except clans *(new)* | claude | todo |
+| [x] | M2 Auth: guest-first identity, email code, password, sessions, API keys [§12.1]. Built: all except the optional password *(new)* | claude | done |
+| [ ] | M2 Land service: grid maths, claim, edit, image across tiles, 3-word address, /u/ links, sandboxed HTML [§2, §12.6]. Built: all except `/u/` redirect and sandboxed custom HTML *(new)* | claude | in-progress (API done: sandboxed custom HTML; the /u/ fallback is in the web app) |
+| [x] | M2 Marketplace: list, buy, sell, platform fee, ledger [§12.4] *(new)* | claude | API done: listings, 10% fee, ledger, payouts; the web UI is under M6 |
+| [x] | M2 Payments: Stripe checkout, subscriptions, webhooks (PayPal adapter optional) [§12.4]. Built: Stripe, mock; provider interface to add | claude | done (Stripe + mock behind a PaymentProvider interface; PayPal adapter documented, not built) |
+| [x] | M2 Real-time: presence, avatars, nearby + private chat, connections [§12.3]. Built: online count and live activity only *(new)* | claude | API done (WebSocket hub); the map and chat UI are under M5/M6 |
+| [x] | M2 Game layer: XP, levels, quests, achievements, leaderboards, clans [§2.4, §12.5]. Built: all except clans *(new)* | claude | done (clans, 4 new achievements) |
 | [x] | M3 AI layer: provider adapters + plot designer (image + copy), suggestions, AI search, moderation + fallbacks [§5] | claude | done |
 | [x] | M3 Showcase system: generator for 10–20 brands per region, "unclaimed" labels, Claim-this-land flow, admin bulk approve [§2.5] (140 plots, 14 per country, 10 countries) | claude | done |
 | [ ] | M3 Core tests (land maths, payments, ledger, auth, moderation) [§9]. Built: 32 API tests; ledger, chat, clans tests to add | claude | todo |

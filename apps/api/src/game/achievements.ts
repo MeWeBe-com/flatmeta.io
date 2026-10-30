@@ -65,6 +65,10 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { key: 'curator', name: 'Curator', description: 'Sign 5 guestbooks.', icon: 'pen', rarity: 'common', xp: 40, stat: 'guestbook_posts', threshold: 5, triggers: ['guestbook'] },
   { key: 'shareable', name: 'Shareable', description: 'Share 5 times.', icon: 'share', rarity: 'common', xp: 40, stat: 'shares', threshold: 5, triggers: ['share'] },
   { key: 'quest-master', name: 'Quest Master', description: 'Complete 20 quests.', icon: 'trophy', rarity: 'epic', xp: 200, stat: 'quests_completed', threshold: 20, triggers: ['quest_complete'] },
+  { key: 'clan-founder', name: 'Clan Founder', description: 'Found a clan.', icon: 'shield', rarity: 'rare', xp: 75, special: true },
+  { key: 'clan-member', name: 'Together', description: 'Join a clan.', icon: 'users', rarity: 'common', xp: 30, special: true },
+  { key: 'ten-strong', name: 'Ten Strong', description: 'Lead a clan with 10 members.', icon: 'castle', rarity: 'epic', xp: 200, special: true },
+  { key: 'first-sale', name: 'Dealmaker', description: 'Sell a plot on the marketplace.', icon: 'gem', rarity: 'rare', xp: 100, special: true },
   { key: 'level-10', name: 'Pathfinder', description: 'Reach level 10.', icon: 'star', rarity: 'rare', xp: 0, stat: 'level', threshold: 10 },
   { key: 'level-25', name: 'Cartographer Supreme', description: 'Reach level 25.', icon: 'stars', rarity: 'legendary', xp: 0, stat: 'level', threshold: 25 },
 ];

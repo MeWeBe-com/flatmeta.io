@@ -24,6 +24,8 @@ export type Action =
   | 'take_tour'
   | 'quest_complete'
   | 'upgrade'
+  | 'create_clan'
+  | 'join_clan'
   | 'org_verified';
 
 export const XP_TABLE: Partial<Record<Action, { xp: number; dailyCap?: number }>> = {
@@ -43,6 +45,8 @@ export const XP_TABLE: Partial<Record<Action, { xp: number; dailyCap?: number }>
   receive_wave: { xp: 1, dailyCap: 50 },
   take_tour: { xp: 20 },
   upgrade: { xp: 25 },
+  create_clan: { xp: 50 },
+  join_clan: { xp: 25 },
 };
 
 /** First AI design ever is worth +50 (awarded once via the achievement-like ref "first"). */
