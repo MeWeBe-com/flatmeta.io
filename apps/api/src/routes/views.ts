@@ -5,6 +5,7 @@ import { countryName } from '../lib/geo.js';
 import { rectBounds, threeWords } from '../lib/grid.js';
 import { renderMarkdown } from '../lib/markdown.js';
 import { levelTitle } from '../game/levels.js';
+import { wrapCustomHtml } from '../lib/html.js';
 
 export interface OwnerView {
   type: 'user' | 'org';
@@ -17,11 +18,12 @@ export interface OwnerView {
   plan?: string;
 }
 
-export const publicUser = (u: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl' | 'level' | 'homeCountry' | 'bio' | 'xp' | 'plan' | 'createdAt'>) => ({
+export const publicUser = (u: Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl' | 'avatar' | 'level' | 'homeCountry' | 'bio' | 'xp' | 'plan' | 'createdAt'>) => ({
   id: u.id,
   username: u.username,
   displayName: u.displayName,
   avatarUrl: u.avatarUrl,
+  avatar: u.avatar ?? null,
   bio: u.bio,
   level: u.level,
   levelTitle: levelTitle(u.level),
@@ -38,6 +40,7 @@ export const privateUser = (u: User) => ({
   streak: u.streak,
   lastCheckin: u.lastCheckin,
   homesteadUsed: u.homesteadUsed,
+  hasPassword: !!u.passwordHash,
 });
 
 export const publicOrg = (o: Organization) => ({
@@ -55,7 +58,7 @@ export const publicOrg = (o: Organization) => ({
 
 const DORMANT_MS = 365 * 86400_000;
 
-export function plotView(p: Plot, owner: OwnerView | null, extra: { likedByMe?: boolean; canEdit?: boolean } = {}) {
+export function plotView(p: Plot, owner: OwnerView | null, extra: { likedByMe?: boolean; canEdit?: boolean; withHtml?: boolean } = {}) {
   const rect = { minGx: p.minGx, minGy: p.minGy, maxGx: p.maxGx, maxGy: p.maxGy };
   const now = Date.now();
   const sc = p.showcase;
@@ -78,6 +81,9 @@ export function plotView(p: Plot, owner: OwnerView | null, extra: { likedByMe?: 
     tagline: p.tagline,
     descriptionMd: p.descriptionMd,
     descriptionHtml: renderMarkdown(p.descriptionMd),
+    hasCustomHtml: !!p.customHtml,
+    ...(extra.canEdit && p.customHtml ? { customHtml: p.customHtml } : {}),
+    ...(extra.withHtml && p.customHtml ? { customHtmlDoc: wrapCustomHtml(p.customHtml) } : {}),
     coverImageUrl: p.coverImageUrl,
     thumbUrl: p.thumbUrl,
     gallery: p.gallery,

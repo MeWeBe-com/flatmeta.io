@@ -19,6 +19,7 @@ import { mergeResults, recordAction, type GameResult } from '../game/engine.js';
 import { setPlotLikes } from '../game/leaderboards.js';
 import { FRAMES } from '../game/levels.js';
 import { checkContent } from '../services/moderation.js';
+import { MAX_CUSTOM_HTML, screenCustomHtml, wrapCustomHtml } from '../lib/html.js';
 import { afterClaim, assertCanActForOrg, createPlot, ensureCover, neighbours, quoteFor } from '../services/plots.js';
 import { createCheckout } from '../services/billing.js';
 import { canEditPlot, ownersFor, plotView } from './views.js';
@@ -38,6 +39,7 @@ export const PlotPatch = z.object({
   title: z.string().min(2).max(80).optional(),
   tagline: z.string().max(140).nullable().optional(),
   descriptionMd: z.string().max(5000).nullable().optional(),
+  customHtml: z.string().max(MAX_CUSTOM_HTML).nullable().optional(),
   links: z.array(LinkSchema).max(5).optional(),
   cta: LinkSchema.nullable().optional(),
   category: z.string().max(40).nullable().optional(),
@@ -82,7 +84,7 @@ export async function viewFor(plot: Plot, user: { id: string; role: string } | n
   const owners = await ownersFor([plot]);
   const fullUser = user ? (await db.select().from(schema.users).where(eq(schema.users.id, user.id)))[0] ?? null : null;
   const liked = user ? (await db.select().from(schema.plotLikes).where(and(eq(schema.plotLikes.plotId, plot.id), eq(schema.plotLikes.userId, user.id)))).length > 0 : false;
-  return plotView(plot, owners.get(plot.id) ?? null, { likedByMe: liked, canEdit: await canEditPlot(fullUser, plot) });
+  return plotView(plot, owners.get(plot.id) ?? null, { likedByMe: liked, canEdit: await canEditPlot(fullUser, plot), withHtml: true });
 }
 
 async function mediaOwnedUrl(mediaId: string, userId: string, isAdmin: boolean) {
@@ -97,6 +99,23 @@ export async function applyPlotPatch(plot: Plot, patch: PlotPatchInput, actor: {
   if (patch.title !== undefined) set.title = stripText(patch.title, 80);
   if (patch.tagline !== undefined) set.tagline = patch.tagline ? stripText(patch.tagline, 140) : null;
   if (patch.descriptionMd !== undefined) set.descriptionMd = patch.descriptionMd;
+  if (patch.customHtml !== undefined) {
+    if (patch.customHtml) {
+      let allowed = actor.role === 'admin' || actor.plan !== 'free';
+      if (!allowed && plot.ownerOrgId) {
+        const [org] = await db.select({ plan: schema.organizations.plan }).from(schema.organizations).where(eq(schema.organizations.id, plot.ownerOrgId));
+        allowed = ['business', 'brand', 'enterprise'].includes(org?.plan ?? 'free');
+      }
+      if (!allowed) throw paymentRequired('Custom HTML is part of FlatMeta Plus and organisation plans');
+      const screen = screenCustomHtml(patch.customHtml);
+      if (!screen.ok) throw badRequest(`Your HTML ${screen.reasons.join(', ')}.`);
+      const mod = await checkContent('plot', plot.id, screen.html.replace(/<[^>]+>/g, ' '));
+      if (mod.status === 'flagged') throw badRequest('Our moderator flagged the text in your HTML. Please edit it and try again.');
+      set.customHtml = screen.html;
+    } else {
+      set.customHtml = null;
+    }
+  }
   if (patch.links !== undefined) {
     set.links = patch.links
       .map((l) => ({ label: stripText(l.label, 40), url: safeUrl(l.url) }))

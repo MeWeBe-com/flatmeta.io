@@ -104,6 +104,10 @@ export default async function meRoutes(app: App) {
           username: z.string().regex(/^[a-zA-Z0-9_]{3,20}$/).optional(),
           bio: z.string().max(280).nullable().optional(),
           homeCountry: z.string().length(2).nullable().optional(),
+          avatar: z
+            .object({ face: z.string().min(1).max(8), color: z.string().regex(/^#[0-9a-fA-F]{6}$/), accessory: z.string().max(8).optional() })
+            .nullable()
+            .optional(),
         }),
       },
     },
@@ -112,6 +116,7 @@ export default async function meRoutes(app: App) {
       const set: Partial<typeof schema.users.$inferInsert> = { updatedAt: new Date() };
       if (req.body.displayName) set.displayName = stripText(req.body.displayName, 40);
       if (req.body.bio !== undefined) set.bio = req.body.bio ? stripText(req.body.bio, 280) : null;
+      if (req.body.avatar !== undefined) set.avatar = req.body.avatar;
       if (req.body.homeCountry !== undefined) set.homeCountry = req.body.homeCountry?.toUpperCase() ?? null;
       if (req.body.username && req.body.username.toLowerCase() !== user.username.toLowerCase()) {
         const [taken] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.username, req.body.username));

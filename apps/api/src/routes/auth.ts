@@ -3,8 +3,8 @@ import { z } from 'zod';
 import type { App } from '../app.js';
 import { config } from '../config.js';
 import { db, schema } from '../db/client.js';
-import { createSession, destroySession } from '../lib/auth.js';
-import { hashToken, randomToken, safeEqual, sixDigitCode } from '../lib/crypto.js';
+import { createSession, destroySession, requireUser } from '../lib/auth.js';
+import { hashPassword, hashToken, randomToken, safeEqual, sixDigitCode, verifyPassword } from '../lib/crypto.js';
 import { badRequest, tooMany } from '../lib/errors.js';
 import { sendCodeEmail } from '../lib/mail.js';
 import { findOrCreateUser, userCount } from '../lib/users.js';
@@ -105,6 +105,53 @@ export default async function authRoutes(app: App) {
       await createSession(user.id, req, reply);
       const [fresh] = await db.select().from(schema.users).where(eq(schema.users.id, user.id));
       return { user: privateUser(fresh!), isNew };
+    },
+  );
+
+  app.post(
+    '/v1/auth/password-login',
+    {
+      config: { rateLimit: { max: 8, timeWindow: '1 minute' } },
+      schema: {
+        tags: ['auth'],
+        summary: 'Sign in with email and password (only for accounts that set one; the email code always works)',
+        body: z.object({ email: z.email().max(200), password: z.string().min(1).max(200) }),
+      },
+    },
+    async (req, reply) => {
+      const [u] = await db.select().from(schema.users).where(eq(schema.users.email, req.body.email.trim().toLowerCase()));
+      const ok = await verifyPassword(req.body.password, u?.passwordHash);
+      if (!u || !ok || u.bannedAt) throw badRequest('Email or password is wrong. You can always sign in with an emailed code instead.');
+      await createSession(u.id, req, reply);
+      return { user: privateUser(u), isNew: false };
+    },
+  );
+
+  app.put(
+    '/v1/me/password',
+    {
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+      schema: {
+        tags: ['auth'],
+        summary: 'Set, change or remove my password. Changing needs the current password; setting the first one needs a fresh emailed code.',
+        body: z.object({
+          password: z.string().min(10).max(200).nullable(),
+          current: z.string().max(200).optional(),
+          code: z.string().regex(/^\d{6}$/).optional(),
+        }),
+      },
+    },
+    async (req) => {
+      const user = requireUser(req);
+      const [row] = await db.select().from(schema.users).where(eq(schema.users.id, user.id));
+      if (row!.passwordHash) {
+        if (!req.body.current || !(await verifyPassword(req.body.current, row!.passwordHash))) throw badRequest('Your current password is wrong.');
+      } else if (req.body.password !== null) {
+        if (!req.body.code || !(await consumeCode(row!.email, req.body.code, 'login'))) throw badRequest('Request a sign-in code and enter it to set your first password.');
+      }
+      const passwordHash = req.body.password === null ? null : await hashPassword(req.body.password);
+      await db.update(schema.users).set({ passwordHash, updatedAt: new Date() }).where(eq(schema.users.id, user.id));
+      return { ok: true, hasPassword: !!passwordHash };
     },
   );
 
