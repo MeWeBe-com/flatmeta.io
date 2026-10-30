@@ -27,30 +27,30 @@ Status note: milestones M1–M12 were first built **before** the kickoff file wa
 | ✓ | Task | Owner | Status |
 |---|------|-------|--------|
 | [x] | M1 Monorepo scaffold (`apps/web`, `apps/api`, `packages/shared`), typed config, root `.env.example`, `APP_URL`/`STAGING_DOMAIN`/port env, flatmetaAPI pointer [§12.1] | claude | done |
-| [x] | M1 DB schema + migrations (users, orgs, plots/tiles, regions, listings, orders, subscriptions, XP, quests, achievements, chat, showcase) [§3, §12.3–12.5]. Built: all except `listings`, `ledger_entries`, `connections`, `chat_messages`, `clans*`, `users.avatar/password_hash` *(new)* | claude | done (0002: listings, ledger, payouts, connections, chat, clans, avatar, password, custom HTML) |
+| [x] | M1 DB schema + migrations (users, orgs, plots/tiles, regions, listings, orders, subscriptions, XP, quests, achievements, chat, showcase) [§3, §12.3–12.5] | claude | done (migrations 0000–0002: 40+ tables incl. listings, ledger_entries, payout_accounts, connections, chat_messages, clans) |
 | [x] | M1 Seed data: regions/countries, demo users, plots (listings come with the marketplace task) | claude | done |
-| [x] | M2 Auth: guest-first identity, email code, password, sessions, API keys [§12.1]. Built: all except the optional password *(new)* | claude | done |
-| [ ] | M2 Land service: grid maths, claim, edit, image across tiles, 3-word address, /u/ links, sandboxed HTML [§2, §12.6]. Built: all except `/u/` redirect and sandboxed custom HTML *(new)* | claude | in-progress (API done: sandboxed custom HTML; the /u/ fallback is in the web app) |
-| [x] | M2 Marketplace: list, buy, sell, platform fee, ledger [§12.4] *(new)* | claude | API done: listings, 10% fee, ledger, payouts; the web UI is under M6 |
-| [x] | M2 Payments: Stripe checkout, subscriptions, webhooks (PayPal adapter optional) [§12.4]. Built: Stripe, mock; provider interface to add | claude | done (Stripe + mock behind a PaymentProvider interface; PayPal adapter documented, not built) |
-| [x] | M2 Real-time: presence, avatars, nearby + private chat, connections [§12.3]. Built: online count and live activity only *(new)* | claude | API done (WebSocket hub); the map and chat UI are under M5/M6 |
-| [x] | M2 Game layer: XP, levels, quests, achievements, leaderboards, clans [§2.4, §12.5]. Built: all except clans *(new)* | claude | done (clans, 4 new achievements) |
+| [x] | M2 Auth: guest-first identity, email code, password, sessions, API keys [§12.1] | claude | done (guests explore and appear anonymously; email code; optional scrypt password; sessions; `fm_live_` API keys) |
+| [x] | M2 Land service: grid maths, claim, edit, image across tiles, 3-word address, /u/ links, sandboxed HTML [§2, §12.6] | claude | done (custom HTML only in a CSP-wrapped sandboxed iframe, screened, Plus+; `/u/<plot>` redirects to `/p/<plot>`) |
+| [x] | M2 Marketplace: list, buy, sell, platform fee, ledger [§12.4] | claude | done (API + web: /marketplace, sell/buy on plot pages, balance and payouts in Billing, admin overview) |
+| [x] | M2 Payments: Stripe checkout, subscriptions, webhooks (PayPal adapter optional) [§12.4] | claude | done (Stripe + mock behind a PaymentProvider interface; PayPal documented, not built) |
+| [x] | M2 Real-time: presence, avatars, nearby + private chat, connections [§12.3] | claude | done (Redis geo presence, viewport avatars, chat with moderation, connections and blocking) |
+| [x] | M2 Game layer: XP, levels, quests, achievements, leaderboards, clans [§2.4, §12.5] | claude | done (36 achievements incl. clan and marketplace ones; clans with roles, leaderboard, clan chat) |
 | [x] | M3 AI layer: provider adapters + plot designer (image + copy), suggestions, AI search, moderation + fallbacks [§5] | claude | done |
 | [x] | M3 Showcase system: generator for 10–20 brands per region, "unclaimed" labels, Claim-this-land flow, admin bulk approve [§2.5] (140 plots, 14 per country, 10 countries) | claude | done |
-| [ ] | M3 Core tests (land maths, payments, ledger, auth, moderation) [§9]. Built: 32 API tests; ledger, chat, clans tests to add | claude | todo |
+| [x] | M3 Core tests (land maths, payments, ledger, auth, moderation) [§9] | claude | done (50 API tests: marketplace ledger and refunds, realtime, clans, passwords, HTML screening, plus the earlier suite; 8 web unit tests) |
 | [x] | M4 REST API + OpenAPI docs + rate limits [§4] | claude | done |
 | [x] | M4 MCP server (search/view/manage land) + tests [§6.1] | claude | done |
-| [ ] | M5 Web: design system, map/world (MapLibre/deck.gl), 3 zoom levels, smooth avatar movement [§7, §12.2–12.3]. Built: design system, globe map, smooth zoom; zoom-level control and avatars to add | claude | todo |
+| [x] | M5 Web: design system, map/world (MapLibre/deck.gl), 3 zoom levels, smooth avatar movement [§7, §12.2–12.3] | claude | done (World/City/Land switch, avatars with smooth movement, tap and arrow-key walking, bubbles; deck.gl is Phase 2) |
 | [x] | M5 Web: onboarding + guided tour, plot editor, AI designer UI, search | claude | done |
-| [ ] | M6 Web: marketplace, checkout, dashboards (user + org), game HUD, chat UI [§12.3–12.5]. Built: checkout, dashboards, HUD; marketplace, clan and chat UI to add | claude | todo |
-| [x] | M7 Admin panel: users, moderation queue, showcase manager, payments, settings, audit (marketplace and clan admin to add under the marketplace task) | claude | done |
+| [x] | M6 Web: marketplace, checkout, dashboards (user + org), game HUD, chat UI [§12.3–12.5] | claude | done (marketplace, clans, chat and friends panel, settings with avatar and password) |
+| [x] | M7 Admin panel: users, moderation queue, showcase manager, payments, settings, audit | claude | done (incl. marketplace: volume, fees, seller balances, manual payouts, void listing) |
 | [x] | M8 SEO: plot/region/country pages, share cards, sitemap, JSON-LD [§6.2] | claude | done |
 | [x] | M8 PWA, mobile-first QA, i18n-ready [§7.4] | claude | done |
 | [x] | M9 Worker: crons (subscriptions, showcase generation, digests, cleanup) [§8] (marketplace payouts and chat cleanup join under their tasks) | claude | done |
 | [x] | M10 Run showcase generator for a first batch of regions | claude | done |
-| [ ] | M11 Playwright e2e smoke (guest → claim → pay → edit, showcase claim). Built: 4 smoke specs (map, plot page, pricing, sitemap); the full flows to add | claude | todo |
-| [ ] | M11 CI workflow (ci.yml) with a final deploy job on push to v2. Do NOT use workflow_run/workflow_dispatch (they only work from main) [§12.7]. Built: separate `deploy.yml` with `workflow_dispatch` *(rework)* | claude | todo |
-| [ ] | M11 PM2, server scripts, README + HestiaCP guide (NodeJS proxy template, configurable ports, APP_URL-based redirects) [§12.7]. Built: PM2, scripts and an nginx guide *(rework to Hestia)* | claude | todo |
+| [x] | M11 Playwright e2e smoke (guest → claim → pay → edit, showcase claim) | claude | done (8 specs × desktop and mobile; found and fixed a real sign-in bug) |
+| [x] | M11 CI workflow (ci.yml) with a final deploy job on push to v2. Do NOT use workflow_run/workflow_dispatch (they only work from main) [§12.7] | claude | done (one ci.yml: test + e2e, then deploy; skips with a notice when the secrets are unset) |
+| [x] | M11 PM2, server scripts, README + HestiaCP guide (NodeJS proxy template, configurable ports, APP_URL-based redirects) [§12.7] | claude | done (ecosystem.config.cjs, scripts/deploy.sh, deploy/hestia/nodejs-app.conf, docs/deploy-hestia.md, README; PM2 stack verified locally) |
 | [ ] | M12 Polish: a11y, Lighthouse, copy, performance | — | todo |
 | [x] | flatmetaAPI v2: README pointing to the new monorepo (`V2.md`, added by the owner) | owner | done |
 

@@ -3,8 +3,7 @@
 import clsx from 'clsx';
 import Link from 'next/link';
 import { useEffect, useRef, type ReactNode } from 'react';
-import * as Icons from 'lucide-react';
-import { X } from 'lucide-react';
+import { BookOpen, Binoculars, Brush, Building2, CalendarCheck, Castle, Compass, Crown, Eye, Flag, Flame, Gem, Globe, Grid3x3, Hand, Heart, HeartHandshake, Home, Landmark, Map as MapIcon, Moon, Palette, PenLine, Plane, Rocket, Share2, Sparkles, Star, Stars, Store, Sun, TrendingUp, Trophy, UserPlus, Users, X, type LucideIcon } from 'lucide-react';
 import { compact, flag } from '@/lib/format';
 import type { Plot } from '@/lib/types';
 
@@ -94,16 +93,16 @@ export function Spinner({ className }: { className?: string }) {
 }
 
 /** Lucide icon by name (used for quests/achievements catalogue icons). */
-const ICON_ALIASES: Record<string, keyof typeof Icons> = {
-  flag: 'Flag', home: 'Home', grid: 'Grid3x3', castle: 'Castle', crown: 'Crown', sparkles: 'Sparkles', palette: 'Palette', rocket: 'Rocket', globe: 'Globe',
-  plane: 'Plane', hand: 'Hand', book: 'BookOpen', heart: 'Heart', hearts: 'HeartHandshake', trending: 'TrendingUp', flame: 'Flame', moon: 'Moon',
-  compass: 'Compass', gem: 'Gem', store: 'Store', landmark: 'Landmark', sun: 'Sun', users: 'Users', binoculars: 'Binoculars', pen: 'PenLine',
-  share: 'Share2', trophy: 'Trophy', star: 'Star', stars: 'Stars', building: 'Building2', eye: 'Eye', calendar: 'CalendarCheck', brush: 'Brush',
-  'user-plus': 'UserPlus', map: 'Map',
+// Named imports (not `import * as`) so only these icons are shipped, not the whole library.
+const ICONS: Record<string, LucideIcon> = {
+  flag: Flag, home: Home, grid: Grid3x3, castle: Castle, crown: Crown, sparkles: Sparkles, palette: Palette, rocket: Rocket, globe: Globe,
+  plane: Plane, hand: Hand, book: BookOpen, heart: Heart, hearts: HeartHandshake, trending: TrendingUp, flame: Flame, moon: Moon,
+  compass: Compass, gem: Gem, store: Store, landmark: Landmark, sun: Sun, users: Users, binoculars: Binoculars, pen: PenLine,
+  share: Share2, trophy: Trophy, star: Star, stars: Stars, building: Building2, eye: Eye, calendar: CalendarCheck, brush: Brush,
+  'user-plus': UserPlus, map: MapIcon,
 };
 export function NamedIcon({ name, className, size = 18 }: { name: string; className?: string; size?: number }) {
-  const key = ICON_ALIASES[name] ?? 'Star';
-  const Cmp = Icons[key] as Icons.LucideIcon;
+  const Cmp = ICONS[name] ?? Star;
   return <Cmp className={className} size={size} aria-hidden />;
 }
 
@@ -178,10 +177,10 @@ export function PlotCard({ plot, compactView = false }: { plot: Plot; compactVie
         {!compactView && plot.tagline && <p className="muted text-sm line-clamp-2">{plot.tagline}</p>}
         <div className="mt-auto pt-2 flex items-center gap-3 text-xs muted">
           <span className="inline-flex items-center gap-1">
-            <Icons.Heart size={13} /> {compact(plot.likesCount)}
+            <Heart size={13} /> {compact(plot.likesCount)}
           </span>
           <span className="inline-flex items-center gap-1">
-            <Icons.Eye size={13} /> {compact(plot.visitsCount)}
+            <Eye size={13} /> {compact(plot.visitsCount)}
           </span>
           <span className="ml-auto truncate">{plot.owner?.displayName ?? plot.showcase?.city ?? ''}</span>
         </div>

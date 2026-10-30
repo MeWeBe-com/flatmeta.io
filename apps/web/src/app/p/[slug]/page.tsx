@@ -72,7 +72,7 @@ export default async function PlotPage({ params }: Params) {
         </nav>
 
         <header className={`relative overflow-hidden rounded-[28px] min-h-[340px] md:min-h-[440px] flex items-end frame-${p.frame}`}>
-          {hero && <img src={hero} alt="" className="absolute inset-0 size-full object-cover" />}
+          {hero && <img src={hero} alt="" fetchPriority="high" decoding="async" width={1600} height={1067} className="absolute inset-0 size-full object-cover" />}
           <div className="absolute inset-0 bg-gradient-to-t from-[rgb(11_16_32/.96)] via-[rgb(11_16_32/.35)] to-transparent" />
           <div className="relative p-6 md:p-10 w-full">
             <div className="flex flex-wrap gap-2 mb-3">
