@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Compass, LocateFixed, Minus, Plus, Search, Sparkles, Users, Flag, X, HelpCircle } from 'lucide-react';
@@ -9,12 +9,15 @@ import { rectCenter } from '@/lib/grid';
 import { guessStart } from '@/lib/locate';
 import { compact } from '@/lib/format';
 import { t } from '@/lib/i18n';
-import type { Activity, Plot, WorldPlot } from '@/lib/types';
+import type { Activity, Peer, Plot, WorldPlot } from '@/lib/types';
 import { WorldMap, type SelectionState, type WorldMapHandle } from '../map/world-map';
 import { useLive, useSession, useTheme } from '../providers';
 import { UserMenu } from '../site-chrome';
 import { Logo, clsx } from '../ui';
+import { ChatPanel } from './chat-panel';
 import { ClaimPanel } from './claim-panel';
+import { LEVEL_ZOOM, LevelSwitch, type Level } from './level-switch';
+import { PeerCard } from './peer-card';
 import { LiveTicker } from './live-ticker';
 import { PlotSheet } from './plot-sheet';
 import { QuestTracker } from './quest-tracker';
@@ -27,20 +30,46 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
   const router = useRouter();
   const { theme } = useTheme();
   const { me } = useSession();
-  const { online } = useLive();
+  const live = useLive();
+  const { online } = live;
   const tour = useTourState();
   const [claimMode, setClaimMode] = useState(false);
   const [selection, setSelection] = useState<Rect | null>(null);
   const [selState, setSelState] = useState<SelectionState>('idle');
   const [openPlot, setOpenPlot] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [zoom, setZoom] = useState(2);
+  const [zoom, setZoom] = useState(() => {
+    const at = params.get('at')?.split(',').map(Number);
+    return at && at.length >= 2 && at.every(Number.isFinite) ? (at[2] ?? 15) : 1.6;
+  });
   const [mobilePanel, setMobilePanel] = useState(false);
+  const [peer, setPeer] = useState<Peer | null>(null);
+  const [chatWith, setChatWith] = useState<string | null>(null);
+  const center = useRef({ lng: 8, lat: 28 });
+  const viewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [initialView] = useState(() => {
     const at = params.get('at')?.split(',').map(Number);
     if (at && at.length >= 2 && at.every(Number.isFinite)) return { lat: at[0]!, lng: at[1]!, zoom: at[2] ?? 15 };
     return undefined;
   });
+
+  // Other explorers in view are drawn by the map layer; chat becomes speech bubbles over their heads.
+  useEffect(() => live.onPeers((list) => map.current?.setPeers(list)), [live]);
+  useEffect(
+    () =>
+      live.onChat((m) => {
+        if (!m.room.startsWith('nearby:') && !m.room.startsWith('clan:')) return;
+        map.current?.bubble(m.senderId && m.senderId === me.user?.id ? 'me' : m.senderId, m.body);
+      }),
+    [live, me.user?.id],
+  );
+  const identity = useMemo(() => ({ look: me.user?.avatar ?? live.you?.avatar ?? null, name: me.user?.displayName ?? live.you?.name ?? 'You' }), [me.user?.avatar, me.user?.displayName, live.you?.avatar, live.you?.name]);
+
+  const pickLevel = (l: Level) => {
+    const mine = map.current?.myPosition();
+    const at = l === 'world' ? center.current : (mine ?? center.current);
+    map.current?.flyTo(at.lng, at.lat, LEVEL_ZOOM[l]);
+  };
 
   // First visit: fly from the globe to the visitor's region (no permission prompt).
   useEffect(() => {
@@ -121,7 +150,15 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
         initialView={initialView}
         onSelect={setSelection}
         onPlotClick={onPlotClick}
-        onViewChange={(v) => setZoom(v.zoom)}
+        identity={identity}
+        onAvatarMove={live.sendMove}
+        onPeerClick={(p) => setPeer(p)}
+        onViewChange={(v) => {
+          setZoom(v.zoom);
+          center.current = { lng: v.lng, lat: v.lat };
+          if (viewTimer.current) clearTimeout(viewTimer.current);
+          viewTimer.current = setTimeout(() => live.sendView(v.bounds), 300);
+        }}
       />
 
       {/* Top bar */}
@@ -194,6 +231,25 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
         </button>
         <button className="glass rounded-2xl icon-btn" onClick={tour.start} aria-label="How FlatMeta works"><HelpCircle size={18} /></button>
       </div>
+
+      {/* The three levels */}
+      {!claimMode && (
+        <div className="absolute z-20 left-1/2 -translate-x-1/2 bottom-[84px] sm:bottom-auto sm:top-[108px]">
+          <LevelSwitch zoom={zoom} onPick={pickLevel} />
+        </div>
+      )}
+
+      {peer && !claimMode && !openPlot && (
+        <PeerCard
+          peer={peer}
+          onClose={() => setPeer(null)}
+          onChat={(u) => {
+            setPeer(null);
+            setChatWith(u);
+          }}
+        />
+      )}
+      {!claimMode && <ChatPanel position={() => map.current?.myPosition() ?? { ...center.current }} openWith={chatWith} onOpenedWith={() => setChatWith(null)} />}
 
       {/* Bottom stats pill */}
       <div className="absolute z-10 left-1/2 -translate-x-1/2 top-[70px] hidden sm:flex glass rounded-full h-8 px-3 items-center gap-3 text-xs pointer-events-none">

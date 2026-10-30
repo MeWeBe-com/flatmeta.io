@@ -4,7 +4,8 @@ import { Map as MapLibreMap, setWorkerUrl, type GeoJSONSource, type ImageSource,
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { MAP_STYLE_URL } from '@/lib/config';
 import { bboxToRect, lngLatToCell, normalizeRect, rectBounds, rectPolygon, type Rect } from '@/lib/grid';
-import type { WorldPlot } from '@/lib/types';
+import type { AvatarLook, Peer, WorldPlot } from '@/lib/types';
+import { AVATAR_MIN_ZOOM, AvatarLayer } from './avatars';
 import { buildStyle, FIRST_LABEL_LAYER } from './style';
 
 export type SelectionState = 'idle' | 'checking' | 'ok' | 'free' | 'conflict' | 'invalid';
@@ -15,6 +16,11 @@ export interface WorldMapHandle {
   zoomBy: (delta: number) => void;
   getZoom: () => number;
   reload: () => void;
+  /** Avatars (City and Land levels). */
+  setPeers: (peers: Peer[]) => void;
+  bubble: (userId: string | null, text: string) => void;
+  myPosition: () => { lat: number; lng: number } | null;
+  teleportMe: (lng: number, lat: number) => void;
 }
 
 interface Props {
@@ -28,7 +34,10 @@ interface Props {
   initialView?: { lng: number; lat: number; zoom: number };
   onSelect: (rect: Rect | null) => void;
   onPlotClick: (plot: WorldPlot) => void;
-  onViewChange?: (v: { lng: number; lat: number; zoom: number }) => void;
+  identity?: { look: AvatarLook | null; name: string };
+  onAvatarMove?: (lat: number, lng: number) => void;
+  onPeerClick?: (peer: Peer, el: HTMLElement) => void;
+  onViewChange?: (v: { lng: number; lat: number; zoom: number; bounds: { west: number; south: number; east: number; north: number } }) => void;
   onPlotsLoaded?: (count: number) => void;
 }
 
@@ -108,6 +117,7 @@ export function WorldMap(props: Props) {
   const [hover, setHover] = useState<{ x: number; y: number; plot: WorldPlot } | null>(null);
   const [ready, setReady] = useState(false);
   const loadSeq = useRef(0);
+  const avatarsRef = useRef<AvatarLayer | null>(null);
 
   useImperativeHandle(props.ref, () => ({
     flyTo: (lng, lat, zoom) => mapRef.current?.flyTo({ center: [lng, lat], zoom: zoom ?? Math.max(mapRef.current.getZoom(), 15), speed: 1.4, curve: 1.5, essential: true }),
@@ -115,6 +125,10 @@ export function WorldMap(props: Props) {
     zoomBy: (d) => mapRef.current?.easeTo({ zoom: mapRef.current.getZoom() + d, duration: 300 }),
     getZoom: () => mapRef.current?.getZoom() ?? 0,
     reload: () => void loadPlots(true),
+    setPeers: (peers) => avatarsRef.current?.setPeers(peers),
+    bubble: (userId, text) => avatarsRef.current?.bubble(userId, text),
+    myPosition: () => avatarsRef.current?.position() ?? null,
+    teleportMe: (lng, lat) => avatarsRef.current?.teleport(lng, lat),
   }));
 
   // ── data loading ──
@@ -322,9 +336,35 @@ export function WorldMap(props: Props) {
     });
 
     let moveTimer: ReturnType<typeof setTimeout> | null = null;
-    map.on('moveend', () => {
+    const avatars = new AvatarLayer(map, {
+      onMove: (lat, lng) => propsRef.current.onAvatarMove?.(lat, lng),
+      onPeerClick: (peer, el) => propsRef.current.onPeerClick?.(peer, el),
+    });
+    avatarsRef.current = avatars;
+    if (propsRef.current.identity) avatars.setIdentity(propsRef.current.identity.look, propsRef.current.identity.name);
+    // Arrow keys walk my avatar at City level and up; below that they pan the map as usual.
+    const syncLevel = () => {
+      const z = map.getZoom();
+      avatars.update(z);
+      if (z >= AVATAR_MIN_ZOOM) map.keyboard.disable();
+      else map.keyboard.enable();
+    };
+    map.on('zoom', syncLevel);
+    map.on('style.load', syncLevel);
+
+    const reportView = () => {
       const c = map.getCenter();
-      propsRef.current.onViewChange?.({ lng: c.lng, lat: c.lat, zoom: map.getZoom() });
+      const bb = map.getBounds();
+      propsRef.current.onViewChange?.({ lng: c.lng, lat: c.lat, zoom: map.getZoom(), bounds: { west: bb.getWest(), south: bb.getSouth(), east: bb.getEast(), north: bb.getNorth() } });
+    };
+    map.once('style.load', () => {
+      reportView(); // so the first view (not just later moves) reaches the HUD and the live socket
+      syncLevel();
+    });
+    map.once('idle', reportView);
+    map.on('moveend', () => {
+      reportView();
+      syncLevel();
       if (moveTimer) clearTimeout(moveTimer);
       moveTimer = setTimeout(() => void loadPlots(), 220);
       if (propsRef.current.claimMode) (map.getSource('grid') as GeoJSONSource | undefined)?.setData(gridLines(map));
@@ -348,6 +388,7 @@ export function WorldMap(props: Props) {
       if (propsRef.current.claimMode) return;
       const p = plotAt(e);
       if (p) propsRef.current.onPlotClick(p);
+      else if (map.getZoom() >= AVATAR_MIN_ZOOM) avatars.walkTo(e.lngLat.lng, e.lngLat.lat); // tap the ground to walk there
     });
 
     // Beacon pulse animation (only runs while beacons exist)
@@ -364,11 +405,18 @@ export function WorldMap(props: Props) {
 
     return () => {
       cancelAnimationFrame(raf);
+      avatars.destroy();
+      avatarsRef.current = null;
       map.remove();
       mapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // My avatar's look follows my profile / guest identity.
+  useEffect(() => {
+    if (props.identity) avatarsRef.current?.setIdentity(props.identity.look, props.identity.name);
+  }, [props.identity?.look?.face, props.identity?.look?.color, props.identity?.look?.accessory, props.identity?.name]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Theme switch → new style (layers are re-added on style.load)
   useEffect(() => {

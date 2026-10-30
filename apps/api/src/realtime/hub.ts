@@ -49,6 +49,7 @@ interface Conn {
   ws: WebSocket;
   userId: string | null;
   name: string;
+  username: string | null;
   avatar: { face: string; color: string; accessory?: string } | null;
   level: number;
   clanId: string | null;
@@ -115,7 +116,7 @@ export function registerHub(app: App) {
     c.lng = lng;
     const m = redis.multi();
     m.geoadd(GEO(), lng, lat, c.id);
-    m.hset(CONN(c.id), { n: c.name, a: JSON.stringify(c.avatar), u: c.userId ?? '', l: String(c.level), lat: String(lat), lng: String(lng) });
+    m.hset(CONN(c.id), { n: c.name, un: c.username ?? '', a: JSON.stringify(c.avatar), u: c.userId ?? '', l: String(c.level), lat: String(lat), lng: String(lng) });
     m.expire(CONN(c.id), 40);
     m.zadd(PRESENCE(), Date.now(), c.id);
     await m.exec().catch(() => undefined);
@@ -130,11 +131,11 @@ export function registerHub(app: App) {
     const pipe = redis.pipeline();
     for (const id of ids) pipe.hgetall(CONN(id));
     const rows = (await pipe.exec()) ?? [];
-    const out: { id: string; name: string; avatar: unknown; userId: string | null; level: number; lat: number; lng: number }[] = [];
+    const out: { id: string; name: string; username: string | null; avatar: unknown; userId: string | null; level: number; lat: number; lng: number }[] = [];
     rows.forEach(([, h], i) => {
       const r = h as Record<string, string> | null;
       if (!r?.n) return;
-      out.push({ id: ids[i]!, name: r.n, avatar: r.a ? JSON.parse(r.a) : null, userId: r.u || null, level: Number(r.l) || 1, lat: Number(r.lat), lng: Number(r.lng) });
+      out.push({ id: ids[i]!, name: r.n, username: r.un || null, avatar: r.a ? JSON.parse(r.a) : null, userId: r.u || null, level: Number(r.l) || 1, lat: Number(r.lat), lng: Number(r.lng) });
     });
     return out;
   }
@@ -187,6 +188,7 @@ export function registerHub(app: App) {
       ws: socket,
       userId: req.user?.id ?? null,
       name: `Guest ${n}`,
+      username: null,
       avatar: { face: GUEST_FACES[n % GUEST_FACES.length]!, color: GUEST_COLORS[n % GUEST_COLORS.length]! },
       level: 1,
       clanId: null,
@@ -203,6 +205,7 @@ export function registerHub(app: App) {
         const [u] = await db.select().from(schema.users).where(eq(schema.users.id, conn.userId));
         if (u) {
           conn.name = u.displayName;
+          conn.username = u.username;
           conn.level = u.level;
           conn.avatar = u.avatar ?? conn.avatar;
           const [m] = await db.select({ clanId: schema.clanMembers.clanId }).from(schema.clanMembers).where(eq(schema.clanMembers.userId, u.id));
@@ -210,7 +213,7 @@ export function registerHub(app: App) {
         }
       }
       await redis.zadd(PRESENCE(), Date.now(), id);
-      send(conn, { type: 'welcome', you: { id, name: conn.name, avatar: conn.avatar, userId: conn.userId, guest: !conn.userId, clanId: conn.clanId } });
+      send(conn, { type: 'welcome', you: { id, name: conn.name, username: conn.username, avatar: conn.avatar, userId: conn.userId, guest: !conn.userId, clanId: conn.clanId } });
       send(conn, { type: 'presence', online: await onlineCount() });
     })();
 

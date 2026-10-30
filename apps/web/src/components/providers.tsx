@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api, post } from '@/lib/api';
 import { WS_URL } from '@/lib/config';
-import type { Activity, GameResult, MeResponse } from '@/lib/types';
+import type { Activity, ChatMsg, GameResult, MeResponse, Peer, You } from '@/lib/types';
 import { t } from '@/lib/i18n';
 
 // ─── Session ────────────────────────────────────────────────────────────────
@@ -170,6 +170,19 @@ interface LiveCtx {
   activity: Activity[];
   connected: boolean;
   subscribe: (fn: (a: Activity) => void) => () => void;
+  /** Who I am on the live socket (guests get an anonymous name and avatar). */
+  you: You | null;
+  /** Explorers inside my current viewport (City and Land levels). */
+  peers: Peer[];
+  /** Tell the server where my avatar is, and what part of the map I'm looking at. */
+  sendMove: (lat: number, lng: number) => void;
+  sendView: (b: { west: number; south: number; east: number; north: number } | null) => void;
+  sendChat: (scope: 'nearby' | 'dm' | 'clan', body: string, to?: string) => void;
+  /** Subscribe to chat messages and server errors. */
+  onChat: (fn: (m: ChatMsg) => void) => () => void;
+  onChatError: (fn: (message: string, code: string) => void) => () => void;
+  /** Subscribe to peer snapshots without re-rendering (used by the map layer). */
+  onPeers: (fn: (p: Peer[]) => void) => () => void;
 }
 const Live = createContext<LiveCtx | null>(null);
 export const useLive = () => {
@@ -183,6 +196,14 @@ function LiveProvider({ children }: { children: ReactNode }) {
   const [activity, setActivity] = useState<Activity[]>([]);
   const [connected, setConnected] = useState(false);
   const listeners = useRef(new Set<(a: Activity) => void>());
+  const chatListeners = useRef(new Set<(m: ChatMsg) => void>());
+  const errorListeners = useRef(new Set<(message: string, code: string) => void>());
+  const peerListeners = useRef(new Set<(p: Peer[]) => void>());
+  const wsRef = useRef<WebSocket | null>(null);
+  const lastView = useRef<string | null>(null);
+  const lastMove = useRef<string | null>(null);
+  const [you, setYou] = useState<You | null>(null);
+  const [peers, setPeers] = useState<Peer[]>([]);
   const { me } = useSession();
   const userId = me.user?.id;
 
@@ -204,14 +225,25 @@ function LiveProvider({ children }: { children: ReactNode }) {
     const connect = () => {
       if (stop) return;
       ws = new WebSocket(url);
+      wsRef.current = ws;
       ws.onopen = () => {
         setConnected(true);
         retry = 1000;
+        // Re-announce where I am and what I'm looking at after every (re)connect.
+        if (lastMove.current) ws?.send(lastMove.current);
+        if (lastView.current) ws?.send(lastView.current);
         ping = setInterval(() => ws?.readyState === 1 && ws.send('{"type":"ping"}'), 25_000);
       };
       ws.onmessage = (ev) => {
         try {
-          const msg = JSON.parse(ev.data as string) as { type: string; online?: number; activity?: Activity };
+          const msg = JSON.parse(ev.data as string) as { type: string; online?: number; activity?: Activity; you?: You; avatars?: Peer[]; message?: ChatMsg & { code?: string }; code?: string };
+          if (msg.type === 'welcome' && msg.you) setYou(msg.you);
+          if (msg.type === 'avatars' && msg.avatars) {
+            setPeers(msg.avatars);
+            for (const fn of peerListeners.current) fn(msg.avatars);
+          }
+          if (msg.type === 'chat' && msg.message) for (const fn of chatListeners.current) fn(msg.message);
+          if (msg.type === 'error') for (const fn of errorListeners.current) fn(String((msg as unknown as { message?: string }).message ?? 'Something went wrong'), msg.code ?? 'error');
           if (msg.type === 'presence' && typeof msg.online === 'number') setOnline(msg.online);
           if (msg.type === 'activity' && msg.activity) {
             setActivity((list) => [msg.activity!, ...list.filter((a) => a.id !== msg.activity!.id)].slice(0, 30));
@@ -231,23 +263,44 @@ function LiveProvider({ children }: { children: ReactNode }) {
     return () => {
       stop = true;
       if (ping) clearInterval(ping);
+      wsRef.current = null;
       ws?.close();
     };
     // Reconnect when the user signs in/out so notifications reach the right socket.
   }, [userId]);
 
-  const value = useMemo<LiveCtx>(
-    () => ({
+  const value = useMemo<LiveCtx>(() => {
+    const sendRaw = (text: string) => {
+      const ws = wsRef.current;
+      if (ws?.readyState === 1) ws.send(text);
+    };
+    const add = <T,>(set: Set<T>, fn: T) => {
+      set.add(fn);
+      return () => {
+        set.delete(fn);
+      };
+    };
+    return {
       online,
       activity,
       connected,
-      subscribe: (fn) => {
-        listeners.current.add(fn);
-        return () => listeners.current.delete(fn);
+      you,
+      peers,
+      subscribe: (fn) => add(listeners.current, fn),
+      onChat: (fn) => add(chatListeners.current, fn),
+      onChatError: (fn) => add(errorListeners.current, fn),
+      onPeers: (fn) => add(peerListeners.current, fn),
+      sendMove: (lat, lng) => {
+        lastMove.current = JSON.stringify({ type: 'move', lat, lng });
+        sendRaw(lastMove.current);
       },
-    }),
-    [online, activity, connected],
-  );
+      sendView: (b) => {
+        lastView.current = JSON.stringify({ type: 'view', bbox: b ? [b.west, b.south, b.east, b.north] : null });
+        sendRaw(lastView.current);
+      },
+      sendChat: (scope, body, to) => sendRaw(JSON.stringify({ type: 'chat', scope, body, ...(to ? { to } : {}) })),
+    };
+  }, [online, activity, connected, you, peers]);
   return <Live.Provider value={value}>{children}</Live.Provider>;
 }
 

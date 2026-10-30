@@ -56,6 +56,10 @@ export interface Plot {
   showcase: { brand: string; website: string; sector: string; kind: string; city: string; useCase: string; highlights: string[]; approved: boolean } | null;
   moderationStatus: string;
   owner: Owner | null;
+  hasCustomHtml?: boolean;
+  customHtml?: string;
+  customHtmlDoc?: string;
+  listing?: { id: string; priceCents: number; currency: string; version: number } | null;
   likesCount: number;
   visitsCount: number;
   guestbookCount: number;
@@ -97,11 +101,14 @@ export interface WorldPlot {
   published: boolean;
 }
 
+export interface AvatarLook { face: string; color: string; accessory?: string }
+
 export interface PublicUser {
   id: string;
   username: string;
   displayName: string;
   avatarUrl: string | null;
+  avatar: AvatarLook | null;
   bio: string | null;
   level: number;
   levelTitle: string;
@@ -116,6 +123,7 @@ export interface Me extends PublicUser {
   streak: number;
   lastCheckin: string | null;
   homesteadUsed: boolean;
+  hasPassword: boolean;
 }
 
 export interface LevelProgress { level: number; title: string; xp: number; levelXp: number; nextLevelXp: number; progress: number }
@@ -205,3 +213,23 @@ export interface Activity {
 export interface Country { code: string; name: string; lat: number; lng: number; flag: string; plotCount: number; cellCount: number; showcaseCount: number; bbox?: [number, number, number, number] | null }
 export interface Region { slug: string; name: string; countryCode: string; lat: number; lng: number; tier: string; population: number | null }
 export interface GuestbookEntry { id: string; body: string; createdAt: string; author: { id: string; username: string; displayName: string; avatarUrl: string | null; level: number } }
+
+// ─── Realtime, chat, social ────────────────────────────────────────────────
+export interface Peer { id: string; name: string; username: string | null; userId: string | null; avatar: AvatarLook | null; level: number; lat: number; lng: number }
+export interface ChatMsg { id: number; room: string; senderId: string | null; senderName: string; avatar: AvatarLook | null; body: string; createdAt: string }
+export interface You { id: string; name: string; username: string | null; avatar: AvatarLook | null; userId: string | null; guest: boolean; clanId: string | null }
+export interface ConnUser { id: string; username: string; displayName: string; avatar: AvatarLook | null; avatarUrl: string | null; level: number }
+export interface Connections {
+  friends: { connectionId: string; user: ConnUser }[];
+  incoming: { connectionId: string; user: ConnUser; at: string }[];
+  outgoing: { connectionId: string; user: ConnUser; at: string }[];
+  blocked: { connectionId: string; user: ConnUser }[];
+}
+
+// ─── Marketplace and clans ─────────────────────────────────────────────────
+export interface Listing { id: string; status: 'active' | 'sold' | 'cancelled' | 'void'; priceCents: number; currency: string; feeCents: number; version: number; createdAt: string; soldAt: string | null; plot: Plot }
+export interface ClanEmblem { icon: string; color: string }
+export interface Clan { id: string; slug: string; name: string; tag: string; description: string | null; emblem: ClanEmblem; memberCount: number; maxMembers: number; xp: number; cells: number; createdAt: string }
+export interface ClanMember { role: 'leader' | 'officer' | 'member'; joinedAt: string; id: string; username: string; displayName: string; avatar: AvatarLook | null; avatarUrl: string | null; level: number; xp: number }
+export interface ClanDetail { clan: Clan; members: ClanMember[]; myRole: 'leader' | 'officer' | 'member' | null; myPending: { id: string; kind: string } | null; requests: { id: string; createdAt: string; kind: string; username: string; displayName: string; level: number }[] }
+export interface ClanRank { rank: number; id: string; slug: string; name: string; tag: string; emblem: ClanEmblem; memberCount: number; xp: number; cells: number }
