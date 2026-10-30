@@ -51,7 +51,7 @@ Status note: milestones M1–M12 were first built **before** the kickoff file wa
 | [x] | M11 Playwright e2e smoke (guest → claim → pay → edit, showcase claim) | claude | done (8 specs × desktop and mobile; found and fixed a real sign-in bug) |
 | [x] | M11 CI workflow (ci.yml) with a final deploy job on push to v2. Do NOT use workflow_run/workflow_dispatch (they only work from main) [§12.7] | claude | done (one ci.yml: test + e2e, then deploy; skips with a notice when the secrets are unset) |
 | [x] | M11 PM2, server scripts, README + HestiaCP guide (NodeJS proxy template, configurable ports, APP_URL-based redirects) [§12.7] | claude | done (ecosystem.config.cjs, scripts/deploy.sh, deploy/hestia/nodejs-app.conf, docs/deploy-hestia.md, README; PM2 stack verified locally) |
-| [x] | M12 Polish: a11y, Lighthouse, copy, performance | claude | done (mobile Lighthouse on a plot page: performance 87, accessibility 100, best practices 100, SEO 100 in production; the only SEO audit failing locally is the intentional noindex outside production) |
+| [x] | M12 Polish: a11y, Lighthouse, copy, performance | claude | done (mobile Lighthouse on a plot page: performance 87, accessibility 100, best practices 100, every SEO audit passes except the intentional noindex outside production) |
 | [x] | flatmetaAPI v2: README pointing to the new monorepo (`V2.md`, added by the owner) | owner | done |
 
 ## Follow-ups found during the build
