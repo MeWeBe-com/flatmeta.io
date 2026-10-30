@@ -111,6 +111,8 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
 const NAV = [
   { href: '/', label: 'nav.map' },
   { href: '/explore', label: 'nav.explore' },
+  { href: '/marketplace', label: 'nav.marketplace' },
+  { href: '/clans', label: 'nav.clans' },
   { href: '/leaderboards', label: 'nav.leaderboards' },
   { href: '/business', label: 'nav.business' },
   { href: '/pricing', label: 'nav.pricing' },

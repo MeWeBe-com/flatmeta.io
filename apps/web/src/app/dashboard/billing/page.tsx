@@ -8,6 +8,7 @@ import { usd, timeAgo } from '@/lib/format';
 import type { OrderItem } from '@/lib/types-billing';
 import { useGame, useSession } from '@/components/providers';
 import { SectionTitle, Spinner, clsx } from '@/components/ui';
+import { SellerBalance } from './seller-balance';
 
 interface Order { id: string; kind: string; status: string; amountCents: number; currency: string; items: OrderItem[]; createdAt: string }
 interface Sub { id: string; plan: string; interval: string; status: string; currentPeriodEnd: string | null; cancelAtPeriodEnd: boolean }
@@ -49,6 +50,7 @@ export default function BillingPage() {
           <button className="btn-gold" disabled={!!busy} onClick={() => void go('credits', () => post('/billing/credits'))}>{busy === 'credits' ? <Spinner /> : <Sparkles size={16} />} Design Pack · +25 for $5</button>
         </div>
       </div>
+      <SellerBalance />
       <p className="text-sm muted">Business and Brand plans are managed per organisation in <Link className="underline" href="/dashboard/orgs">Organisations</Link>.</p>
       {data?.subscriptions.length ? (
         <section>

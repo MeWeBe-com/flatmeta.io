@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { Clock, ExternalLink, Mail, MapPin, Phone, Tag, CalendarCheck } from 'lucide-react';
 import { PageShell } from '@/components/site-chrome';
 import { PlotActions } from '@/components/plot/plot-actions';
+import { PlotMarket } from '@/components/plot/plot-market';
 import { Guestbook } from '@/components/plot/guestbook';
 import { MiniMapLazy } from '@/components/plot/mini-map-lazy';
 import { KindChip, PlotCard } from '@/components/ui';
@@ -176,6 +177,7 @@ export default async function PlotPage({ params }: Params) {
 
           <aside className="space-y-4">
             <PlotActions plot={p} />
+            <PlotMarket plot={p} canEdit={!!p.canEdit} />
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div className="surface py-3"><div className="font-display text-xl font-bold">{compact(p.likesCount)}</div><div className="muted">likes</div></div>
               <div className="surface py-3"><div className="font-display text-xl font-bold">{compact(p.visitsCount)}</div><div className="muted">visits</div></div>
