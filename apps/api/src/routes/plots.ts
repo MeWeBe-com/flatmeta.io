@@ -19,7 +19,7 @@ import { mergeResults, recordAction, type GameResult } from '../game/engine.js';
 import { setPlotLikes } from '../game/leaderboards.js';
 import { FRAMES } from '../game/levels.js';
 import { checkContent } from '../services/moderation.js';
-import { MAX_CUSTOM_HTML, screenCustomHtml, wrapCustomHtml } from '../lib/html.js';
+import { MAX_CUSTOM_HTML, screenCustomHtml } from '../lib/html.js';
 import { afterClaim, assertCanActForOrg, createPlot, ensureCover, neighbours, quoteFor } from '../services/plots.js';
 import { createCheckout } from '../services/billing.js';
 import { canEditPlot, ownersFor, plotView } from './views.js';

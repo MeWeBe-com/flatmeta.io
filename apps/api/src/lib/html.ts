@@ -28,7 +28,7 @@ export interface HtmlScreen {
 }
 
 export function screenCustomHtml(input: string): HtmlScreen {
-  const html = input.replace(/\u0000/g, '').trim();
+  const html = input.replaceAll(String.fromCharCode(0), '').trim();
   const reasons: string[] = [];
   if (html.length > MAX_CUSTOM_HTML) reasons.push(`is larger than ${MAX_CUSTOM_HTML / 1000} KB`);
   for (const [re, why] of BLOCKED) if (re.test(html)) reasons.push(why);

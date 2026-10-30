@@ -45,12 +45,6 @@ export async function listingBlocker(plot: Plot, priceCents?: number): Promise<s
   return null;
 }
 
-async function loadFullUser(id: string): Promise<User> {
-  const [u] = await db.select().from(schema.users).where(eq(schema.users.id, id));
-  if (!u) throw notFound('User not found');
-  return u;
-}
-
 export async function createListing(actor: User, plotId: string, priceCents: number): Promise<Listing> {
   const [plot] = await db.select().from(schema.plots).where(eq(schema.plots.id, plotId));
   if (!plot) throw notFound('Plot not found');
