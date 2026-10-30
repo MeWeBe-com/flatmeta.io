@@ -1,6 +1,6 @@
 # MasterPrompt — FlatMeta v2, Phase 2 (≈2 weeks): enterprise-ready
 
-> **How to use this prompt.** Give this file to a coding agent with both repos (`flatmeta.io/`, `flatmetaAPI/`) checked out on branch **`v2`** (or a `v2-phase2-*` feature branch merged into `v2`). Phase 1 (`docs/02-masterprompt-phase1.md`) must be complete; read it, `docs/01-brief.md`, `tasks.md` and `docs/progress.md` first. The Phase 1 conventions (stack, env-only secrets, zero-key dev mode, tests, small commits, `tasks.md` ownership, progress log, Open questions) apply unchanged.
+> **How to use this prompt.** Give this file to a coding agent with the monorepo (`flatmeta.io`, branch **`v2`**: `apps/web`, `apps/api`, `packages/shared`) (or a `v2-phase2-*` feature branch merged into `v2`). Phase 1 (`docs/02-masterprompt-phase1.md`) must be complete; read it, `docs/01-brief.md`, `tasks.md` and `docs/progress.md` first. The Phase 1 conventions (stack, env-only secrets, zero-key dev mode, tests, small commits, `tasks.md` ownership, progress log, Open questions) apply unchanged.
 > Work in the **order of the tracks below**; each track ends with tests, docs and a progress entry. Ship behind feature flags (`features` table + `FEATURE_*` env overrides) so production can enable tracks one by one.
 
 ---
@@ -18,6 +18,8 @@ Success at the end of Phase 2:
 - The system is observable, load-tested to 5k concurrent map users and 200 req/s API, and ready for a second server.
 
 ---
+
+> **Scope note (kickoff alignment).** Phase 1 now already contains: the basic marketplace (listings, 10% fee, ledger, payouts), clans (create, join, roles, clan chat and leaderboard), nearby/private chat, presence and connections (see `docs/02-masterprompt-phase1.md` §12). Phase 2 builds on those: offers and auctions, rentals and plot ads on top of the listings model; **alliances, territory and mini-games** on top of clans (the "guilds" below are the same entity as Phase 1 `clans`; extend that table, do not create a second one); paint tools; and the "Wanted" list from the v1 README (paint tools, territory mini-games, clan alliances, server chat history, replays).
 
 ## Track A — Deeper game systems (days 1–3)
 

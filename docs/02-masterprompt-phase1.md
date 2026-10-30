@@ -1,8 +1,7 @@
 # MasterPrompt — FlatMeta v2, Phase 1 (≈3 days of agent work)
 
-> **How to use this prompt.** Give this whole file to a coding agent (Claude Code, Gemini/Antigravity, or similar) that has both repositories checked out side by side:
-> `flatmeta.io/` (web app, docs, `tasks.md`) and `flatmetaAPI/` (API, DB, workers, MCP).
-> The agent works only on branch **`v2`** in each repo, never on `main`. Read `docs/00-audit.md` and `docs/01-brief.md` first; this prompt is the build spec and wins over them where they differ.
+> **How to use this prompt.** Give this whole file to a coding agent (Claude Code, Gemini/Antigravity, or similar). Start with `docs/00-kickoff-masterprompt.md` and `tasks.md`. **All v2 code lives in one monorepo, `flatmeta.io` on branch `v2`** (`apps/web`, `apps/api`, `packages/shared`); the `flatmetaAPI` repo's `v2` only has a README pointing here (see §12). Paths such as `flatmetaAPI/src/...` below mean `apps/api/src/...`, and `flatmeta.io/app/...` means `apps/web/src/app/...`.
+> The agent works only on branch **`v2`**, never on `main` or `develop`. Read `docs/00-audit.md` and `docs/01-brief.md` first; this prompt is the build spec and wins over them where they differ.
 > Keep `tasks.md` (in `flatmeta.io/`) as the shared checklist: claim a task by putting your name in *Owner*, set *Status*, tick it when done. Append a summary to `docs/progress.md` after each milestone. Log decisions you can't make under **Open questions** in `docs/progress.md`, then continue with the most sensible default.
 
 ---
@@ -332,3 +331,54 @@ Implement the brief's "night-flight cartography": tokens in CSS variables (`--bg
 10. Web: dashboard + editor + AI designer, billing, developers; admin panel.
 11. PWA, i18n pass, a11y pass, performance pass.
 12. Tests, CI, deploy workflow, README, final QA against §10.
+
+---
+
+## 12. Kickoff alignment (supersedes earlier sections where they differ)
+
+`docs/00-kickoff-masterprompt.md` is the owner's brief. It keeps several v1 features that §§0–11 originally left out. Build them in Phase 1 with the rules below.
+
+### 12.1 Monorepo and config
+- npm workspaces: `apps/web` (Next.js), `apps/api` (Fastify, worker, MCP, CLI), `packages/shared` (grid maths, shared types, pricing constants). One root `.env.example` documents every variable; each app also loads `apps/<app>/.env` if present.
+- `flatmetaAPI` `v2` branch: only a README that points to the monorepo. v1 code stays on its other branches.
+- Config values: `APP_NAME=FlatMeta`, `APP_URL` (public origin, **every absolute URL and redirect is built from it; the API refuses to start in production if it contains `localhost` or `127.0.0.1`**), `PRODUCTION_DOMAIN=flatmeta.io`, `STAGING_DOMAIN=flatmeta.mewebe.net` (placeholder until confirmed). `STAGING_HOST` in §1 is renamed `STAGING_DOMAIN`.
+- Ports are env values, defaults chosen to avoid 3000, 3010 and 3100: `WEB_PORT=3200`, `PORT=3201` (API), `MCP_PORT=3202` (optional separate MCP listener; `/mcp` is always on the API port too), `WORKER_HEALTH_PORT=3203`.
+- Auth keeps guest-first identity and the email 6-digit code, and adds an **optional password** (scrypt hash, set from the dashboard; password sign-in with a rate limit). Sessions and API keys as before.
+
+### 12.2 Three zoom levels, smoother
+Continuous zoom stays, with three named presets shown as a segmented control (World, City, Land) that fly smoothly (1.2 s ease) and are also the semantic levels: **World** (z < 6.5: globe, glowing plots, country labels, no avatars), **City** (6.5 ≤ z < 13.5: plots as tiles, **avatars and presence**, city labels), **Land** (z ≥ 13.5: the claim grid, plot artwork, edit/select). The level is derived from zoom, so pinch/scroll never "snaps back".
+
+### 12.3 Presence, avatars, chat, connections
+- **Avatar**: `users.avatar` jsonb `{face, color, accessory}` (a handful of emoji faces and colours; set in onboarding or the profile). Rendered as MapLibre markers at the City and Land levels.
+- **Movement**: tap/click the map to walk there at a fixed speed (client animates, ~2 position updates/s over the WebSocket); arrow keys nudge. A guest's avatar is anonymous ("Guest 4821").
+- **Presence** (Redis): `GEOADD presence`, a hash per connection with a 30 s TTL, `ZRANGE` by radius for the viewport. `{type:'presence'}` messages carry only people within the viewport plus a global online count. Cap 200 avatars per viewport.
+- **Nearby chat**: speech bubbles above avatars plus a chat panel for everyone within ~2 km at City/Land level. Messages are moderated (heuristic or AI), rate-limited (5/10 s), kept 24 h in `chat_messages` (`room = 'nearby:<geocell>'`).
+- **Private chat** between **connections** only. `connections(requester_id, addressee_id, status: pending|accepted|blocked, created_at)`; `chat_messages(room = 'dm:<lowId>:<highId>')`, persistent. Block and report from the chat panel; reports go to the moderation queue.
+- Notifications for connection requests and DMs (in-app + optional email digest from the worker).
+
+### 12.4 Marketplace (platform fee 10%)
+- `listings(id, plot_id, seller_user_id | seller_org_id, price_cents, status: active|sold|cancelled|void, version, created_at, sold_at)`. A plot can have one active listing. Homesteads (free land) and showcase/landmark plots under contract cannot be listed. The listing price is capped at 50× the plot's tier price during the first 30 days after a claim; plots must be held 7 days (config, shown in the UI).
+- **Buy**: `POST /v1/listings/:id/buy` creates an order and a Stripe Checkout (one-time) tied to the listing `version`. The webhook (idempotent) transfers the plot **only if** the listing is still `active` and unchanged; otherwise the buyer is refunded automatically and told why.
+- **Ledger**: `ledger_entries(id, order_id, account, kind: sale|platform_fee|seller_credit|payout|refund, amount_cents, currency, created_at)` where `account` is `platform` or `user:<id>`/`org:<id>`; every sale writes `seller_credit = price − fee` and `platform_fee = fee` (`MARKETPLACE_FEE_BPS=1000`). Entries are append-only and sum to zero per order.
+- **Payouts**: seller connects Stripe Connect Express (`/v1/payouts/connect`); when enabled the worker transfers seller credit; otherwise credit stays in a visible balance and admin can mark manual payouts. A **payment provider interface** (`PaymentProvider`: `createCheckout`, `refund`, `transfer`, `verifyWebhook`) has Stripe and Mock implementations; a PayPal adapter is an optional extra and is documented but not required.
+- UI: "List for sale" on a plot, `/marketplace` (filters: country, price, tier, newest), listing cards, buy flow, "My sales/purchases", seller balance in Billing. Marketplace activity appears in the live feed. Phase 2 adds offers, rentals and plot ads.
+
+### 12.5 Clans
+`clans(id, slug, name, tag (2-4 chars), description, emblem jsonb, leader_user_id, created_at)`, `clan_members(clan_id, user_id, role: leader|officer|member, joined_at)`, `clan_requests` (join requests and invites). One clan per user. Pages `/clan/[slug]`, a clan leaderboard (sum of members' weekly XP and cells), clan chat room (`clan:<id>`, members only), clan achievements (Founder, Ten Strong), activity events, XP for creating or joining. Phase 2 adds alliances and territory mini-games.
+
+### 12.6 Land content
+Plot owners on Plus and above can add **custom HTML**, rendered in `<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" srcdoc=…>` (no same-origin, no top navigation, no forms), screened by moderation (the AI or heuristic checker rejects obfuscated scripts, external form posts and known abuse) and size-limited to 50 KB. Embeds (YouTube, Vimeo, Spotify, Google Maps) via an allow-list of hostnames. Plots keep a **/u/<slug>** vanity link that redirects to `/p/<slug>`.
+
+### 12.7 Deployment (HestiaCP, no root, Node 22 via nvm)
+- The app runs as an ordinary Linux user with its own PM2 (`ecosystem.config.cjs`: `flatmeta-web`, `flatmeta-api`, `flatmeta-worker`). No nginx, no root and no Docker needed on the server.
+- HestiaCP's generic **NodeJS** proxy template serves the domain and includes a per-domain `nodejs-app.conf`; ship a sample in `deploy/hestia/nodejs-app.conf` (proxy locations only, no http-level directives): `/` → web, `/api/` → API (strip prefix), `/api/v1/live` → API WebSocket with `Upgrade`/`Connection` passed through (Hestia hides `Upgrade` by default), `/media/` → static.
+- `scripts/deploy.sh`: loads nvm and `.env` itself, exports `COREPACK_ENABLE_DOWNLOAD_PROMPT=0`, defaults to branch `v2`, builds, migrates, reloads PM2 and **health-checks on `$PORT`**. The server's SSH key has a forced command, so the script takes no arguments from the caller and is the only thing the key can run.
+- `docs/deploy-hestia.md`: full guide (user, nvm, Postgres, Redis, Hestia domain and template, `.env`, first deploy, staging, cron/backups, troubleshooting). The README links to it.
+- **CI/CD: one file, `.github/workflows/ci.yml`.** Jobs: `test` (Postgres 16 + Redis 7 services; lint, typecheck, unit and API tests, build, Playwright smoke) then `deploy` (`needs: test`, `if: github.ref == 'refs/heads/v2' && github.event_name == 'push'`). Do **not** use `workflow_run` or `workflow_dispatch` (GitHub only honours them from `main`). The deploy job reads `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KEY`, `DEPLOY_PATH` and optional `DEPLOY_PORT` from secrets into env and prints a `::notice::` and exits cleanly if any required one is unset.
+
+### 12.8 Acceptance additions
+11. Two browsers at City level see each other's avatars move; nearby chat shows bubbles; a connection request leads to a private chat.
+12. A listed plot is bought through (mock) checkout; ownership moves, the ledger balances (price = seller credit + fee), and a changed listing triggers a refund instead.
+13. A clan can be created, joined by a second user, and appears on the clan leaderboard.
+14. `APP_URL=https://x.example` makes every link, redirect, sitemap entry, share card and email use that origin; production start refuses a localhost `APP_URL`.
+15. A push to `v2` runs `ci.yml`, and its last job deploys when the secrets exist and prints a skip notice when they don't.

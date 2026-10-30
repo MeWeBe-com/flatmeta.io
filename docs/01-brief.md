@@ -244,3 +244,22 @@ The world is divided into the v1 grid of **cells** (40 px at zoom 15: ≈120–1
 ## 12. Appendix: research notes
 
 See `docs/research-notes.md` for the full market research with sources.
+
+---
+
+## 13. Scope alignment with the kickoff brief (2026-10-30)
+
+After this brief was written, the owner's kickoff (`docs/00-kickoff-masterprompt.md`) confirmed the direction and added requirements that this document had treated as "drop" or "Phase 2". The decisions:
+
+| Topic | Earlier position | Now |
+| --- | --- | --- |
+| Avatars walking on the map, nearby chat, connections | Drop (expensive, low value) | **Keep in Phase 1**, built light: avatars only at City/Land zoom, viewport-limited presence on Redis, 24 h nearby chat. They are what makes the world feel populated and "game-like", which the brief demands. |
+| Marketplace with a platform fee | Phase 2 | **Phase 1 basic**: listings, 10% fee, ledger, Stripe checkout and Connect payouts, anti-speculation limits. Offers, rentals and ads stay Phase 2. |
+| Clans | Phase 2 (guilds) | **Phase 1 basic**: create, join, roles, leaderboard, chat. Alliances and territory stay Phase 2. |
+| 3 hard zoom levels | Replace with smooth zoom | **Smooth zoom plus three named levels** (World, City, Land) as presets and as the semantic levels. |
+| PayPal | Dropped | **Stripe primary**, with a provider interface so a PayPal adapter can be added; v1's PayPal money rules (refund if the listing changed, idempotent webhooks, payout retries) are kept. |
+| Passwords | None (email code only) | Email code stays the default; an **optional password** is added. |
+| Hosting | nginx + PM2 + systemd on a bare server | **HestiaCP** on Ubuntu 24.04, app as a normal user with nvm and PM2, nginx via Hestia's NodeJS proxy template. |
+| Repos | Two repos in step | **One monorepo** in `flatmeta.io` `v2`; `flatmetaAPI` `v2` is a pointer README. |
+
+Revenue model is unchanged (land Deeds, subscriptions, boosts, Landmark claims) with **marketplace fees (10%)** moved up as an early recurring-style revenue line. The risks section applies doubly to the marketplace: keep the "not an investment" copy, the 7-day hold and the 50× price cap.
