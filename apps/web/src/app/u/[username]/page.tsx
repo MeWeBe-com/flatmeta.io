@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { PageShell } from '@/components/site-chrome';
 import { Avatar, EmptyState, NamedIcon, PlotGrid, SectionTitle } from '@/components/ui';
 import { FollowButton } from '@/components/follow-button';
+import { FaceBadge } from '@/components/face-badge';
 import { serverApi } from '@/lib/server-api';
 import { flag, RARITY_COLOR } from '@/lib/format';
 import { SITE_URL } from '@/lib/config';
@@ -23,13 +24,18 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function UserPage({ params }: Params) {
   const { username } = await params;
   const d = await load(username);
-  if (!d) notFound();
+  if (!d) {
+    // v1 vanity links: flatmeta.io/u/<plot slug> still works and lands on the plot page.
+    const plot = await serverApi<{ plot: Plot }>(`/plots/${encodeURIComponent(username)}`, { auth: false, revalidate: 60 }).catch(() => null);
+    if (plot) permanentRedirect(`/p/${plot.plot.slug}`);
+    notFound();
+  }
   const u = d.user;
   return (
     <PageShell>
       <div id="main" className="space-y-10">
         <header className="surface p-6 md:p-8 flex flex-col md:flex-row gap-6 md:items-center">
-          <Avatar name={u.displayName} url={u.avatarUrl} size={96} />
+          {u.avatar && !u.avatarUrl ? <FaceBadge look={u.avatar} size={96} /> : <Avatar name={u.displayName} url={u.avatarUrl} size={96} />}
           <div className="flex-1">
             <h1 className="text-3xl font-bold">{u.displayName} {u.homeCountry && <span>{flag(u.homeCountry)}</span>}</h1>
             <p className="muted">@{u.username} · Level {u.level} {u.levelTitle}{u.plan === 'plus' && ' · ✦ Plus'}</p>

@@ -34,7 +34,7 @@ function Editor() {
   const [plot, setPlot] = useState<Plot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>((params.get('designer') ? 'design' : (params.get('tab') as Tab)) || 'design');
-  const [draft, setDraft] = useState({ title: '', tagline: '', descriptionMd: '', category: '', tags: '' });
+  const [draft, setDraft] = useState({ title: '', tagline: '', descriptionMd: '', category: '', tags: '', customHtml: '' });
   const [links, setLinks] = useState<PlotLink[]>([]);
   const [cta, setCta] = useState<PlotLink>({ label: '', url: '' });
   const [theme, setTheme] = useState({ primary: '#2DE2C4', accent: '#FFC94D' });
@@ -45,7 +45,7 @@ function Editor() {
 
   const hydrate = (p: Plot) => {
     setPlot(p);
-    setDraft({ title: p.title, tagline: p.tagline ?? '', descriptionMd: p.descriptionMd ?? '', category: p.category ?? '', tags: p.tags.join(', ') });
+    setDraft({ title: p.title, tagline: p.tagline ?? '', descriptionMd: p.descriptionMd ?? '', category: p.category ?? '', tags: p.tags.join(', '), customHtml: p.customHtml ?? '' });
     setLinks(p.links);
     setCta(p.cta ?? { label: '', url: '' });
     setTheme(p.theme ?? { primary: '#2DE2C4', accent: '#FFC94D' });
@@ -131,7 +131,7 @@ function Editor() {
           {tab === 'design' && <Designer plot={plot} onApplied={(p) => { hydrate(p); void refresh(); }} credits={progress?.credits.remaining ?? me.credits?.remaining ?? 0} unlimited={!!progress?.credits.unlimited} />}
 
           {tab === 'content' && (
-            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void save({ title: draft.title, tagline: draft.tagline || null, descriptionMd: draft.descriptionMd || null, category: draft.category || null, tags: draft.tags.split(',').map((t) => t.trim()).filter(Boolean) }); }}>
+            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void save({ title: draft.title, tagline: draft.tagline || null, descriptionMd: draft.descriptionMd || null, category: draft.category || null, tags: draft.tags.split(',').map((t) => t.trim()).filter(Boolean), customHtml: draft.customHtml.trim() || null }); }}>
               <div><label className="label">Title</label><input className="input" maxLength={80} value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></div>
               <div><label className="label">Tagline</label><input className="input" maxLength={140} value={draft.tagline} onChange={(e) => setDraft({ ...draft, tagline: e.target.value })} placeholder="One line that makes people stop" /></div>
               <div><label className="label">Description (Markdown)</label><textarea className="input font-mono text-[13px]" rows={10} maxLength={5000} value={draft.descriptionMd} onChange={(e) => setDraft({ ...draft, descriptionMd: e.target.value })} /></div>
@@ -139,6 +139,13 @@ function Editor() {
                 <div><label className="label">Category</label><input className="input" value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} placeholder="e.g. food & drink" /></div>
                 <div><label className="label">Tags (comma separated)</label><input className="input" value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} /></div>
               </div>
+              <details className="surface p-4" open={!!draft.customHtml}>
+                <summary className="cursor-pointer font-semibold">Custom HTML <span className="chip chip-violet ml-2">Plus</span></summary>
+                <p className="text-sm muted mt-2">Add your own HTML, CSS and a little JavaScript. It is shown in a sandbox on your plot page: no cookies, forms, popups or redirects; up to 50 KB. Embeds are limited to YouTube, Vimeo, Spotify and Google Maps.</p>
+                <textarea className="input font-mono text-[13px] mt-3" rows={9} maxLength={50000} value={draft.customHtml} onChange={(e) => setDraft({ ...draft, customHtml: e.target.value })} placeholder={'<h2>Welcome!</h2>\n<p>Opening hours, a playlist, a tiny game…</p>'} aria-label="Custom HTML" />
+                {draft.customHtml && <iframe title="Preview" sandbox="allow-scripts" srcDoc={`<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><body style="margin:0;font-family:system-ui;color:#e6e9f5;background:#0b1020">${draft.customHtml}`} className="w-full h-56 rounded-xl mt-3 border border-[var(--line)]" />}
+                {me.user?.plan === 'free' && !me.orgs?.some((o) => o.plan !== 'free') && <p className="text-xs mt-2 text-[var(--color-gold)]">Custom HTML needs <a className="underline" href="/pricing">Plus or a business plan</a>.</p>}
+              </details>
               <button className="btn-primary" disabled={saving}>{saving ? <Spinner /> : <Save size={16} />} Save</button>
               <Ideas plotId={plot.id} />
             </form>

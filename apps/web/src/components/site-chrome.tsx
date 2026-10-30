@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Award, Code2, CreditCard, LayoutDashboard, LogOut, Map, Moon, Shield, Sun, User, Building2, Menu, X, Download } from 'lucide-react';
+import { Award, Code2, CreditCard, LayoutDashboard, LogOut, Map, Moon, Shield, Sun, User, Building2, Menu, X, Download, Settings } from 'lucide-react';
 import { APP_ENV, STAGING_DOMAIN } from '@/lib/config';
 import { t } from '@/lib/i18n';
 import { useSession, useTheme } from './providers';
@@ -55,6 +55,7 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
     { href: '/dashboard/orgs', label: t('nav.organisations'), icon: Building2 },
     { href: '/dashboard/billing', label: t('nav.billing'), icon: CreditCard },
     { href: '/dashboard/developers', label: t('nav.developers'), icon: Code2 },
+    { href: '/dashboard/settings', label: 'Settings', icon: Settings },
     { href: `/u/${u.username}`, label: t('nav.profile'), icon: User },
     ...(u.role !== 'user' ? [{ href: '/admin', label: t('nav.admin'), icon: Shield }] : []),
   ];

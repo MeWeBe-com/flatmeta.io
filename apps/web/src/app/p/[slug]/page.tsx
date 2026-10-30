@@ -127,6 +127,14 @@ export default async function PlotPage({ params }: Params) {
               </section>
             )}
 
+            {p.customHtmlDoc && (
+              <section className="surface overflow-hidden" aria-label="Custom content from the plot owner">
+                {/* Owner HTML runs in a sandbox with no same-origin access, no forms, popups or top navigation, under its own CSP. */}
+                <iframe title={`Custom content for ${p.title}`} srcDoc={p.customHtmlDoc} sandbox="allow-scripts" referrerPolicy="no-referrer" loading="lazy" className="w-full h-[480px] bg-transparent" />
+                <p className="text-[11px] muted px-4 py-2 border-t border-[var(--line)]">Custom content made by the plot owner. Report problems with the Report button.</p>
+              </section>
+            )}
+
             {p.gallery.length > 0 && (
               <section className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {p.gallery.map((g) => (

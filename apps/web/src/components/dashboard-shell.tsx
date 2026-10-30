@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Award, Building2, Code2, CreditCard, LayoutDashboard, Map } from 'lucide-react';
+import { Award, Building2, Code2, CreditCard, LayoutDashboard, Map, Settings } from 'lucide-react';
 import { useSession } from './providers';
 import { SiteHeader } from './site-chrome';
 import { Spinner, clsx } from './ui';
@@ -14,6 +14,7 @@ const NAV = [
   { href: '/dashboard/orgs', label: 'Organisations', icon: Building2 },
   { href: '/dashboard/billing', label: 'Billing', icon: CreditCard },
   { href: '/dashboard/developers', label: 'Developers', icon: Code2 },
+  { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
