@@ -70,7 +70,17 @@ Each step appends a short summary: what was done, decisions made, what's next.
 
 **Next:** grant GitHub write access so the `v2` branches can be pushed; add the deploy secrets and stand up the server per the README; Stripe and AI keys; legal review; then a Lighthouse pass on staging and Phase 2 (`docs/03-masterprompt-phase2.md`).
 
+## Step 1 follow-up — extra branches and secrets (2026-10-30)
+
+**Done:** read every branch of the public `flatmeta/flatmeta.io` and `flatmeta/flatmetaAPI` repos (all are ancestors of `main`; summarised in audit §8) and scanned all branches and history for secrets (audit §9). Merged the owner's `origin/v2` (kickoff masterprompt, `tasks.md`) into the rebuild.
+
+**Finding that changes the plan:** the kickoff brief keeps marketplace, nearby/private chat, connections, clans, the 3 zoom levels, a PayPal option, a **monorepo in `flatmeta.io`** (the API repo's `v2` only gets a README), a deploy job inside `ci.yml`, and a HestiaCP deployment. My first Phase 1 build (written without that file) has none of the following: marketplace, chat/presence/clans, monorepo layout, Hestia, `ci.yml` deploy job. These are now tasks in `tasks.md`.
+
+**Next:** finish Phase 0 (brief and masterprompts updated to the kickoff scope), then the missing Phase 1 milestones.
+
 ## Open questions
+
+0. **URGENT: rotate the Laravel `APP_KEY`.** `flatmetaAPI/.env.example` (all v1 branches, since commit `363faab`) contains a real key: `APP_KEY=base64:ah1EUh…`. Rotate it on every server that ever ran it. It is removed from `v2`; it stays in v1 history unless you rewrite it.
 
 1. The planning gdoc (y3.0 "Logins" tab) is not in the repos. Assumed the login model stays email + one-time code (no passwords), plus optional Google sign-in.
 2. The `APP_KEY` committed in the v1 `.env.example` is a real key; rotate it on any server still running v1.

@@ -130,3 +130,33 @@ No OpenAPI spec, no API keys for third parties, no MCP.
 What we **drop**: avatars walking on the map and proximity chat (expensive realtime with low value; replaced by lighter "explorers online" presence, live activity feed, guestbooks and neighbour waves), hard 3-level zoom, PayPal (replaced by Stripe), Ionic/Capacitor native shells (replaced by a PWA; native shells can return later), the PHP WebSocket server, the Blade CMS, NFT ideas.
 
 **Legacy code stays on `main`** in both repos; `v2` is a clean rebuild.
+
+---
+
+## 8. The other branches (public repos `flatmeta/flatmeta.io` and `flatmeta/flatmetaAPI`)
+
+Added 2026-10-30 from the owner's request to read every branch. All of these branch tips are **ancestors of `main`**: nothing unique lives on them, they are the stepping stones that led to the current `main`. They matter because they record *why* things are built the way they are.
+
+| Repo | Branch (tip date) | What it did | What v2 takes from it |
+| --- | --- | --- | --- |
+| web | `refactor/brief-alignment` (16 Oct) | Replaced a 1,900-line `MetaverseService` (land, friends, chat in `localStorage`, with bots and fake listings) with focused services (`Session`, `Land`, `Presence`, `Friends`, `Pins`, `Settings`, `Payment`). One route serves every map URL (`/`, `/u/:slug`, `/at/:coords`, `/p/:pin`). **Strict 3 zoom levels**; first visit goes to the real location (GPS, then IP). All user text escaped (fixed an XSS via avatar names). Guest land is a device draft saved on sign-in. Tap/click walks the avatar; double-click walks in Buy mode. | The service split, the "one map instance, many URLs" idea, guest drafts, the real-location start, escaping rules. The kickoff brief keeps the 3 zoom levels, so v2 must make them **smooth presets** on top of continuous zoom, not hard snaps. |
+| web | `launch-payments` (20 Oct) | Rent status on "My land", PayPal payout email on the profile, a thank-you page with the real PayPal result, legal pages with `[COMPANY NAME]` placeholders, Capacitor 8 phone builds (`@capacitor/browser`, no cleartext HTTP). | Legal text, payout email, thank-you states. Native wrappers return in Phase 2 (Capacitor). |
+| api | `viewport-land-loading` (16 Oct) | `PurchasedTiles?bbox=…` capped at 5,000 squares, a one-row-per-area summary for zoomed-out levels, indexed numeric `lat_num`/`lng_num`, and a `tiles_updated` WebSocket notice carrying the changed bounds. | The same idea, done properly: integer `(gx, gy)` cells with a primary key, bbox queries by cell range, and a live notice per changed rectangle. |
+| api | `remove-test-uploads` (16 Oct) | Deleted test uploads from `public/assets/uploads`. | Nothing to port; v2 stores media outside the repo. |
+| api | `upgrade/laravel-12`, `upgrade-wip` (20 Oct) | Laravel 8 → 12, Passport 10 → 13 (UUID client ids had to be turned off so existing personal access tokens kept working), PHPUnit 11, Passport migrations, lock file resolved for PHP 8.2. | Confirms v1 now runs on Laravel 12; v1 is frozen on `main`. |
+| api | `launch-payments` (20 Oct) | End-to-end PayPal: rent by subscription ($0.10/square/month), marketplace by one-time checkout (buyers were once charged the sale price monthly), a 90% seller payout by PayPal Payouts with retries, de-duplicated signed webhooks, a `billing:enforce` job (release unpaid reservations after 24 h; release land whose rent lapsed 7 days after the paid period), 25 feature tests against a faked PayPal, a launch checklist. | **Marketplace money rules** (10% fee, refund when a listing changes mid-checkout, ledger, idempotent webhooks, payout retries) move to Phase 1 on Stripe Connect, with a PayPal adapter kept optional. The launch checklist becomes the v2 owner-actions list. |
+| api | `develop` (20 Oct) | One commit on `main`: the HestiaCP guide must let the WebSocket `Upgrade` header through (Hestia's template sets `proxy_hide_header Upgrade`). | Applies to v2's live WebSocket: the Hestia proxy template in `deploy/hestia/` must pass `Upgrade`/`Connection`. |
+
+`flatmeta/flatmeta.io` also has `develop` (identical to `main` minus one "Ship an `.htaccess`" commit).
+
+**Correction to §5 and §6 above:** the audit was written as if marketplace, nearby/private chat, connections and clans were things to drop. The owner's kickoff brief (`docs/00-kickoff-masterprompt.md`) keeps them in Phase 1, so v2 must include them, with the lighter implementation the audit proposed (WebSocket presence on Redis, not a single in-memory PHP process).
+
+## 9. Committed secrets
+
+A scan of every branch tip and the full history of both repos (private-key blocks, cloud and payment key patterns, `*_SECRET`/`*_PASSWORD`/`*_TOKEN` assignments, `.env` and key files, SQL dumps) found **one** credential:
+
+| Where | What | Status |
+| --- | --- | --- |
+| `flatmetaAPI` `.env.example` line 3, introduced in commit `363faab`, present on every v1 branch | `APP_KEY=base64:ah1EUh…` (a real Laravel key; it signs cookies and encrypts values) | **URGENT: rotate on any server that ever used it** (`php artisan key:generate`; this logs everyone out). Removed from `v2` (the file no longer exists there). Still in git history; rewriting v1 history is the owner's call. |
+
+Nothing else was found: no PayPal keys, no private keys, no database dumps, no mobile signing material. `.env.production.example` and the PayPal config use placeholders. v2 ships only `.env.example` files with empty values.
