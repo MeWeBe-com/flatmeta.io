@@ -1,45 +1,27 @@
 {
-  "name": "flatmeta-web",
+  "name": "flatmeta",
   "version": "2.0.0",
   "private": true,
-  "description": "FlatMeta v2 web app: the world map you can own a piece of",
-  "engines": {
-    "node": ">=22"
-  },
+  "description": "FlatMeta v2 monorepo: the world map you can own a piece of",
+  "engines": { "node": ">=22" },
+  "workspaces": ["packages/*", "apps/*"],
   "scripts": {
-    "dev": "next dev -p 3000",
-    "build": "node scripts/copy-maplibre-worker.mjs && next build",
-    "start": "next start -p ${PORT:-3000}",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:e2e": "playwright test",
-    "icons": "node scripts/make-icons.mjs",
-    "postinstall": "node scripts/copy-maplibre-worker.mjs"
-  },
-  "dependencies": {
-    "@fontsource-variable/inter": "^5.3.0",
-    "@fontsource-variable/space-grotesk": "^5.3.0",
-    "clsx": "^2.1.1",
-    "lucide-react": "^1.63.0",
-    "maplibre-gl": "^6.16.0",
-    "next": "^16.4.3",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "server-only": "^0.0.1"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.64.1",
-    "@tailwindcss/postcss": "^4.3.3",
-    "@types/node": "^22.20.5",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "eslint": "^9.39.5",
-    "eslint-config-next": "^16.4.3",
-    "postcss": "^8.5.32",
-    "sharp": "^0.35.5",
-    "tailwindcss": "^4.3.3",
-    "typescript": "~5.9.3",
-    "vitest": "^5.0.5"
+    "postinstall": "npm run build -w @flatmeta/shared",
+    "build:shared": "npm run build -w @flatmeta/shared",
+    "dev:api": "npm run build:shared && npm run dev -w flatmeta-api",
+    "dev:worker": "npm run dev:worker -w flatmeta-api",
+    "dev:web": "npm run dev -w flatmeta-web",
+    "build": "npm run build:shared && npm run build -w flatmeta-api && npm run build -w flatmeta-web",
+    "start:web": "npm run start -w flatmeta-web",
+    "start:api": "npm run start -w flatmeta-api",
+    "start:worker": "npm run start:worker -w flatmeta-api",
+    "lint": "npm run lint -w flatmeta-api -w flatmeta-web",
+    "typecheck": "npm run build:shared && npm run typecheck -w flatmeta-api -w flatmeta-web",
+    "test": "npm run build:shared && npm test -w flatmeta-api -w flatmeta-web",
+    "test:e2e": "npm run test:e2e -w flatmeta-web",
+    "db:migrate": "npm run db:migrate -w flatmeta-api",
+    "db:seed": "npm run db:seed -w flatmeta-api",
+    "setup": "npm run setup -w flatmeta-api",
+    "showcase": "npm run showcase -w flatmeta-api --"
   }
 }

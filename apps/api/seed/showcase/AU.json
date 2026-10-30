@@ -1,0 +1,582 @@
+{
+  "country": {
+    "iso2": "AU",
+    "name": "Australia"
+  },
+  "entries": [
+    {
+      "brand": "Atlassian",
+      "slug": "atlassian",
+      "kind": "company",
+      "sector": "tech",
+      "city": "Sydney",
+      "lat": -33.8673,
+      "lng": 151.2065,
+      "website": "https://www.atlassian.com",
+      "title": "Atlassian — on FlatMeta",
+      "tagline": "Teamwork tools born in Sydney, with an open door on George Street",
+      "description": "Founded in Sydney in 2002, Atlassian makes collaboration software used by teams around the world, and its headquarters sits on George Street in the city centre. This sample plot imagines a teamwork playground: you could browse a careers board, register for developer meetups and community events, and try a short quest that turns planning a group project into a game. Students might find internship and graduate programme details. It shows how a software company could give its global community a friendly place to gather on the map.",
+      "useCase": "Careers & community meetups",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.atlassian.com"
+      },
+      "highlights": [
+        "Careers, internships and graduate roles",
+        "Developer meetup and event calendar",
+        "Gamified team-planning quest"
+      ],
+      "imagePrompt": "Isometric game-like scene of a busy Sydney CBD street with a modern office tower, open-plan floors visible with teams around whiteboards and sticky notes, floating task cards linking people like constellations, harbour glimpses and trams below, bright morning light, vivid palette, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#2D6CDF",
+        "#7DD3C0",
+        "#F4F7FB"
+      ],
+      "motif": "gear",
+      "size": {
+        "w": 3,
+        "h": 3
+      },
+      "tags": [
+        "software",
+        "teamwork",
+        "careers",
+        "meetups",
+        "sydney"
+      ]
+    },
+    {
+      "brand": "Canva",
+      "slug": "canva",
+      "kind": "company",
+      "sector": "tech",
+      "city": "Sydney",
+      "lat": -33.8853,
+      "lng": 151.2114,
+      "website": "https://www.canva.com",
+      "title": "Canva — on FlatMeta",
+      "tagline": "Surry Hills' design studio, turning blank pages into play",
+      "description": "Founded in 2012, Canva grew from a Sydney start-up into an online design platform used around the world, with its home base in Surry Hills. A plot like this could be a creative sandbox: you could try weekly design challenges, find free workshops for teachers, small businesses and non-profits, and browse open roles. A Surry Hills trail might point to street art, laneway cafés and creative studios nearby. It is an illustration of how a design company could invite its community to make something together, right on the map.",
+      "useCase": "Design challenges & workshops",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.canva.com"
+      },
+      "highlights": [
+        "Weekly community design challenges",
+        "Workshops for teachers and non-profits",
+        "Surry Hills street-art walking trail"
+      ],
+      "imagePrompt": "Joyful isometric scene of a converted warehouse office in leafy Surry Hills, colourful creative spaces, people sketching on giant floating canvases, paper shapes and colour swatches drifting from windows, terrace houses and laneway cafés around, sunny afternoon, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#2EC4B6",
+        "#8F5BD6",
+        "#FFD166"
+      ],
+      "motif": "star",
+      "size": {
+        "w": 3,
+        "h": 2
+      },
+      "tags": [
+        "design",
+        "creativity",
+        "workshops",
+        "surry-hills",
+        "sydney"
+      ]
+    },
+    {
+      "brand": "ASX",
+      "slug": "asx",
+      "kind": "company",
+      "sector": "finance",
+      "city": "Sydney",
+      "lat": -33.8634,
+      "lng": 151.2086,
+      "website": "https://www.asx.com.au",
+      "title": "ASX — on FlatMeta",
+      "tagline": "Bridge Street's market hub, translated for first-time investors",
+      "description": "The Australian Securities Exchange operates from the Exchange Centre on Bridge Street, a short walk from Circular Quay. This sample plot imagines an investor-education lobby: you could follow a plain-language path through shares, ETFs and how listings work, join free online courses and investor events, and explore a timeline of Australian market history. A walking trail might link the Exchange Centre to the sandstone landmarks of Bridge and Macquarie Streets. It shows how an exchange could help newcomers feel confident and curious.",
+      "useCase": "Investor education lobby",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.asx.com.au"
+      },
+      "highlights": [
+        "Plain-language guide to investing basics",
+        "Free courses and investor events",
+        "Sandstone Sydney heritage trail"
+      ],
+      "imagePrompt": "Isometric game-like scene of a modern office building on a Sydney street lined with sandstone heritage facades, gentle abstract light charts rising into the sky like kites, commuters heading to the harbour ferries, fig trees and a glimpse of the bridge, crisp morning light, vivid palette, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#12355B",
+        "#2CA58D",
+        "#F0E6D2"
+      ],
+      "motif": "orbit",
+      "size": {
+        "w": 3,
+        "h": 2
+      },
+      "tags": [
+        "stock-exchange",
+        "investing",
+        "education",
+        "circular-quay",
+        "sydney"
+      ]
+    },
+    {
+      "brand": "Qantas",
+      "slug": "qantas",
+      "kind": "company",
+      "sector": "travel",
+      "city": "Sydney",
+      "lat": -33.9252,
+      "lng": 151.1866,
+      "website": "https://www.qantas.com",
+      "title": "Qantas — on FlatMeta",
+      "tagline": "From an outback start in 1920 to every corner of the map",
+      "description": "Founded in outback Queensland in 1920, Qantas is one of the world's oldest continuously operating airlines, with its group headquarters in Mascot beside Sydney Airport. A plot like this could be your departure gate on the map: you could explore destinations across Australia and beyond, plan a road-trip-plus-flight itinerary, and look behind the scenes at pilots, engineers and cabin crew through a careers hub. Aviation fans might follow a heritage timeline of famous aircraft. It is a sample of how an airline could share the wonder of flight.",
+      "useCase": "Destination explorer & aviation heritage",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.qantas.com"
+      },
+      "highlights": [
+        "Destination ideas across Australia",
+        "Pilot and engineering careers hub",
+        "Aviation heritage timeline"
+      ],
+      "imagePrompt": "Sweeping isometric scene of a Sydney airside campus beside Botany Bay, unmarked jets lined up at gates, engineers in a sunlit hangar, a vintage biplane parked beside a modern airliner, red outback landscape fading into ocean on the horizon, golden light, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#B83A2E",
+        "#F2D0A4",
+        "#1F3B57"
+      ],
+      "motif": "wing",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "airline",
+        "travel",
+        "aviation-heritage",
+        "careers",
+        "sydney"
+      ]
+    },
+    {
+      "brand": "Myer",
+      "slug": "myer",
+      "kind": "company",
+      "sector": "retail",
+      "city": "Melbourne",
+      "lat": -37.8134,
+      "lng": 144.9638,
+      "website": "https://www.myer.com.au",
+      "title": "Myer — on FlatMeta",
+      "tagline": "Bourke Street's grand department store, with windows that tell stories",
+      "description": "Myer's flagship department store anchors Bourke Street Mall in central Melbourne, where its animated Christmas windows have delighted families for generations. This sample plot imagines a shopping concierge: you could browse departments by floor, see in-store events and seasonal launches, and plan a visit around the festive windows. A city-centre trail might connect the store with arcades, laneways and trams nearby. It shows how a department store could combine practical shopping tools with a dash of holiday magic.",
+      "useCase": "Store guide & festive windows",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.myer.com.au"
+      },
+      "highlights": [
+        "Floor-by-floor department guide",
+        "Seasonal events and launch calendar",
+        "Festive window trail with arcades"
+      ],
+      "imagePrompt": "Festive isometric scene of a grand department store on a Melbourne pedestrian mall at dusk, animated storybook window displays glowing, green trams gliding past, families with shopping bags, laneway arcades and fairy lights strung overhead, warm magical light, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#1E1E24",
+        "#E3B505",
+        "#C1666B"
+      ],
+      "motif": "bag",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "department-store",
+        "shopping",
+        "christmas-windows",
+        "bourke-street",
+        "melbourne"
+      ]
+    },
+    {
+      "brand": "Haigh's Chocolates",
+      "slug": "haighs-chocolates",
+      "kind": "company",
+      "sector": "food",
+      "city": "Adelaide",
+      "lat": -34.9229,
+      "lng": 138.5998,
+      "website": "https://www.haighschocolates.com.au",
+      "title": "Haigh's Chocolates — on FlatMeta",
+      "tagline": "A sweet corner of Adelaide, made by one family since 1915",
+      "description": "Haigh's has been making chocolate in Adelaide since 1915, and its store on Beehive Corner at the top of Rundle Mall is a city favourite. A plot like this could reveal the bean-to-bar story through short illustrated chapters, list seasonal treats as they arrive, and help you book a visit to the company's chocolate-making tour. A Rundle Mall trail might pair a chocolate stop with nearby arcades and North Terrace galleries. It is an example of how a family-run maker could share its craft with a sweet tooth anywhere.",
+      "useCase": "Bean-to-bar story & tours",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.haighschocolates.com.au"
+      },
+      "highlights": [
+        "Illustrated bean-to-bar story",
+        "Seasonal treats as they arrive",
+        "Rundle Mall and North Terrace trail"
+      ],
+      "imagePrompt": "Delicious isometric scene of a heritage corner building on an Adelaide shopping mall, a chocolate shop glowing inside with trays of truffles and pralines, cocoa pods and beans floating in the air, shoppers in sunny streets with jacaranda trees, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#5A3825",
+        "#E8C39E",
+        "#7FA88B"
+      ],
+      "motif": "heart",
+      "size": {
+        "w": 2,
+        "h": 2
+      },
+      "tags": [
+        "chocolate",
+        "family-business",
+        "rundle-mall",
+        "tours",
+        "adelaide"
+      ]
+    },
+    {
+      "brand": "The Perth Mint",
+      "slug": "the-perth-mint",
+      "kind": "company",
+      "sector": "tourism",
+      "city": "Perth",
+      "lat": -31.9568,
+      "lng": 115.8694,
+      "website": "https://www.perthmint.com",
+      "title": "The Perth Mint — on FlatMeta",
+      "tagline": "Gold-rush history, a glowing pour and a heritage courtyard",
+      "description": "Opened in 1899 during Western Australia's gold rush, The Perth Mint still operates from its heritage limestone buildings on Hay Street. This sample plot imagines a gold-rush time machine: you could book a visit to see a live gold pour, explore the story of prospectors and early coins through an interactive timeline, and browse collectable releases. Families might follow a nugget-hunting quest around the courtyard. It shows how a historic mint could share a shining chapter of Perth's past with visitors from everywhere.",
+      "useCase": "Gold-pour visits & history quests",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.perthmint.com"
+      },
+      "highlights": [
+        "Book a live gold-pour demonstration",
+        "Interactive gold-rush timeline",
+        "Courtyard nugget-hunting quest"
+      ],
+      "imagePrompt": "Warm isometric scene of a 19th-century limestone mint building with arched verandahs and a courtyard in Perth, molten gold glowing as it pours into a mould inside, prospector-era carts and pans on display, families exploring, blue sky and gum trees, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#D4A72C",
+        "#E9DDC7",
+        "#3E5C76"
+      ],
+      "motif": "star",
+      "size": {
+        "w": 3,
+        "h": 2
+      },
+      "tags": [
+        "gold-rush",
+        "heritage",
+        "coins",
+        "family",
+        "perth"
+      ]
+    },
+    {
+      "brand": "Sydney Symphony Orchestra",
+      "slug": "sydney-symphony-orchestra",
+      "kind": "organisation",
+      "sector": "culture",
+      "city": "Sydney",
+      "lat": -33.8572,
+      "lng": 151.2151,
+      "website": "https://www.sydneysymphony.com",
+      "title": "Sydney Symphony Orchestra — on FlatMeta",
+      "tagline": "Harbour, sails and a full orchestra in full flight",
+      "description": "The Sydney Symphony Orchestra performs in the Concert Hall of the Sydney Opera House, one of the world's most famous buildings on Bennelong Point. A plot like this could gather the whole season into one interactive programme: you could preview concerts by mood or composer, meet the players section by section, and sign up for family concerts and learning programmes. A pre-concert harbour walk might start at Circular Quay and loop through the Royal Botanic Garden. It is a sample of how an orchestra could make every performance easier to discover.",
+      "useCase": "Season explorer & family concerts",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.sydneysymphony.com"
+      },
+      "highlights": [
+        "Browse concerts by mood or composer",
+        "Meet the musicians, section by section",
+        "Pre-concert harbour and garden walk"
+      ],
+      "imagePrompt": "Majestic isometric scene of white sail-shaped concert halls on a harbour point at sunset, an orchestra visible inside a glowing timber hall, musical notes drifting over the water toward a great arched steel bridge, ferries and sailboats, pink and gold sky, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#F2EEE6",
+        "#1C4E80",
+        "#E8915B"
+      ],
+      "motif": "music",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "orchestra",
+        "classical-music",
+        "opera-house",
+        "concerts",
+        "sydney"
+      ]
+    },
+    {
+      "brand": "Melbourne Cricket Ground",
+      "slug": "melbourne-cricket-ground",
+      "kind": "organisation",
+      "sector": "sport",
+      "city": "Melbourne",
+      "lat": -37.8199,
+      "lng": 144.9832,
+      "website": "https://www.mcg.org.au",
+      "title": "Melbourne Cricket Ground — on FlatMeta",
+      "tagline": "The 'G: footy finals, Boxing Day cricket and 100,000 voices",
+      "description": "Home to Australian sport since 1853, the Melbourne Cricket Ground hosts the AFL Grand Final, the Boxing Day Test and crowds approaching 100,000. This sample plot imagines a year-round stadium hub: you could check upcoming fixtures and events, book a behind-the-scenes tour of change rooms and the members' areas, and explore sporting history through an interactive timeline. A Yarra Park trail might link the ground with nearby gardens and the city. It shows how a legendary venue could keep fans connected between seasons.",
+      "useCase": "Stadium tours & event calendar",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.mcg.org.au"
+      },
+      "highlights": [
+        "Upcoming fixtures and events",
+        "Behind-the-scenes stadium tours",
+        "Interactive sporting history timeline"
+      ],
+      "imagePrompt": "Epic isometric scene of a vast oval stadium packed with fans under a summer sky, cricket whites on a lush green field, light towers rising, parklands with elm trees and a city skyline behind, trams and crowds streaming in, golden afternoon light, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#2F6B3B",
+        "#F2E3BC",
+        "#1D3557"
+      ],
+      "motif": "ball",
+      "size": {
+        "w": 5,
+        "h": 4
+      },
+      "tags": [
+        "stadium",
+        "cricket",
+        "afl",
+        "tours",
+        "melbourne"
+      ]
+    },
+    {
+      "brand": "The University of Melbourne",
+      "slug": "university-of-melbourne",
+      "kind": "organisation",
+      "sector": "education",
+      "city": "Melbourne",
+      "lat": -37.7978,
+      "lng": 144.9612,
+      "website": "https://www.unimelb.edu.au",
+      "title": "The University of Melbourne — on FlatMeta",
+      "tagline": "Sandstone cloisters and big ideas, a tram ride from the CBD",
+      "description": "Founded in 1853, the University of Melbourne's Parkville campus mixes historic sandstone cloisters with modern research buildings, just north of the city centre. A plot like this could be a campus guidebook: you could take a self-guided walk past the Old Quad and South Lawn, find public lectures, exhibitions and open days, and explore courses and scholarships. Prospective students might follow a day-in-the-life quest through lecture halls, libraries and student hangouts. It is an illustration of how a university could open its campus to the whole city.",
+      "useCase": "Open days & campus walks",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.unimelb.edu.au"
+      },
+      "highlights": [
+        "Self-guided historic campus walk",
+        "Public lectures and exhibitions",
+        "Day-in-the-life student quest"
+      ],
+      "imagePrompt": "Painterly isometric scene of a university campus in Melbourne with Gothic Revival sandstone cloisters around a quadrangle, a broad green lawn, students with bikes and coffee, modern glass faculty buildings, a tram on the nearby road, autumn leaves and soft light, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#1B365D",
+        "#C8A96E",
+        "#8DB38B"
+      ],
+      "motif": "book",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "university",
+        "campus",
+        "open-day",
+        "parkville",
+        "melbourne"
+      ]
+    },
+    {
+      "brand": "Queensland Art Gallery | Gallery of Modern Art",
+      "slug": "qagoma",
+      "kind": "organisation",
+      "sector": "culture",
+      "city": "Brisbane",
+      "lat": -27.4705,
+      "lng": 153.0171,
+      "website": "https://www.qagoma.qld.gov.au",
+      "title": "Queensland Art Gallery | Gallery of Modern Art — on FlatMeta",
+      "tagline": "Riverside art in Brisbane's South Bank, from ancient to now",
+      "description": "QAGOMA brings together the Queensland Art Gallery and the Gallery of Modern Art on Brisbane's South Bank, beside the river. It is known for big contemporary exhibitions, a strong Asia Pacific focus and lively children's programmes. This sample plot imagines a riverside art planner: you could see current exhibitions, book family art activities, and find late-night events and film screenings at the cinémathèque. A South Bank trail might link the galleries with parklands and the swimming lagoon. It shows how a gallery could make art part of a day in the sun.",
+      "useCase": "Exhibitions & kids' art activities",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.qagoma.qld.gov.au"
+      },
+      "highlights": [
+        "Current exhibitions at both galleries",
+        "Children's art activities to book",
+        "South Bank river and lagoon trail"
+      ],
+      "imagePrompt": "Bright isometric scene of a sleek modern gallery with deep cantilevered roofs beside a wide subtropical river in Brisbane, giant colourful installations visible through glass walls, families on lawns, a pedestrian bridge and city towers across the water, sunny blue sky, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#F2F2F0",
+        "#E85D75",
+        "#2A7F9E"
+      ],
+      "motif": "star",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "art-gallery",
+        "modern-art",
+        "south-bank",
+        "family",
+        "brisbane"
+      ]
+    },
+    {
+      "brand": "Kings Park and Botanic Garden",
+      "slug": "kings-park-and-botanic-garden",
+      "kind": "organisation",
+      "sector": "tourism",
+      "city": "Perth",
+      "lat": -31.9606,
+      "lng": 115.8418,
+      "website": "https://www.bgpa.wa.gov.au",
+      "title": "Kings Park and Botanic Garden — on FlatMeta",
+      "tagline": "Bushland, wildflowers and the best view of the Swan River",
+      "description": "Overlooking the Swan River and Perth's skyline, Kings Park is one of the world's largest inner-city parks, combining native bushland with a botanic garden of Western Australian plants. A plot like this could help you plan a visit around the wildflower season, follow a self-guided walk across the treetop walkway, and discover guided walks, festivals and conservation volunteering. Kids might take on a spot-the-wildflower quest. It is a sample of how a park could share its biodiversity and views with locals and visitors alike.",
+      "useCase": "Wildflower trails & volunteering",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.bgpa.wa.gov.au"
+      },
+      "highlights": [
+        "Wildflower-season visit planner",
+        "Treetop walkway self-guided route",
+        "Spot-the-wildflower quest for kids"
+      ],
+      "imagePrompt": "Lush isometric scene of a hilltop park above a wide blue river and city skyline, a curving glass-and-steel walkway through eucalyptus canopy, carpets of colourful native wildflowers, picnicking families and a kookaburra on a branch, clear golden afternoon light, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#5B8C3E",
+        "#E07A5F",
+        "#4BA3C3"
+      ],
+      "motif": "leaf",
+      "size": {
+        "w": 5,
+        "h": 3
+      },
+      "tags": [
+        "park",
+        "wildflowers",
+        "botanic-garden",
+        "views",
+        "perth"
+      ]
+    },
+    {
+      "brand": "Taronga Conservation Society Australia",
+      "slug": "taronga-conservation-society",
+      "kind": "organisation",
+      "sector": "nonprofit",
+      "city": "Sydney",
+      "lat": -33.8438,
+      "lng": 151.2414,
+      "website": "https://www.taronga.org.au",
+      "title": "Taronga Conservation Society Australia — on FlatMeta",
+      "tagline": "A harbourside zoo where every visit helps wildlife",
+      "description": "Taronga Zoo sits on the hillside in Mosman with sweeping views across Sydney Harbour, a short ferry ride from Circular Quay. Run by a not-for-profit conservation society, it combines animal encounters with breeding programmes and wildlife research. This sample plot imagines a wild welcome: you could plan your day around keeper talks, follow a ferry-to-gate route, and learn how to support conservation projects. Kids might take on an endangered-species quest across the zoo. It shows how a conservation charity could turn curiosity into action.",
+      "useCase": "Keeper talks & conservation quests",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.taronga.org.au"
+      },
+      "highlights": [
+        "Keeper talk and feeding schedule",
+        "Ferry-to-gate visit planner",
+        "Endangered-species quest for kids"
+      ],
+      "imagePrompt": "Delightful isometric scene of a hillside zoo overlooking a sparkling harbour and city skyline, a ferry arriving at the wharf, a sky gondola gliding above, koalas, giraffes and platypus habitats among native trees, families exploring, bright sunny day, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#3A7D44",
+        "#F2C57C",
+        "#2B7BB9"
+      ],
+      "motif": "globe",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "zoo",
+        "conservation",
+        "wildlife",
+        "harbour",
+        "sydney"
+      ]
+    },
+    {
+      "brand": "Art Gallery of South Australia",
+      "slug": "art-gallery-of-south-australia",
+      "kind": "organisation",
+      "sector": "culture",
+      "city": "Adelaide",
+      "lat": -34.9206,
+      "lng": 138.604,
+      "website": "https://www.agsa.sa.gov.au",
+      "title": "Art Gallery of South Australia — on FlatMeta",
+      "tagline": "North Terrace's grand gallery, open to every kind of looker",
+      "description": "Established in 1881, the Art Gallery of South Australia sits on North Terrace, Adelaide's cultural boulevard, and holds celebrated collections of Australian, Aboriginal and international art. A plot like this could help you discover what is on, follow themed trails through the collection, and register for talks, late-night events and family art-making sessions. A North Terrace culture walk might link the gallery to the museum, library and university next door. It is an example of how a gallery could welcome first-time visitors as warmly as regulars.",
+      "useCase": "Collection trails & late nights",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.agsa.sa.gov.au"
+      },
+      "highlights": [
+        "Themed trails through the collection",
+        "Late-night events and talks",
+        "North Terrace culture walk"
+      ],
+      "imagePrompt": "Elegant isometric scene of a classical colonnaded gallery on a tree-lined Adelaide boulevard, bright sunlit halls with paintings and sculptures, visitors sketching, a neighbouring museum and library, jacaranda blossoms and warm stone, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#C9B79C",
+        "#7B4B94",
+        "#3C6E71"
+      ],
+      "motif": "column",
+      "size": {
+        "w": 3,
+        "h": 2
+      },
+      "tags": [
+        "art-gallery",
+        "north-terrace",
+        "aboriginal-art",
+        "events",
+        "adelaide"
+      ]
+    }
+  ]
+}

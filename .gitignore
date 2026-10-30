@@ -15,3 +15,7 @@ test-results/
 playwright-report/
 .next-build/
 .next-prev/
+dist/
+storage/
+*.log
+apps/web/public/vendor/

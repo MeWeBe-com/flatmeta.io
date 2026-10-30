@@ -1,0 +1,582 @@
+{
+  "country": {
+    "iso2": "BR",
+    "name": "Brazil"
+  },
+  "entries": [
+    {
+      "brand": "B3",
+      "slug": "b3",
+      "kind": "company",
+      "sector": "finance",
+      "city": "São Paulo",
+      "lat": -23.5465,
+      "lng": -46.6344,
+      "website": "https://www.b3.com.br",
+      "title": "B3 — on FlatMeta",
+      "tagline": "Brazil's market heartbeat, explained on a street in Centro",
+      "description": "Brazil's stock exchange keeps its historic home on Rua XV de Novembro in São Paulo's old city centre. This sample plot imagines a welcoming entry point to the markets: you could follow a beginner's path through shares, indices and how trading works, sign up for financial-education courses, and find events held in the building. A walking trail might connect the exchange to nearby landmarks such as the Pátio do Colégio and the Mosteiro de São Bento. It shows how a market operator could turn its address into a classroom anyone can visit.",
+      "useCase": "Financial education & heritage walks",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.b3.com.br"
+      },
+      "highlights": [
+        "Beginner's path to how markets work",
+        "Financial-education course sign-up",
+        "Centro histórico walking trail"
+      ],
+      "imagePrompt": "Isometric game-like scene of São Paulo's historic downtown: an elegant early-20th-century bank building on a cobbled pedestrian street, abstract glowing data ribbons rising like vines, office workers and street musicians, art-deco towers behind, warm afternoon light with tropical trees, vivid palette, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#0E3B5C",
+        "#29B39A",
+        "#F1E9D8"
+      ],
+      "motif": "orbit",
+      "size": {
+        "w": 3,
+        "h": 3
+      },
+      "tags": [
+        "stock-exchange",
+        "investing",
+        "education",
+        "centro",
+        "sao-paulo"
+      ]
+    },
+    {
+      "brand": "Copacabana Palace",
+      "slug": "copacabana-palace",
+      "kind": "company",
+      "sector": "travel",
+      "city": "Rio de Janeiro",
+      "lat": -22.967,
+      "lng": -43.1792,
+      "website": "https://www.belmond.com",
+      "title": "Copacabana Palace — on FlatMeta",
+      "tagline": "A white façade, a famous beach and a century of Rio glamour",
+      "description": "Opened in 1923 on Avenida Atlântica, the Copacabana Palace is one of Rio's most recognisable hotels, facing the curve of Copacabana beach. A plot like this could let you peek into its pool terrace and ballrooms, plan dinners and stays around Rio's festival calendar, and discover the neighbourhood through a curated beach-and-bossa walking trail. New Year's Eve fans might find tips for the fireworks along the sand. It is an illustration of how a landmark hotel could share its story with travellers long before check-in.",
+      "useCase": "Stay planner & beach trails",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.belmond.com"
+      },
+      "highlights": [
+        "Virtual tour of the pool terrace",
+        "Season-by-season Rio stay planner",
+        "Copacabana beach-and-bossa walk"
+      ],
+      "imagePrompt": "Painterly isometric view of a grand white Art Deco seafront hotel on a wave-patterned promenade, golden sand, beach volleyball, palm trees and a turquoise pool, the granite peaks of Rio rising behind at sunset, glowing pink and gold sky, vivid game-like detail, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#F5F1E6",
+        "#2A9DB5",
+        "#E8A87C"
+      ],
+      "motif": "waves",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "hotel",
+        "beach",
+        "copacabana",
+        "rio-de-janeiro",
+        "heritage"
+      ]
+    },
+    {
+      "brand": "Confeitaria Colombo",
+      "slug": "confeitaria-colombo",
+      "kind": "company",
+      "sector": "food",
+      "city": "Rio de Janeiro",
+      "lat": -22.9052,
+      "lng": -43.1787,
+      "website": "https://www.confeitariacolombo.com.br",
+      "title": "Confeitaria Colombo — on FlatMeta",
+      "tagline": "Mirrored halls, stained glass and pastries since 1894",
+      "description": "Since 1894, Confeitaria Colombo has served coffee and pastries beneath tall mirrors and a stained-glass skylight on Rua Gonçalves Dias in Rio's Centro. This sample plot imagines a sweet invitation: you could browse today's pastries, check the best times for afternoon tea, and book a table for brunch. A Belle Époque trail might link the café with the Theatro Municipal and other historic buildings nearby. It shows how a heritage café could guide visitors through downtown Rio with a cup of coffee as the reward.",
+      "useCase": "Tea-time booking & heritage trail",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.confeitariacolombo.com.br"
+      },
+      "highlights": [
+        "Today's pastries and tea menu",
+        "Brunch and afternoon-tea booking",
+        "Belle Époque downtown walking trail"
+      ],
+      "imagePrompt": "Lavish painterly interior of a Belle Époque café in Rio: towering gilded mirrors, a glowing stained-glass skylight, marble counters piled with pastries, waiters with silver trays, sunlight streaming through, guests sipping coffee, warm amber and jade tones, isometric game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#C79A4B",
+        "#2F5D50",
+        "#F3E3C3"
+      ],
+      "motif": "cup",
+      "size": {
+        "w": 3,
+        "h": 2
+      },
+      "tags": [
+        "cafe",
+        "pastries",
+        "belle-epoque",
+        "centro",
+        "rio-de-janeiro"
+      ]
+    },
+    {
+      "brand": "Havaianas",
+      "slug": "havaianas",
+      "kind": "company",
+      "sector": "fashion",
+      "city": "São Paulo",
+      "lat": -23.5616,
+      "lng": -46.6705,
+      "website": "https://havaianas.com.br",
+      "title": "Havaianas — on FlatMeta",
+      "tagline": "Summer underfoot, all year long, on Rua Oscar Freire",
+      "description": "Havaianas rubber sandals have been a Brazilian staple since the 1960s, and the brand's concept store on Rua Oscar Freire is a stop on many São Paulo shopping walks. On a plot like this you could explore seasonal collections, design a custom pair in a playful configurator, and check in-store events and launches. A Jardins shopping trail might guide you between boutiques, cafés and shady streets. It is an example of how a fashion brand could make its flagship feel like a summer festival you can visit from anywhere.",
+      "useCase": "Custom designer & store events",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://havaianas.com.br"
+      },
+      "highlights": [
+        "Playful custom sandal configurator",
+        "Concept-store launches and events",
+        "Jardins shopping and café trail"
+      ],
+      "imagePrompt": "Joyful isometric scene of a leafy São Paulo boutique street with an airy, plant-filled concept store, walls of colourful sandals arranged like a rainbow, shoppers with tote bags, tropical plants and street art, bright sunshine and dappled shade, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#FF8A3D",
+        "#3BB8C3",
+        "#FFE07A"
+      ],
+      "motif": "sun",
+      "size": {
+        "w": 3,
+        "h": 2
+      },
+      "tags": [
+        "sandals",
+        "fashion",
+        "oscar-freire",
+        "jardins",
+        "sao-paulo"
+      ]
+    },
+    {
+      "brand": "Globo",
+      "slug": "globo",
+      "kind": "company",
+      "sector": "media",
+      "city": "Rio de Janeiro",
+      "lat": -22.9605,
+      "lng": -43.2094,
+      "website": "https://www.globo.com",
+      "title": "Globo — on FlatMeta",
+      "tagline": "Behind the screen in Jardim Botânico, where Brazil tunes in",
+      "description": "Globo, Brazil's largest media group, has long been based in Rio's Jardim Botânico neighbourhood. This sample plot imagines a backstage pass: you could explore what is on tonight, discover the making of telenovelas and news shows through short behind-the-scenes stories, and find audience sign-ups for live programmes. Fans might follow a Rio filming-location trail that visits beaches, hills and city streets seen on screen. It shows how a broadcaster could connect what viewers watch with the real places that inspire it.",
+      "useCase": "Behind-the-scenes & filming trails",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.globo.com"
+      },
+      "highlights": [
+        "Tonight's schedule at a glance",
+        "Behind-the-scenes production stories",
+        "Rio filming-location trail"
+      ],
+      "imagePrompt": "Cinematic isometric scene of a lush Rio neighbourhood at the foot of forested hills, a modern TV studio complex with open soundstages, camera cranes, glowing studio lights and actors rehearsing in costume, botanical palms around, twilight sky, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#1B2A49",
+        "#F2A541",
+        "#5FBF8F"
+      ],
+      "motif": "film",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "television",
+        "telenovelas",
+        "media",
+        "jardim-botanico",
+        "rio-de-janeiro"
+      ]
+    },
+    {
+      "brand": "Nubank",
+      "slug": "nubank",
+      "kind": "company",
+      "sector": "tech",
+      "city": "São Paulo",
+      "lat": -23.561,
+      "lng": -46.6735,
+      "website": "https://nubank.com.br",
+      "title": "Nubank — on FlatMeta",
+      "tagline": "Money made simpler, from a Pinheiros side street to millions of phones",
+      "description": "Founded in São Paulo in 2013, Nubank grew into one of the world's largest digital banks, with its headquarters in the Pinheiros district. A plot like this could offer a friendly money-skills hub: you could try short financial-literacy quests, browse open roles for engineers and designers, and find meetups and talks hosted nearby. A Pinheiros neighbourhood trail might point to independent cafés, galleries and Largo da Batata. It is a sample of how a fintech could meet its community in the real streets where it began.",
+      "useCase": "Money-skills quests & careers",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://nubank.com.br"
+      },
+      "highlights": [
+        "Bite-sized financial-literacy quests",
+        "Engineering and design careers board",
+        "Pinheiros meetups and café trail"
+      ],
+      "imagePrompt": "Playful isometric scene of a modern office building in a creative São Paulo neighbourhood, glass terraces with plants, people collaborating on laptops, floating glowing phone screens and coins turning into leaves, street art murals and cafés below, dusk lighting with soft violet and teal accents, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#6B4FA0",
+        "#3CC9B4",
+        "#F4F0FA"
+      ],
+      "motif": "bolt",
+      "size": {
+        "w": 3,
+        "h": 2
+      },
+      "tags": [
+        "fintech",
+        "digital-bank",
+        "careers",
+        "pinheiros",
+        "sao-paulo"
+      ]
+    },
+    {
+      "brand": "Embraer",
+      "slug": "embraer",
+      "kind": "company",
+      "sector": "tech",
+      "city": "São José dos Campos",
+      "lat": -23.2325,
+      "lng": -45.852,
+      "website": "https://www.embraer.com",
+      "title": "Embraer — on FlatMeta",
+      "tagline": "Where Brazilian wings take shape, ready for a closer look",
+      "description": "Founded in 1969, Embraer is one of the world's leading aircraft manufacturers, headquartered in São José dos Campos in the Paraíba Valley. This sample plot imagines a hangar door left open for curious visitors: you could explore stories from commercial and executive aviation, follow an aircraft from design to first flight, and browse engineering careers and student programmes. Aviation fans might find a timeline of iconic models. It shows how an aerospace company could share the craft of flight with the next generation of engineers.",
+      "useCase": "Aviation stories & careers",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.embraer.com"
+      },
+      "highlights": [
+        "From design sketch to first flight",
+        "Engineering careers and student programmes",
+        "Timeline of landmark aircraft"
+      ],
+      "imagePrompt": "Isometric game-like scene of a gleaming aircraft hangar beside a runway in a green Brazilian valley, an unmarked white jet being assembled by engineers, blueprint holograms floating above, a test plane taking off into a pastel sunrise, rolling hills behind, vivid palette, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#1F4E79",
+        "#9CC9E8",
+        "#F2F2EE"
+      ],
+      "motif": "wing",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "aerospace",
+        "aviation",
+        "engineering",
+        "careers",
+        "sao-jose-dos-campos"
+      ]
+    },
+    {
+      "brand": "Museu de Arte de São Paulo (MASP)",
+      "slug": "masp-museu-de-arte-de-sao-paulo",
+      "kind": "organisation",
+      "sector": "culture",
+      "city": "São Paulo",
+      "lat": -23.5615,
+      "lng": -46.656,
+      "website": "https://masp.org.br",
+      "title": "Museu de Arte de São Paulo (MASP) — on FlatMeta",
+      "tagline": "A red-framed museum floating over Avenida Paulista",
+      "description": "Designed by Lina Bo Bardi, MASP's building appears to float above Avenida Paulista, leaving a free open space beneath where the city gathers. A plot like this could help you plan a visit with exhibition highlights, introduce the museum's famous glass easels that let paintings seem to hover in space, and list talks and workshops. On Sundays, when Paulista opens to pedestrians, a walking trail might link the museum to nearby cultural centres. It is an example of how a museum could extend its welcome out onto the avenue.",
+      "useCase": "Exhibitions & Sunday Paulista trail",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://masp.org.br"
+      },
+      "highlights": [
+        "Current exhibitions and talks",
+        "Guide to the glass-easel gallery",
+        "Sunday Avenida Paulista culture walk"
+      ],
+      "imagePrompt": "Isometric painterly scene of a bold modernist museum lifted on two red concrete frames above a wide open plaza on a busy avenue, Sunday crowds, cyclists and street performers beneath, paintings glimpsed through glass, skyscrapers and jacaranda trees around, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#C0392B",
+        "#2C3E50",
+        "#ECE7DF"
+      ],
+      "motif": "column",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "museum",
+        "modern-art",
+        "avenida-paulista",
+        "architecture",
+        "sao-paulo"
+      ]
+    },
+    {
+      "brand": "Museu do Amanhã",
+      "slug": "museu-do-amanha",
+      "kind": "organisation",
+      "sector": "culture",
+      "city": "Rio de Janeiro",
+      "lat": -22.8941,
+      "lng": -43.1794,
+      "website": "https://www.museudoamanha.org.br",
+      "title": "Museu do Amanhã — on FlatMeta",
+      "tagline": "Questions about tomorrow, asked on the edge of Guanabara Bay",
+      "description": "Opened in 2015 on Praça Mauá, the Museu do Amanhã is a science museum designed by Santiago Calatrava, its long white structure reaching out over Guanabara Bay. On a plot like this you could explore themes about the planet's future, sign up for school visits and workshops, and plan a trip that includes the revitalised waterfront boulevard. Families might follow a sustainability quest with small challenges to complete at home. It is a sample of how a museum could keep visitors thinking about tomorrow long after they leave.",
+      "useCase": "Sustainability quests & school visits",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.museudoamanha.org.br"
+      },
+      "highlights": [
+        "Futures themes explained simply",
+        "School visits and workshop booking",
+        "Home sustainability challenge quest"
+      ],
+      "imagePrompt": "Futuristic isometric scene of a long white skeletal museum with fin-like solar panels stretching over turquoise bay waters, reflecting pools, cyclists along a waterfront boulevard, ferries and sailboats, green hills in the distance, bright tropical daylight, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#F4F6F2",
+        "#2BA6A0",
+        "#F2B33D"
+      ],
+      "motif": "leaf",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "science-museum",
+        "sustainability",
+        "praca-maua",
+        "rio-de-janeiro",
+        "family"
+      ]
+    },
+    {
+      "brand": "Orquestra Sinfônica do Estado de São Paulo (Osesp)",
+      "slug": "osesp",
+      "kind": "organisation",
+      "sector": "culture",
+      "city": "São Paulo",
+      "lat": -23.5342,
+      "lng": -46.6398,
+      "website": "https://osesp.art.br",
+      "title": "Orquestra Sinfônica do Estado de São Paulo (Osesp) — on FlatMeta",
+      "tagline": "A symphony in a railway station, with a ceiling that moves",
+      "description": "The São Paulo State Symphony Orchestra performs at Sala São Paulo, a concert hall created inside the restored Júlio Prestes railway station, known for its adjustable ceiling panels. This sample plot imagines a season guide you can wander through: you could preview upcoming concerts, meet the musicians, and register for open rehearsals, youth programmes or guided tours of the hall. A pre-concert trail might highlight the architecture of the surrounding Luz district. It shows how an orchestra could invite new audiences into one of Latin America's great halls.",
+      "useCase": "Concert season & hall tours",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://osesp.art.br"
+      },
+      "highlights": [
+        "Season previews with listening clips",
+        "Guided hall tour booking",
+        "Open rehearsals and youth programmes"
+      ],
+      "imagePrompt": "Painterly isometric cutaway of a grand early-20th-century railway station converted into a concert hall, a full orchestra on stage beneath a coffered wooden ceiling of movable panels, old clock tower outside, warm golden light, steam-era details, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#8C5A3C",
+        "#E8C27A",
+        "#26324A"
+      ],
+      "motif": "music",
+      "size": {
+        "w": 3,
+        "h": 3
+      },
+      "tags": [
+        "orchestra",
+        "classical-music",
+        "sala-sao-paulo",
+        "concerts",
+        "sao-paulo"
+      ]
+    },
+    {
+      "brand": "Universidade de São Paulo",
+      "slug": "universidade-de-sao-paulo",
+      "kind": "organisation",
+      "sector": "education",
+      "city": "São Paulo",
+      "lat": -23.5622,
+      "lng": -46.7204,
+      "website": "https://www.usp.br",
+      "title": "Universidade de São Paulo — on FlatMeta",
+      "tagline": "A whole campus city of ideas, centred on the Praça do Relógio",
+      "description": "Founded in 1934, the University of São Paulo is Brazil's largest public university, and its main campus, the Cidade Universitária, spreads across the Butantã area. A plot like this could act as a campus compass: you could discover open-to-the-public museums and lectures, follow a green trail around the Praça do Relógio, and find admissions information and outreach programmes for school students. Visitors might also see weekend sports and cultural events. It is an illustration of how a university could make its huge campus easy to explore.",
+      "useCase": "Campus compass & public lectures",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.usp.br"
+      },
+      "highlights": [
+        "Public museums and lecture listings",
+        "Green trail around the clock tower",
+        "Outreach for prospective students"
+      ],
+      "imagePrompt": "Isometric game-like scene of a sprawling green university campus in São Paulo, a tall slender clock tower over a wide square, modernist faculty buildings, students on lawns and bicycles, a lake with rowers, glowing idea-bubbles floating up, soft morning light, vivid palette, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#2D5D7B",
+        "#F2C14E",
+        "#7FB069"
+      ],
+      "motif": "book",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "university",
+        "research",
+        "campus",
+        "public-lectures",
+        "sao-paulo"
+      ]
+    },
+    {
+      "brand": "Museu Oscar Niemeyer",
+      "slug": "museu-oscar-niemeyer",
+      "kind": "organisation",
+      "sector": "culture",
+      "city": "Curitiba",
+      "lat": -25.41,
+      "lng": -49.2673,
+      "website": "https://www.museuoscarniemeyer.org.br",
+      "title": "Museu Oscar Niemeyer — on FlatMeta",
+      "tagline": "Curitiba's eye-shaped gallery, looking out at the city",
+      "description": "Curitiba's Museu Oscar Niemeyer is known for its striking eye-shaped gallery raised on a single column, designed by the celebrated Brazilian architect. On a plot like this you could see what is on view, learn the story of the building's sweeping curves, and book family workshops or guided architecture tours. A Centro Cívico trail might connect the museum with the city's parks and famous bus-tube stations. It is an example of how a museum could share both its art and its architecture with visitors planning a day in Curitiba.",
+      "useCase": "Architecture tours & workshops",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.museuoscarniemeyer.org.br"
+      },
+      "highlights": [
+        "What's on in the galleries",
+        "Story of the eye-shaped building",
+        "Family workshops and guided tours"
+      ],
+      "imagePrompt": "Surreal isometric scene of a giant eye-shaped gallery perched on a yellow column above a reflecting pool in Curitiba, curving white ramps, families strolling across green lawns, araucaria pine trees, clouds mirrored in water, crisp southern-Brazil light, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#F2D04B",
+        "#2F4F6F",
+        "#E9EEF0"
+      ],
+      "motif": "column",
+      "size": {
+        "w": 3,
+        "h": 3
+      },
+      "tags": [
+        "museum",
+        "architecture",
+        "niemeyer",
+        "art",
+        "curitiba"
+      ]
+    },
+    {
+      "brand": "Grêmio Foot-Ball Porto Alegrense",
+      "slug": "gremio",
+      "kind": "organisation",
+      "sector": "sport",
+      "city": "Porto Alegre",
+      "lat": -29.974,
+      "lng": -51.1951,
+      "website": "https://gremio.net",
+      "title": "Grêmio Foot-Ball Porto Alegrense — on FlatMeta",
+      "tagline": "Gaúcho football passion, from the north of Porto Alegre",
+      "description": "Founded in 1903, Grêmio is one of Brazil's most decorated football clubs, playing its home games at the Arena do Grêmio in northern Porto Alegre. This sample plot imagines a year-round fan zone: you could check upcoming fixtures, find the best transport and gate information for matchday, and book a stadium tour. Young supporters might take on a football skills quest, while families find community events and youth academy news. It shows how a club could keep its terraces buzzing between kick-offs.",
+      "useCase": "Fan zone & stadium tours",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://gremio.net"
+      },
+      "highlights": [
+        "Fixtures and matchday transport tips",
+        "Stadium tour booking",
+        "Youth academy news and skills quest"
+      ],
+      "imagePrompt": "Energetic isometric night scene of a modern football stadium on the outskirts of a southern Brazilian city, floodlights blazing, fans in sky-blue, black and white scarves, drummers outside, a river and city lights in the distance, confetti in the air, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#3E8ED0",
+        "#1A1A1A",
+        "#F5F5F5"
+      ],
+      "motif": "ball",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "football",
+        "fan-zone",
+        "stadium",
+        "porto-alegre",
+        "matchday"
+      ]
+    },
+    {
+      "brand": "Olodum",
+      "slug": "olodum",
+      "kind": "organisation",
+      "sector": "nonprofit",
+      "city": "Salvador",
+      "lat": -12.973,
+      "lng": -38.5085,
+      "website": "https://www.olodum.com.br",
+      "title": "Olodum — on FlatMeta",
+      "tagline": "Samba-reggae drums echoing off the Pelourinho's painted walls",
+      "description": "Olodum is a cultural group born in Salvador's historic Pelourinho in 1979, famous for its powerful samba-reggae drumming and its social and educational projects. A plot like this could share rehearsal times and open performances, introduce the rhythms through short drum lessons, and invite you to support youth music and arts programmes. A Pelourinho trail might weave through colourful colonial streets and squares where music spills out of every doorway. It is a sample of how a community organisation could amplify its beat and its mission together.",
+      "useCase": "Drum lessons & youth support",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.olodum.com.br"
+      },
+      "highlights": [
+        "Open rehearsal and show calendar",
+        "Beginner samba-reggae rhythm lessons",
+        "Support youth music programmes"
+      ],
+      "imagePrompt": "Exuberant isometric scene of a sloping cobbled square in Salvador's colonial old town, pastel facades in pink, blue and yellow, a large drum group performing in bright patterned outfits, dancers and children joining in, church towers and bay views, golden late-afternoon light, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#E94F37",
+        "#F6C445",
+        "#2E8B57"
+      ],
+      "motif": "music",
+      "size": {
+        "w": 3,
+        "h": 2
+      },
+      "tags": [
+        "drumming",
+        "samba-reggae",
+        "pelourinho",
+        "youth-programmes",
+        "salvador"
+      ]
+    }
+  ]
+}

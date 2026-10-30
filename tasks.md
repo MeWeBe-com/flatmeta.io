@@ -9,7 +9,7 @@ Status values: `todo` · `in-progress` · `done` · `blocked (reason)`. Once `do
 
 Owner `claude` = Claude Code cloud session `01LEq4cqBwnNj9v3GR8k2J4p`.
 
-> **Push status:** the Claude GitHub App has no write access to `MeWeBe-com/*`, so `git push` returns 403. Commits are kept on local `v2`; see `docs/progress.md` → Open questions.
+> **Push status:** the Claude GitHub App has no write access to `MeWeBe-com/*`: `git push` and the GitHub API both return 403. Commits are kept on local `v2` (with git bundles as a backup); see `docs/progress.md` → Open questions.
 
 ## Phase 0: Docs
 | ✓ | Task | Owner | Status |
@@ -52,7 +52,7 @@ Status note: milestones M1–M12 were first built **before** the kickoff file wa
 | [ ] | M11 CI workflow (ci.yml) with a final deploy job on push to v2. Do NOT use workflow_run/workflow_dispatch (they only work from main) [§12.7]. Built: separate `deploy.yml` with `workflow_dispatch` *(rework)* | claude | todo |
 | [ ] | M11 PM2, server scripts, README + HestiaCP guide (NodeJS proxy template, configurable ports, APP_URL-based redirects) [§12.7]. Built: PM2, scripts and an nginx guide *(rework to Hestia)* | claude | todo |
 | [ ] | M12 Polish: a11y, Lighthouse, copy, performance | — | todo |
-| [ ] | flatmetaAPI v2: README pointing to the new monorepo | — | todo |
+| [x] | flatmetaAPI v2: README pointing to the new monorepo (`V2.md`, added by the owner) | owner | done |
 
 ## Follow-ups found during the build
 | ✓ | Task | Owner | Status |

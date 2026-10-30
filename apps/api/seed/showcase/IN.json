@@ -1,0 +1,582 @@
+{
+  "country": {
+    "iso2": "IN",
+    "name": "India"
+  },
+  "entries": [
+    {
+      "brand": "Infosys",
+      "slug": "infosys",
+      "kind": "company",
+      "sector": "tech",
+      "city": "Bengaluru",
+      "lat": 12.8424,
+      "lng": 77.6614,
+      "website": "https://www.infosys.com",
+      "title": "Infosys — on FlatMeta",
+      "tagline": "A campus-sized tour of where Bengaluru's code meets the world",
+      "description": "Step onto a sample plot pinned to Infosys's sprawling Electronics City campus, one of the best-known addresses in India's IT story. Here you could browse a live careers board, sign up for campus walk-throughs, and follow a self-guided trail past the striking glass-and-garden buildings that fill the grounds. Students might drop into hackathon announcements, while partners could find talks and learning sessions in one place. Think of it as a front door to a global services company, opened right where thousands of engineers start their working day.",
+      "useCase": "Careers board & campus trails",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.infosys.com"
+      },
+      "highlights": [
+        "Live careers and internship board",
+        "Self-guided campus architecture trail",
+        "Hackathon and tech-talk calendar"
+      ],
+      "imagePrompt": "Isometric game-like scene of a vast green tech campus in Bengaluru at golden hour: glass pavilions and a pyramid-shaped glass hall among rain trees, cyclists on shaded paths, glowing circuit lines tracing the lawns, tiny engineers with laptops on benches, warm soft lighting, vivid colours, 16:9 composition, no logos, no text, no trademarks.",
+      "palette": [
+        "#1F6FB2",
+        "#7FD1C7",
+        "#F2F5F9"
+      ],
+      "motif": "circuit",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "it-services",
+        "careers",
+        "campus",
+        "bengaluru",
+        "engineering"
+      ]
+    },
+    {
+      "brand": "Tata Motors",
+      "slug": "tata-motors",
+      "kind": "company",
+      "sector": "auto",
+      "city": "Mumbai",
+      "lat": 18.9316,
+      "lng": 72.8327,
+      "website": "https://www.tatamotors.com",
+      "title": "Tata Motors — on FlatMeta",
+      "tagline": "From Fort's heritage lanes to the open highway, one plot at a time",
+      "description": "This sample plot sits at Bombay House in Mumbai's historic Fort district, the registered home of Tata Motors. Picture it as a showroom without walls: you could compare passenger cars and electric SUVs side by side, find the nearest dealer or charging point on the map, and book a test drive in a couple of taps. Commercial buyers might jump straight to trucks and buses, while history fans could scroll through a timeline of vehicles that have shaped Indian roads for decades.",
+      "useCase": "Dealer finder & EV explorer",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.tatamotors.com"
+      },
+      "highlights": [
+        "Map-based dealer and charging finder",
+        "Side-by-side EV and car comparisons",
+        "Interactive vehicle heritage timeline"
+      ],
+      "imagePrompt": "Painterly isometric street scene in Mumbai's Fort district: a stately stone heritage building on a leafy corner, a sleek electric SUV and a city bus gliding past, glowing charging points, black-and-yellow taxis, monsoon-washed pavements reflecting warm evening light, vivid game-like palette, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#2B3A55",
+        "#4FB3BF",
+        "#E8D8B0"
+      ],
+      "motif": "wheel",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "cars",
+        "electric-vehicles",
+        "dealers",
+        "mumbai",
+        "heritage"
+      ]
+    },
+    {
+      "brand": "The Taj Mahal Palace, Mumbai",
+      "slug": "taj-mahal-palace-mumbai",
+      "kind": "company",
+      "sector": "travel",
+      "city": "Mumbai",
+      "lat": 18.9218,
+      "lng": 72.8333,
+      "website": "https://www.tajhotels.com",
+      "title": "The Taj Mahal Palace, Mumbai — on FlatMeta",
+      "tagline": "A red-domed waterfront legend, opened up to curious travellers",
+      "description": "Facing the Gateway of India across Apollo Bunder, this grand hotel has welcomed guests since 1903. On a plot like this you could take a virtual stroll through its sweeping staircase and heritage wing, check restaurant reservations, and plan a stay around Mumbai's festival calendar. A curated Colaba walking trail might start right at the porch, linking sea-facing promenades, art galleries and café corners. It is an example of how a landmark hotel could turn its address into an invitation to explore the whole neighbourhood.",
+      "useCase": "Heritage tours & stay planner",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.tajhotels.com"
+      },
+      "highlights": [
+        "Virtual heritage-wing walkthrough",
+        "Colaba walking trail from the porch",
+        "Dining and stay planner by season"
+      ],
+      "imagePrompt": "Painterly isometric view of a grand Indo-Saracenic waterfront hotel with a large red dome beside a basalt ceremonial arch on Mumbai's harbour, boats bobbing, pigeons rising, strolling families, sunset sky in coral and gold, lanterns glowing, vivid game-like detail, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#B4483A",
+        "#F3C77B",
+        "#2E5E6E"
+      ],
+      "motif": "column",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "hotel",
+        "heritage",
+        "colaba",
+        "mumbai",
+        "luxury-travel"
+      ]
+    },
+    {
+      "brand": "Mavalli Tiffin Rooms (MTR)",
+      "slug": "mavalli-tiffin-rooms",
+      "kind": "company",
+      "sector": "food",
+      "city": "Bengaluru",
+      "lat": 12.9552,
+      "lng": 77.5855,
+      "website": "https://mavallitiffinrooms.com",
+      "title": "Mavalli Tiffin Rooms (MTR) — on FlatMeta",
+      "tagline": "Breakfast queues, silver tumblers and a century of Bengaluru mornings",
+      "description": "Opposite the gates of Lalbagh, this much-loved restaurant has been serving South Indian tiffin since the 1920s. A plot like this could show you how busy the queue is right now, walk you through the morning and evening menus, and explain the rituals that regulars swear by, from crisp dosas to strong filter coffee. You might also find a Lalbagh-and-breakfast trail that pairs a garden walk with a table booking. It is a sample of how a heritage eatery could share its traditions with first-timers and old faithfuls alike.",
+      "useCase": "Live queue & breakfast trails",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://mavallitiffinrooms.com"
+      },
+      "highlights": [
+        "Live wait-time indicator for breakfast",
+        "Menu guide for first-time visitors",
+        "Lalbagh garden-and-tiffin walking trail"
+      ],
+      "imagePrompt": "Cosy painterly scene of a bustling heritage South Indian eatery in Bengaluru at dawn: steel tumblers of frothy coffee, golden dosas on banana leaves, ceiling fans, families queuing outside beside a botanical garden's gates, morning mist and mango-leaf garlands, warm vivid game-like lighting, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#C9772B",
+        "#F6E3B4",
+        "#3F6B3A"
+      ],
+      "motif": "plate",
+      "size": {
+        "w": 3,
+        "h": 2
+      },
+      "tags": [
+        "south-indian",
+        "breakfast",
+        "heritage-restaurant",
+        "bengaluru",
+        "coffee"
+      ]
+    },
+    {
+      "brand": "BSE (Bombay Stock Exchange)",
+      "slug": "bse-bombay-stock-exchange",
+      "kind": "company",
+      "sector": "finance",
+      "city": "Mumbai",
+      "lat": 18.9299,
+      "lng": 72.8334,
+      "website": "https://www.bseindia.com",
+      "title": "BSE (Bombay Stock Exchange) — on FlatMeta",
+      "tagline": "Dalal Street's tower, reimagined as a classroom for curious investors",
+      "description": "Rising above Dalal Street, Phiroze Jeejeebhoy Towers is home to BSE, Asia's oldest stock exchange, founded in 1875. This sample plot imagines a friendly front desk for the markets: you could follow a beginner's path through how listings and indices work, join investor-awareness webinars, and see announcements about events in the building. A short heritage trail might link the tower to nearby Fort landmarks. It shows how a financial institution could use its famous address to make markets feel a little less mysterious.",
+      "useCase": "Investor education hub",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.bseindia.com"
+      },
+      "highlights": [
+        "Beginner's guide to how markets work",
+        "Investor-awareness webinar calendar",
+        "Fort district financial heritage trail"
+      ],
+      "imagePrompt": "Isometric game-like illustration of a tall concrete tower on a narrow Mumbai street lined with colonial buildings, glowing ticker-style light ribbons wrapping around it, office workers with umbrellas, a small tree-lined plaza, twilight blues and warm window light, vivid, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#183D6B",
+        "#3FB27F",
+        "#F0E6D2"
+      ],
+      "motif": "orbit",
+      "size": {
+        "w": 3,
+        "h": 3
+      },
+      "tags": [
+        "stock-exchange",
+        "investing",
+        "education",
+        "dalal-street",
+        "mumbai"
+      ]
+    },
+    {
+      "brand": "The Times of India",
+      "slug": "the-times-of-india",
+      "kind": "company",
+      "sector": "media",
+      "city": "Mumbai",
+      "lat": 18.9416,
+      "lng": 72.8342,
+      "website": "https://timesofindia.indiatimes.com",
+      "title": "The Times of India — on FlatMeta",
+      "tagline": "Front pages, fresh off the press, beside Mumbai's busiest terminus",
+      "description": "Across the road from Chhatrapati Shivaji Maharaj Terminus stands the Times of India building, a fixture of the city's newspaper history. On a plot like this you could flick through a local news map that pins stories to neighbourhoods, sign up for newsletters, and spot community events the paper is covering this week. Young readers might try a reporter-for-a-day quest around the old Fort district. It is an illustration of how a daily that dates back to 1838 could meet its readers right where the news happens.",
+      "useCase": "Local news map & quests",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://timesofindia.indiatimes.com"
+      },
+      "highlights": [
+        "Neighbourhood news map for Mumbai",
+        "Newsletter and alerts sign-up",
+        "Reporter-for-a-day quest for students"
+      ],
+      "imagePrompt": "Painterly isometric Mumbai street at early morning: a heritage stone newspaper building opposite a vast Gothic railway terminus, delivery cyclists with bundles of blank papers, chai stalls steaming, commuters streaming in, soft pink dawn light, flocks of pigeons, vivid game-like detail, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#2C2C34",
+        "#D9A441",
+        "#EDE6DA"
+      ],
+      "motif": "book",
+      "size": {
+        "w": 3,
+        "h": 2
+      },
+      "tags": [
+        "newspaper",
+        "news",
+        "media",
+        "mumbai",
+        "heritage"
+      ]
+    },
+    {
+      "brand": "Nalli Silks",
+      "slug": "nalli-silks",
+      "kind": "company",
+      "sector": "fashion",
+      "city": "Chennai",
+      "lat": 13.041,
+      "lng": 80.2335,
+      "website": "https://www.nalli.com",
+      "title": "Nalli Silks — on FlatMeta",
+      "tagline": "Kanchipuram colour stories, unfolded beside T. Nagar's Panagal Park",
+      "description": "In the heart of T. Nagar, Chennai's buzzing shopping district, Nalli's Panagal Park store has been a destination for silk sarees for generations. A plot like this could let you explore weaves by region and occasion, read short stories about how traditional silk is made, and book a styling appointment before a wedding season visit. A festival-shopping map might help you plan a calm route through busy T. Nagar. It is a sample of how a family textile house could share craft and colour with shoppers near and far.",
+      "useCase": "Weave guide & appointment booking",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.nalli.com"
+      },
+      "highlights": [
+        "Browse sarees by weave and occasion",
+        "Book a pre-wedding styling visit",
+        "Festival-season T. Nagar shopping map"
+      ],
+      "imagePrompt": "Vivid painterly scene of a bustling Chennai shopping street beside a leafy park, an airy textile showroom with cascading silk sarees in jewel tones, a handloom weaver at work, jasmine sellers, festive marigold strings, warm afternoon light, isometric game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#9C1F4A",
+        "#E3B23C",
+        "#1E7F6E"
+      ],
+      "motif": "bag",
+      "size": {
+        "w": 3,
+        "h": 2
+      },
+      "tags": [
+        "silk",
+        "sarees",
+        "textiles",
+        "t-nagar",
+        "chennai"
+      ]
+    },
+    {
+      "brand": "Flurys",
+      "slug": "flurys",
+      "kind": "company",
+      "sector": "food",
+      "city": "Kolkata",
+      "lat": 22.5527,
+      "lng": 88.3526,
+      "website": "https://www.flurys.com",
+      "title": "Flurys — on FlatMeta",
+      "tagline": "Park Street pastries, tea at the window and old-Calcutta charm",
+      "description": "On the corner of Park Street, Flurys has been a tearoom fixture since the 1920s, famous for its breakfasts, cakes and window seats. A plot like this could show you the day's bakes, let you pre-order a celebration cake, and point you to Christmas-season events when Park Street glows with lights. You might follow a Park Street heritage walk that ends with tea and pastries. It is an illustration of how a beloved café could invite visitors into a slice of Kolkata's social history, one plate at a time.",
+      "useCase": "Daily bakes & cake pre-orders",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.flurys.com"
+      },
+      "highlights": [
+        "Today's bakes and breakfast menu",
+        "Celebration cake pre-order form",
+        "Park Street heritage walk with tea stop"
+      ],
+      "imagePrompt": "Charming painterly scene of a vintage tearoom on a Kolkata avenue: pastel pastries in glass cabinets, teapots and rum-ball style cakes, art-deco windows, yellow taxis outside, festive fairy lights strung across the street at dusk, warm cosy glow, isometric game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#F2B5B8",
+        "#6E4B3A",
+        "#F7EFD8"
+      ],
+      "motif": "cup",
+      "size": {
+        "w": 2,
+        "h": 2
+      },
+      "tags": [
+        "tearoom",
+        "bakery",
+        "park-street",
+        "kolkata",
+        "breakfast"
+      ]
+    },
+    {
+      "brand": "Indian Institute of Science",
+      "slug": "indian-institute-of-science",
+      "kind": "organisation",
+      "sector": "education",
+      "city": "Bengaluru",
+      "lat": 13.0219,
+      "lng": 77.5671,
+      "website": "https://iisc.ac.in",
+      "title": "Indian Institute of Science — on FlatMeta",
+      "tagline": "A tree-lined campus where big questions have been asked since 1909",
+      "description": "Founded in 1909, IISc is one of India's leading research institutions, set on a leafy campus in north Bengaluru. This sample plot imagines a doorway for curious minds: you could find public lectures and open-day details, follow a research trail that pins labs and discoveries to campus buildings, and explore admissions pathways for students. School groups might take on a science quest around the historic main building. It shows how a research institute could share its work with neighbours as easily as with scholars across the world.",
+      "useCase": "Open days & research trails",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://iisc.ac.in"
+      },
+      "highlights": [
+        "Public lecture and open-day calendar",
+        "Campus research trail by department",
+        "Science quest for visiting schools"
+      ],
+      "imagePrompt": "Isometric painterly campus in Bengaluru: a heritage stone main building with a clock tower framed by giant rain trees, students cycling, a glowing telescope dome, floating constellations and molecules drifting above the canopy, soft morning light, lush greens and warm stone, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#2E5A3C",
+        "#D8B45A",
+        "#E9EEF2"
+      ],
+      "motif": "book",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "research",
+        "university",
+        "science",
+        "bengaluru",
+        "open-day"
+      ]
+    },
+    {
+      "brand": "Victoria Memorial Hall",
+      "slug": "victoria-memorial-hall",
+      "kind": "organisation",
+      "sector": "culture",
+      "city": "Kolkata",
+      "lat": 22.545,
+      "lng": 88.3426,
+      "website": "https://www.victoriamemorial-cal.org",
+      "title": "Victoria Memorial Hall — on FlatMeta",
+      "tagline": "White marble, wide lawns and Kolkata's story in its galleries",
+      "description": "Completed in 1921 at the edge of the Maidan, the Victoria Memorial is a white-marble museum surrounded by gardens and reflecting pools. A plot like this could help you plan your visit with gallery highlights, timed entries and tips for the quietest hours. You might join a self-guided garden trail, follow a painting-by-painting audio tour, or check what is on in the evening. It is an example of how a landmark museum could greet visitors before they even reach the gates, making Kolkata's history easy to explore.",
+      "useCase": "Visit planner & audio trails",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.victoriamemorial-cal.org"
+      },
+      "highlights": [
+        "Gallery highlights and visit planner",
+        "Self-guided garden and pond trail",
+        "Evening programme listings"
+      ],
+      "imagePrompt": "Painterly isometric view of a vast white-marble domed museum in Kolkata, surrounded by manicured lawns and long reflecting pools, families picnicking, horse carriages on the avenue, lotus ponds and palms, soft dusk sky in lilac and gold, vivid game-like detail, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#F4F1EA",
+        "#7A9E7E",
+        "#C49A6C"
+      ],
+      "motif": "column",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "museum",
+        "landmark",
+        "gardens",
+        "kolkata",
+        "history"
+      ]
+    },
+    {
+      "brand": "National Museum, New Delhi",
+      "slug": "national-museum-new-delhi",
+      "kind": "organisation",
+      "sector": "culture",
+      "city": "New Delhi",
+      "lat": 28.6119,
+      "lng": 77.2196,
+      "website": "https://nationalmuseumindia.gov.in",
+      "title": "National Museum, New Delhi — on FlatMeta",
+      "tagline": "Five thousand years of objects, one corner of Janpath",
+      "description": "On Janpath in the heart of New Delhi, the National Museum holds collections spanning from the Harappan civilisation to modern times. On a plot like this you could build your own route through the galleries, discover object-of-the-week stories, and sign up for workshops and guided walks. Families might try a treasure-hunt quest that moves from ancient seals to bronze sculptures. It is a sample of how a national museum could make a huge collection feel personal, starting from a single square on the map.",
+      "useCase": "Gallery routes & family quests",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://nationalmuseumindia.gov.in"
+      },
+      "highlights": [
+        "Build-your-own gallery route",
+        "Object-of-the-week stories",
+        "Family treasure-hunt through the ages"
+      ],
+      "imagePrompt": "Isometric game-like scene of a circular sandstone museum building on a wide Delhi boulevard lined with trees, glowing pathways leading inside to ancient terracotta, bronze dancers and carved stone panels floating like exhibits, families with audio guides, warm late-afternoon light, vivid palette, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#B5653A",
+        "#E6CFA0",
+        "#2F4858"
+      ],
+      "motif": "column",
+      "size": {
+        "w": 3,
+        "h": 3
+      },
+      "tags": [
+        "museum",
+        "archaeology",
+        "history",
+        "new-delhi",
+        "family"
+      ]
+    },
+    {
+      "brand": "Chennai Super Kings",
+      "slug": "chennai-super-kings",
+      "kind": "organisation",
+      "sector": "sport",
+      "city": "Chennai",
+      "lat": 13.0628,
+      "lng": 80.2784,
+      "website": "https://www.chennaisuperkings.com",
+      "title": "Chennai Super Kings — on FlatMeta",
+      "tagline": "Matchday energy at Chepauk, pinned to the map all year round",
+      "description": "Chennai Super Kings play their home games at the M. A. Chidambaram Stadium in Chepauk, one of India's most atmospheric cricket grounds. This sample plot imagines a year-round fan zone: you could check the home fixture list, find stadium gates and transport tips, and catch up on training-day highlights. Young fans might join a cricket skills quest or a Marina Beach-to-stadium matchday trail. It shows how a franchise could keep the buzz of match night going long after the last ball has been bowled.",
+      "useCase": "Fan zone & matchday guide",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.chennaisuperkings.com"
+      },
+      "highlights": [
+        "Home fixtures and gate guide",
+        "Matchday trail from the Marina",
+        "Junior cricket skills quest"
+      ],
+      "imagePrompt": "Vibrant isometric night scene of a packed cricket stadium by the Chennai seafront, floodlights blazing, crowds waving sunflower-yellow flags, a batter mid-swing on a green oval, fireworks over the Bay of Bengal, street-food stalls outside, energetic game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#F2C230",
+        "#1C3F7A",
+        "#2E8B57"
+      ],
+      "motif": "ball",
+      "size": {
+        "w": 4,
+        "h": 3
+      },
+      "tags": [
+        "cricket",
+        "fan-zone",
+        "chepauk",
+        "chennai",
+        "matchday"
+      ]
+    },
+    {
+      "brand": "Symphony Orchestra of India",
+      "slug": "symphony-orchestra-of-india",
+      "kind": "organisation",
+      "sector": "culture",
+      "city": "Mumbai",
+      "lat": 18.9249,
+      "lng": 72.8199,
+      "website": "https://www.soimumbai.com",
+      "title": "Symphony Orchestra of India — on FlatMeta",
+      "tagline": "Sea breeze, strings and brass at the tip of Nariman Point",
+      "description": "Based at the National Centre for the Performing Arts on Nariman Point, the Symphony Orchestra of India is the country's first professional symphony orchestra. A plot like this could show you the season's concerts, introduce the musicians behind each section, and let you sign up for open rehearsals or music-education programmes. A pre-concert trail might take you along Marine Drive at sunset before the downbeat. It is an example of how an orchestra could welcome new listeners as warmly as long-time subscribers.",
+      "useCase": "Concert season & music outreach",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.soimumbai.com"
+      },
+      "highlights": [
+        "Season calendar with concert previews",
+        "Meet-the-musicians section profiles",
+        "Marine Drive pre-concert sunset walk"
+      ],
+      "imagePrompt": "Painterly isometric scene of a modern performing-arts complex on a Mumbai seafront promenade at sunset, an orchestra visible through a glowing glass foyer, musical notes drifting over the Arabian Sea like gulls, strollers on the sea wall, deep blues and amber light, vivid game-like style, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#22305A",
+        "#E3A857",
+        "#9FC3D9"
+      ],
+      "motif": "music",
+      "size": {
+        "w": 3,
+        "h": 2
+      },
+      "tags": [
+        "orchestra",
+        "classical-music",
+        "ncpa",
+        "mumbai",
+        "concerts"
+      ]
+    },
+    {
+      "brand": "The Akshaya Patra Foundation",
+      "slug": "akshaya-patra-foundation",
+      "kind": "organisation",
+      "sector": "nonprofit",
+      "city": "Bengaluru",
+      "lat": 13.0007,
+      "lng": 77.5494,
+      "website": "https://www.akshayapatra.org",
+      "title": "The Akshaya Patra Foundation — on FlatMeta",
+      "tagline": "Warm school meals, big kitchens and a map of every helping hand",
+      "description": "Headquartered in Bengaluru, Akshaya Patra runs one of the world's largest school-meal programmes, serving children across many Indian states. This sample plot imagines a transparent window into that work: you could see how a central kitchen operates, follow a meal's journey from stove to classroom, and find volunteering or donation options. A kitchen-tour booking form and a map of partner schools might sit side by side. It shows how a charity could turn a single map pin into a story of daily care at enormous scale.",
+      "useCase": "Donation drive & kitchen tours",
+      "cta": {
+        "label": "Visit the website",
+        "url": "https://www.akshayapatra.org"
+      },
+      "highlights": [
+        "Follow a meal from kitchen to classroom",
+        "Volunteer and donation options",
+        "Book a central-kitchen visit"
+      ],
+      "imagePrompt": "Heartwarming isometric scene of a bright, spotless community kitchen in Bengaluru with steaming giant pots, conveyor trays and cheerful cooks, delivery vans heading to colourful schools where children share lunch under trees, soft morning light, warm vivid game-like palette, 16:9, no logos, no text, no trademarks.",
+      "palette": [
+        "#E07A2F",
+        "#F6D98B",
+        "#4E8D4A"
+      ],
+      "motif": "heart",
+      "size": {
+        "w": 3,
+        "h": 2
+      },
+      "tags": [
+        "charity",
+        "school-meals",
+        "volunteering",
+        "bengaluru",
+        "children"
+      ]
+    }
+  ]
+}

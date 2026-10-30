@@ -78,6 +78,14 @@ Each step appends a short summary: what was done, decisions made, what's next.
 
 **Next:** finish Phase 0 (brief and masterprompts updated to the kickoff scope), then the missing Phase 1 milestones.
 
+## Step 4 — M1 monorepo (2026-10-30)
+
+**Done:** all v2 code now lives in `flatmeta.io` `v2` as an npm-workspaces monorepo: `apps/web` (Next.js), `apps/api` (Fastify, worker, MCP, CLI), `packages/shared` (grid maths). One root `.env.example` (and `.env`) configures both apps. `APP_URL` is the single source for every absolute URL (production refuses a localhost `APP_URL`), `STAGING_DOMAIN=flatmeta.mewebe.net` (placeholder), ports are env values (`WEB_PORT=3200`, `PORT=3201`, `MCP_PORT`, `WORKER_HEALTH_PORT=3203`, avoiding 3000/3010/3100), the API can serve `/mcp` on its own port, and the worker exposes a health endpoint. `flatmetaAPI` `v2` is reset to the owner's pointer branch (`V2.md`); my earlier standalone API work is kept locally as branch `v2-phase1-backup` and was imported into `apps/api` (history not carried over). 32 API tests and 8 web tests pass; lint and typecheck are clean.
+
+**Decisions:** the shared package builds to `dist/` (compiled on `npm install`) so both the Node API and Next can import it; Next reads the root `.env` through `@next/env` and exposes `NEXT_PUBLIC_*` from `APP_URL`/`APP_NAME`/…; `API_INTERNAL_URL` is explicit (Next overwrites `PORT` for its own process).
+
+**Next:** the remaining Phase 1 tasks in `tasks.md` order: DB additions (listings, ledger, connections, chat, clans, avatar, password), auth password, land content (sandboxed HTML, `/u/`), marketplace, payments provider interface, real-time presence and chat, clans, then web UI for them, `ci.yml` with the deploy job, PM2/Hestia, e2e, polish.
+
 ## Open questions
 
 0. **URGENT: rotate the Laravel `APP_KEY`.** `flatmetaAPI/.env.example` (all v1 branches, since commit `363faab`) contains a real key: `APP_KEY=base64:ah1EUh…`. Rotate it on every server that ever ran it. It is removed from `v2`; it stays in v1 history unless you rewrite it.
@@ -88,7 +96,7 @@ Each step appends a short summary: what was done, decisions made, what's next.
 4. **Pricing** in the brief ($1–25/cell, Plus $5, Business $29, Brand $249, Landmark claim $990) is a starting proposal; all values are config.
 5. **Plot terms:** plots are a licence to display content, not property. Terms of Service need a lawyer.
 6. **One-time land vs rent:** v1 charged rent; v2 proposes one-time purchases plus subscriptions. Measure repeat revenue early.
-7. **GitHub push access:** pushes to `MeWeBe-com/flatmeta.io` and `MeWeBe-com/flatmetaAPI` fail with 403 (the Claude GitHub App has no write access). Commits are kept locally on `v2` until access is granted.
+7. **GitHub push access (still blocked 2026-10-30):** `git push` and the GitHub API both return 403 (the Claude GitHub App cannot write to `MeWeBe-com/*`). All work is committed on local `v2`; bundles were sent to the owner. Fix: connect GitHub at https://claude.ai/connect-github and install the Claude GitHub App on both repos. Original note: pushes to `MeWeBe-com/flatmeta.io` and `MeWeBe-com/flatmetaAPI` fail with 403 (the Claude GitHub App has no write access). Commits are kept locally on `v2` until access is granted.
 8. **AI model costs:** moderation and search intent default to the same model as the designer (`claude-opus-5-5`). Set `ANTHROPIC_MODEL_FAST` (e.g. `claude-haiku-5-5`) to cut cost on high-volume calls.
 9. **Refund policy details** (`/legal/refunds`): proposed a 14-day refund on land with no published content, no refunds on used boosts, and refundable Landmark claims within 14 days. Confirm, or adjust to your jurisdiction.
 10. **Legal placeholders:** `[COMPANY NAME]`, `[COUNTRY]` and `[CONTACT EMAIL]` in the terms, privacy and refunds pages need real values.
