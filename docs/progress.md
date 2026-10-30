@@ -94,6 +94,18 @@ Each step appends a short summary: what was done, decisions made, what's next.
 
 **Next:** the web UI for all of this (zoom levels, avatars and walking, chat, connections, marketplace, clans, custom HTML, password and avatar settings, `/u/` fallback), then `ci.yml` with the deploy job, PM2 and the HestiaCP guide, e2e tests, and polish.
 
+## Step 4 — M5–M12 web, ops and polish (2026-10-30)
+
+**Done (`apps/web`):** World/City/Land level switch (presets over smooth zoom; avatars from City, claim grid at Land); avatars on the map with smooth movement, tap and arrow-key walking and speech bubbles; chat panel (nearby, clan, private) with connections and a peer card; **marketplace** (`/marketplace`, sell/buy on plot pages, seller balance and payouts in Billing, admin overview with manual payouts and void); **clans** (`/clans`, `/clan/[slug]`, found, requests, invites, roles, leaderboard); **settings** (profile, emoji avatar look, optional password); sandboxed **custom HTML** on plot pages and in the editor; `/u/<plot>` vanity redirect. Playwright e2e now covers guest → sign-in → free claim → edit → publish, paid land through the mock checkout, showcase labels and claim, and the new pages (8 specs × desktop and mobile, all pass).
+
+**Done (ops):** one `.github/workflows/ci.yml` (Postgres + Redis services; lint, typecheck, tests, build, e2e; final **deploy** job on push to `v2`, skipped with a notice when `DEPLOY_*` secrets are unset; no `workflow_run`/`workflow_dispatch`); root `ecosystem.config.cjs` (web, API, worker; verified running under PM2 locally in production mode); `scripts/deploy.sh` (loads nvm and `.env` itself, `COREPACK_ENABLE_DOWNLOAD_PROMPT=0`, defaults to branch `v2`, side-directory web build, migrate, PM2 reload, health checks on `$PORT` and `$WEB_PORT`, rollback); `scripts/backup.sh`; `deploy/hestia/nodejs-app.conf`; `docs/deploy-hestia.md`; monorepo README.
+
+**Bugs found by the new tests and QA, fixed:** claiming land or buying a plot as a guest re-opened the sign-in dialog after signing in (a stale closure still saw no user) — now resumed from an effect via `useAfterSignIn`; the production build shipped the entire icon library (~230 KB gz) — named imports; the mini map loaded its 300 KB library on every plot page — now loads near the viewport; the chat button overlapped the zoom controls. Mobile Lighthouse on a plot page went from 49 to **87** performance (accessibility 100, best practices 100).
+
+**Decisions:** the deploy job deploys the checkout at `DEPLOY_PATH` (staging or production depending on where it points; GitHub Environments can split them later); the API serves `/mcp` on its own port only when `MCP_PORT` is set; avatars are emoji looks (face, colour, accessory) rather than drawn sprites, which keeps the realtime payload tiny and works with the privacy of guests; PayPal is an interface-only option.
+
+**Next:** the owner actions in `tasks.md` (GitHub write access, deploy secrets, Stripe/AI/SMTP keys, staging domain, legal), then a staging deploy and a real Stripe test-mode run, then Phase 2.
+
 ## Open questions
 
 0. **URGENT: rotate the Laravel `APP_KEY`.** `flatmetaAPI/.env.example` (all v1 branches, since commit `363faab`) contains a real key: `APP_KEY=base64:ah1EUh…`. Rotate it on every server that ever ran it. It is removed from `v2`; it stays in v1 history unless you rewrite it.
@@ -111,3 +123,7 @@ Each step appends a short summary: what was done, decisions made, what's next.
 11. **Google Flow:** it has no public API we can call, so the "external" image provider is a file drop. Prompts go to an outbox, you drop the finished images in an inbox, and the worker imports them. If you prefer automation, use Imagen through `GEMINI_API_KEY` (`AI_IMAGE_PROVIDER=gemini`).
 12. **Showcase coordinates** were written by research agents from memory. Some may be a few blocks off; correct them in Admin → Showcase (edit) before launch.
 13. **Map tiles and geocoding** use free public services (OpenFreeMap, Photon). That is fine for launch, but self-host both before heavy traffic (see `.env.example`).
+14. **Hestia nginx include path:** the guide tells you to find the exact `include` line in your Hestia version's `NodeJS.tpl` and copy `deploy/hestia/nodejs-app.conf` there (or use `nginx.conf_*` / `nginx.ssl.conf_*` in the domain's conf folder). Not tested on your server: confirm on first deploy, especially the WebSocket `Upgrade` pass-through.
+15. **Which environment does `ci.yml` deploy?** It deploys whatever `DEPLOY_PATH` points at on every push to `v2`. Until you confirm the staging domain, treat that as staging.
+16. **Marketplace guard rails** are proposals (7-day hold, 50× price cap for 30 days, no resale of Homesteads, 10% fee). All are env values (`MARKETPLACE_*`); legal wording about "not an investment" is in the UI and needs review.
+17. **Guest avatars** appear anonymously on the map ("Guest 1234") and can read chat but not write. Confirm this matches how open you want the world to be.

@@ -121,10 +121,12 @@ export function ChatPanel({ position, openWith, onOpenedWith }: { position: () =
 
   if (!open) {
     return (
-      <button className="absolute z-20 left-3 bottom-[236px] md:bottom-[198px] glass rounded-2xl icon-btn relative" onClick={() => setOpen(true)} aria-label={`Chat${unread ? `, ${unread} unread` : ''}`}>
-        <MessageCircle size={18} />
-        {unread > 0 && <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--color-coral)] text-[10px] font-bold grid place-items-center text-white">{unread > 9 ? '9+' : unread}</span>}
-      </button>
+      <div className="absolute z-20 right-3 bottom-[152px] md:bottom-6">
+        <button className="glass rounded-2xl icon-btn relative" onClick={() => setOpen(true)} aria-label={`Chat${unread ? `, ${unread} unread` : ''}`}>
+          <MessageCircle size={18} />
+          {unread > 0 && <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--color-coral)] text-[10px] font-bold grid place-items-center text-white">{unread > 9 ? '9+' : unread}</span>}
+        </button>
+      </div>
     );
   }
 
