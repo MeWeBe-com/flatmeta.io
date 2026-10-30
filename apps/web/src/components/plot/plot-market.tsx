@@ -5,7 +5,7 @@ import { Store, Tag, X } from 'lucide-react';
 import { ApiError, api, del, patch, post } from '@/lib/api';
 import { usd } from '@/lib/format';
 import type { Plot } from '@/lib/types';
-import { useGame, useSession } from '../providers';
+import { useAfterSignIn, useGame, useSession } from '../providers';
 import { Modal, Spinner } from '../ui';
 
 interface Check { canList: boolean; reason: string | null; minPriceCents: number; maxPriceCents: number | null; feeBps: number }
@@ -41,9 +41,10 @@ export function PlotMarket({ plot, canEdit: canEditInitial }: { plot: Plot; canE
   const fee = check ? Math.floor((cents * check.feeBps) / 10_000) : 0;
 
   const fail = (e: unknown) => toast({ kind: 'error', title: e instanceof ApiError ? e.message : 'That did not work' });
+  const [afterSignIn, signedInGo] = useAfterSignIn();
   const buy = async () => {
     if (!listing) return;
-    if (!me.user) return openSignIn('Sign in to buy this plot.', () => void buy());
+    if (!me.user) return openSignIn('Sign in to buy this plot.', afterSignIn);
     setBusy(true);
     try {
       const r = await post<{ url: string }>(`/listings/${listing.id}/buy`);
@@ -53,6 +54,10 @@ export function PlotMarket({ plot, canEdit: canEditInitial }: { plot: Plot; canE
       setBusy(false);
     }
   };
+  useEffect(() => {
+    if (signedInGo) void buy(); // the purchase the visitor started before signing in
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signedInGo]);
   const save = async () => {
     setBusy(true);
     try {

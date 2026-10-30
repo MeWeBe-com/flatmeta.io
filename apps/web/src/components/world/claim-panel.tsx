@@ -8,7 +8,7 @@ import { TIER_COLOR, TIER_LABEL, flag, usd } from '@/lib/format';
 import type { Rect } from '@/lib/grid';
 import { t } from '@/lib/i18n';
 import type { GameResult, Plot, Quote } from '@/lib/types';
-import { useGame, useSession } from '../providers';
+import { useAfterSignIn, useGame, useSession } from '../providers';
 import { Spinner, clsx } from '../ui';
 import type { SelectionState } from '../map/world-map';
 
@@ -72,9 +72,10 @@ export function ClaimPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selection?.minGx, selection?.minGy, selection?.maxGx, selection?.maxGy, me.user?.id]);
 
+  const [afterSignIn, signedInGo] = useAfterSignIn();
   const claim = async () => {
     if (!selection || !quote) return;
-    if (!me.user) return openSignIn(quote.free ? 'Sign in to claim your free Homestead. It takes 20 seconds.' : 'Sign in to buy this land.', () => void claim());
+    if (!me.user) return openSignIn(quote.free ? 'Sign in to claim your free Homestead. It takes 20 seconds.' : 'Sign in to buy this land.', afterSignIn);
     setBusy(true);
     setError(null);
     try {
@@ -96,6 +97,11 @@ export function ClaimPanel({
       setBusy(false);
     }
   };
+
+  useEffect(() => {
+    if (signedInGo) void claim(); // the claim the visitor started before signing in
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signedInGo]);
 
   const suggest = async () => {
     if (!goal.trim()) return;

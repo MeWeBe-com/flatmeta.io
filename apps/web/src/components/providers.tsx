@@ -163,6 +163,24 @@ function GameProvider({ children }: { children: ReactNode }) {
   return <Game.Provider value={value}>{children}</Game.Provider>;
 }
 
+/**
+ * Run an action once the visitor has signed in. Pass `arm` as the sign-in dialog's callback; `go` turns true for
+ * one render after the session is updated, so the action (run from an effect in the component) sees the new
+ * signed-in state. Calling a closure from before sign-in would still think nobody is signed in.
+ *
+ *   const [arm, go] = useAfterSignIn();
+ *   useEffect(() => { if (go) void doIt(); }, [go]);
+ */
+export function useAfterSignIn() {
+  const { me } = useSession();
+  const [armed, setArmed] = useState(false);
+  const go = armed && !!me.user;
+  useEffect(() => {
+    if (go) setArmed(false);
+  }, [go]);
+  return [useCallback(() => setArmed(true), []), go] as const;
+}
+
 // ─── Live world (WebSocket) ─────────────────────────────────────────────────
 
 interface LiveCtx {
