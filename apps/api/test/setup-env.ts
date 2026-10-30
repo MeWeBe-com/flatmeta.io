@@ -8,3 +8,5 @@ process.env.AI_TEXT_PROVIDER = 'heuristic';
 process.env.AI_MODERATION_PROVIDER = 'heuristic';
 process.env.AI_IMAGE_PROVIDER = 'procedural';
 process.env.SESSION_SECRET = 'test-secret';
+process.env.MARKETPLACE_MIN_HOLD_DAYS = '0'; // tests resell immediately
+process.env.MARKETPLACE_PRICE_CAP_DAYS = '30';

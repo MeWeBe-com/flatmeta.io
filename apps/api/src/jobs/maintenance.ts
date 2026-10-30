@@ -82,8 +82,20 @@ export async function cleanup() {
   return true;
 }
 
+/** Pays sellers whose balance passed the minimum (skips quietly when payments aren't configured). */
+async function payouts() {
+  const { runPayouts } = await import('../services/marketplace.js');
+  try {
+    return await runPayouts();
+  } catch (err) {
+    if ((err as { code?: string }).code === 'payments_unavailable') return { skipped: 'payments not configured' };
+    throw err;
+  }
+}
+
 export const JOBS: Record<string, { every?: number; pattern?: string; run: () => Promise<unknown> }> = {
   'expire-holds': { every: 5 * 60_000, run: expireHolds },
+  payouts: { every: 15 * 60_000, run: payouts },
   'country-stats': { every: 60 * 60_000, run: refreshCountryStats },
   leaderboards: { every: 60 * 60_000, run: rebuildLeaderboards },
   'external-images': { every: 60 * 60_000, run: () => importExternalImages((m) => logger.info(m)) },

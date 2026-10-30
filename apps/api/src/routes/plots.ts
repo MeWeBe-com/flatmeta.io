@@ -84,7 +84,11 @@ export async function viewFor(plot: Plot, user: { id: string; role: string } | n
   const owners = await ownersFor([plot]);
   const fullUser = user ? (await db.select().from(schema.users).where(eq(schema.users.id, user.id)))[0] ?? null : null;
   const liked = user ? (await db.select().from(schema.plotLikes).where(and(eq(schema.plotLikes.plotId, plot.id), eq(schema.plotLikes.userId, user.id)))).length > 0 : false;
-  return plotView(plot, owners.get(plot.id) ?? null, { likedByMe: liked, canEdit: await canEditPlot(fullUser, plot), withHtml: true });
+  const [listing] = await db.select().from(schema.listings).where(and(eq(schema.listings.plotId, plot.id), eq(schema.listings.status, 'active')));
+  return {
+    ...plotView(plot, owners.get(plot.id) ?? null, { likedByMe: liked, canEdit: await canEditPlot(fullUser, plot), withHtml: true }),
+    listing: listing ? { id: listing.id, priceCents: listing.priceCents, currency: listing.currency, version: listing.version } : null,
+  };
 }
 
 async function mediaOwnedUrl(mediaId: string, userId: string, isAdmin: boolean) {

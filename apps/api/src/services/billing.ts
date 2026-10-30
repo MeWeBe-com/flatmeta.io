@@ -42,8 +42,10 @@ async function customerFor(user: User, orgId: string | null): Promise<string | u
 export interface CheckoutInput {
   user: User;
   orgId: string | null;
-  kind: 'land' | 'upgrade' | 'landmark' | 'credits';
+  kind: 'land' | 'upgrade' | 'landmark' | 'credits' | 'listing';
   plotId?: string | null;
+  listingId?: string | null;
+  listingVersion?: number | null;
   items: OrderItem[];
   successPath: string;
   cancelPath: string;
@@ -55,7 +57,7 @@ export async function createCheckout(input: CheckoutInput): Promise<{ url: strin
   if (amountCents < 50) throw badRequest('Amount too small for a card payment');
   const [order] = await db
     .insert(schema.orders)
-    .values({ userId: input.user.id, orgId: input.orgId, kind: input.kind, amountCents, currency: config.CURRENCY, items: input.items, plotId: input.plotId ?? null })
+    .values({ userId: input.user.id, orgId: input.orgId, kind: input.kind, amountCents, currency: config.CURRENCY, items: input.items, plotId: input.plotId ?? null, listingId: input.listingId ?? null, listingVersion: input.listingVersion ?? null })
     .returning();
   const orderId = order!.id;
 
@@ -203,7 +205,10 @@ export async function fulfilOrder(orderId: string, paymentIntent?: string | null
   try {
     if (order.kind === 'land') await fulfilLand(order);
     else if (order.kind === 'upgrade' || order.kind === 'credits') await fulfilUpgrade(order);
-    else if (order.kind === 'landmark') {
+    else if (order.kind === 'listing') {
+      const { fulfilListing } = await import('./marketplace.js');
+      await fulfilListing(order);
+    } else if (order.kind === 'landmark') {
       const { completeLandmarkClaim } = await import('./showcase-claim.js');
       await completeLandmarkClaim(order);
     }

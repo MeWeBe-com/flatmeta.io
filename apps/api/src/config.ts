@@ -90,6 +90,14 @@ const schema = z.object({
   GEOCODER_URL: z.string().default('https://photon.komoot.io/api'),
   GEOCODER_USER_AGENT: z.string().default('FlatMeta/2.0 (hello@flatmeta.io)'),
 
+  // Marketplace (Phase 1 §12.4)
+  MARKETPLACE_FEE_BPS: z.coerce.number().int().min(0).max(5000).default(1000), // 10%
+  MARKETPLACE_MIN_HOLD_DAYS: z.coerce.number().min(0).default(7), // a plot must be held this long before resale
+  MARKETPLACE_PRICE_CAP_MULT: z.coerce.number().min(1).default(50), // x tier price, during the cap window
+  MARKETPLACE_PRICE_CAP_DAYS: z.coerce.number().min(0).default(30),
+  MARKETPLACE_MIN_PRICE_CENTS: z.coerce.number().int().min(50).default(200),
+  PAYOUT_MIN_CENTS: z.coerce.number().int().min(0).default(500),
+
   RATE_LIMIT_PER_MINUTE: z.coerce.number().default(300),
 });
 
