@@ -25,6 +25,7 @@ const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull(
 const updatedAt = () => timestamp('updated_at', { withTimezone: true }).notNull().defaultNow();
 const ts = (name: string) => timestamp(name, { withTimezone: true });
 
+export type Avatar = { face: string; color: string; accessory?: string };
 export type PlotLink = { label: string; url: string };
 export type PlotCta = { label: string; url: string } | null;
 export type PlotTheme = { primary: string; accent: string };
@@ -62,6 +63,8 @@ export const users = pgTable(
     username: citext('username').notNull().unique(),
     displayName: text('display_name').notNull(),
     avatarUrl: text('avatar_url'),
+    avatar: jsonb('avatar').$type<Avatar>(),
+    passwordHash: text('password_hash'),
     bio: text('bio'),
     role: text('role').notNull().default('user'), // user | moderator | admin
     plan: text('plan').notNull().default('free'), // free | plus
@@ -233,6 +236,7 @@ export const plots = pgTable(
     title: text('title').notNull(),
     tagline: text('tagline'),
     descriptionMd: text('description_md'),
+    customHtml: text('custom_html'), // rendered only inside a sandboxed iframe (Plus and above)
     coverImageUrl: text('cover_image_url'),
     thumbUrl: text('thumb_url'),
     gallery: jsonb('gallery').$type<string[]>().notNull().default([]),
@@ -464,12 +468,14 @@ export const orders = pgTable(
     id: id(),
     userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
     orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'set null' }),
-    kind: text('kind').notNull(), // land | upgrade | landmark | credits
+    kind: text('kind').notNull(), // land | upgrade | landmark | credits | listing
     status: text('status').notNull().default('pending'), // pending | paid | failed | expired | refunded
     amountCents: integer('amount_cents').notNull(),
     currency: text('currency').notNull().default('usd'),
     items: jsonb('items').$type<OrderItem[]>().notNull().default([]),
     plotId: uuid('plot_id').references(() => plots.id, { onDelete: 'set null' }),
+    listingId: uuid('listing_id'),
+    listingVersion: integer('listing_version'),
     stripeSessionId: text('stripe_session_id').unique(),
     stripePaymentIntent: text('stripe_payment_intent'),
     paidAt: ts('paid_at'),
@@ -604,7 +610,144 @@ export const auditLog = pgTable(
   (t) => [index('audit_log_created_idx').on(t.createdAt)],
 );
 
+// ─── Marketplace ─────────────────────────────────────────────────────────────
+
+export const listings = pgTable(
+  'listings',
+  {
+    id: id(),
+    plotId: uuid('plot_id')
+      .notNull()
+      .references(() => plots.id, { onDelete: 'cascade' }),
+    sellerUserId: uuid('seller_user_id').references(() => users.id, { onDelete: 'set null' }),
+    sellerOrgId: uuid('seller_org_id').references(() => organizations.id, { onDelete: 'set null' }),
+    priceCents: integer('price_cents').notNull(),
+    currency: text('currency').notNull().default('usd'),
+    status: text('status').notNull().default('active'), // active | sold | cancelled | void
+    version: integer('version').notNull().default(1), // bumped on every price change; checkout is bound to it
+    buyerUserId: uuid('buyer_user_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    soldAt: ts('sold_at'),
+  },
+  (t) => [
+    // one active listing per plot
+    uniqueIndex('listings_one_active_idx').on(t.plotId).where(sql`${t.status} = 'active'`),
+    index('listings_status_idx').on(t.status, t.createdAt),
+  ],
+);
+
+/** Append-only money ledger. Entries for one order sum to zero across accounts. */
+export const ledgerEntries = pgTable(
+  'ledger_entries',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    orderId: uuid('order_id').references(() => orders.id, { onDelete: 'set null' }),
+    listingId: uuid('listing_id').references(() => listings.id, { onDelete: 'set null' }),
+    account: text('account').notNull(), // 'platform' | 'buyer:<id>' | 'user:<id>' | 'org:<id>' | 'external'
+    kind: text('kind').notNull(), // sale | platform_fee | seller_credit | payout | refund
+    amountCents: integer('amount_cents').notNull(), // signed: credits positive, debits negative
+    currency: text('currency').notNull().default('usd'),
+    meta: jsonb('meta').$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: createdAt(),
+  },
+  (t) => [index('ledger_account_idx').on(t.account, t.createdAt), index('ledger_order_idx').on(t.orderId)],
+);
+
+export const payoutAccounts = pgTable('payout_accounts', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  stripeAccountId: text('stripe_account_id').unique(),
+  chargesEnabled: boolean('charges_enabled').notNull().default(false),
+  payoutsEnabled: boolean('payouts_enabled').notNull().default(false),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+// ─── Social: connections and chat ────────────────────────────────────────────
+
+export const connections = pgTable(
+  'connections',
+  {
+    id: id(),
+    requesterId: uuid('requester_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    addresseeId: uuid('addressee_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('pending'), // pending | accepted | blocked
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex('connections_pair_idx').on(t.requesterId, t.addresseeId), index('connections_addressee_idx').on(t.addresseeId, t.status)],
+);
+
+export const chatMessages = pgTable(
+  'chat_messages',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    room: text('room').notNull(), // nearby:<cellX>:<cellY> | dm:<lowId>:<highId> | clan:<id>
+    senderId: uuid('sender_id').references(() => users.id, { onDelete: 'set null' }),
+    senderName: text('sender_name').notNull(),
+    body: text('body').notNull(),
+    moderationStatus: text('moderation_status').notNull().default('ok'), // ok | flagged
+    createdAt: createdAt(),
+  },
+  (t) => [index('chat_room_idx').on(t.room, t.id), index('chat_created_idx').on(t.createdAt)],
+);
+
+// ─── Clans ───────────────────────────────────────────────────────────────────
+
+export const clans = pgTable('clans', {
+  id: id(),
+  slug: citext('slug').notNull().unique(),
+  name: text('name').notNull().unique(),
+  tag: text('tag').notNull(),
+  description: text('description'),
+  emblem: jsonb('emblem').$type<{ icon: string; color: string }>().notNull().default({ icon: 'shield', color: '#2DE2C4' }),
+  leaderUserId: uuid('leader_user_id').references(() => users.id, { onDelete: 'set null' }),
+  memberCount: integer('member_count').notNull().default(1),
+  createdAt: createdAt(),
+});
+
+export const clanMembers = pgTable(
+  'clan_members',
+  {
+    clanId: uuid('clan_id')
+      .notNull()
+      .references(() => clans.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' })
+      .unique(), // one clan per user
+    role: text('role').notNull().default('member'), // leader | officer | member
+    joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.clanId, t.userId] })],
+);
+
+export const clanRequests = pgTable(
+  'clan_requests',
+  {
+    id: id(),
+    clanId: uuid('clan_id')
+      .notNull()
+      .references(() => clans.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(), // join_request | invite
+    status: text('status').notNull().default('pending'), // pending | accepted | declined
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('clan_requests_pending_idx').on(t.clanId, t.userId, t.kind).where(sql`${t.status} = 'pending'`)],
+);
+
 export type User = typeof users.$inferSelect;
 export type Plot = typeof plots.$inferSelect;
 export type Organization = typeof organizations.$inferSelect;
 export type Order = typeof orders.$inferSelect;
+export type Listing = typeof listings.$inferSelect;
+export type Clan = typeof clans.$inferSelect;
