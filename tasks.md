@@ -26,7 +26,7 @@ Status note: milestones M1–M12 were first built **before** the kickoff file wa
 
 | ✓ | Task | Owner | Status |
 |---|------|-------|--------|
-| [ ] | M1 Monorepo scaffold (`apps/web`, `apps/api`, `packages/shared`), typed config, root `.env.example`, `APP_URL`/`STAGING_DOMAIN`/port env, flatmetaAPI pointer [§12.1] *(rework)* | claude | todo |
+| [x] | M1 Monorepo scaffold (`apps/web`, `apps/api`, `packages/shared`), typed config, root `.env.example`, `APP_URL`/`STAGING_DOMAIN`/port env, flatmetaAPI pointer [§12.1] | claude | done |
 | [ ] | M1 DB schema + migrations (users, orgs, plots/tiles, regions, listings, orders, subscriptions, XP, quests, achievements, chat, showcase) [§3, §12.3–12.5]. Built: all except `listings`, `ledger_entries`, `connections`, `chat_messages`, `clans*`, `users.avatar/password_hash` *(new)* | claude | todo |
 | [x] | M1 Seed data: regions/countries, demo users, plots (listings come with the marketplace task) | claude | done |
 | [ ] | M2 Auth: guest-first identity, email code, password, sessions, API keys [§12.1]. Built: all except the optional password *(new)* | claude | todo |
