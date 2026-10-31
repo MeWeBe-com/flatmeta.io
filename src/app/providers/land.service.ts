@@ -283,16 +283,31 @@ export class LandService {
   search(query: string): LandArea[] {
     const q = String(query || '').trim().toLowerCase();
     if (!q) return [];
-    return [...this.areas(), ...this.mine]
-      .filter(
-        (a, i, all) =>
-          all.findIndex((b) => b.order_id === a.order_id) === i &&
-          (a.title.toLowerCase().includes(q) ||
-            (a.slug || '').includes(slugify(q)) ||
-            (a.three_words || '').includes(q) ||
-            (a.username || '').toLowerCase().includes(q))
-      )
-      .slice(0, 8);
+    // ⚡ Bolt optimization:
+    // 1. Pre-compute slugify(q) once instead of in every iteration of the filter loop.
+    // 2. Replace O(N^2) deduplication (all.findIndex) with an O(1) Set lookup.
+    // 3. Early break once 8 matching areas are found, skipping unnecessary checks on remaining items.
+    const slugQuery = slugify(q);
+    const seen = new Set<string>();
+    const matches: LandArea[] = [];
+    const candidates = [...this.areas(), ...this.mine];
+
+    for (const a of candidates) {
+      if (seen.has(a.order_id)) continue;
+      seen.add(a.order_id);
+
+      if (
+        a.title.toLowerCase().includes(q) ||
+        (a.slug || '').includes(slugQuery) ||
+        (a.three_words || '').includes(q) ||
+        (a.username || '').toLowerCase().includes(q)
+      ) {
+        matches.push(a);
+        if (matches.length >= 8) break;
+      }
+    }
+
+    return matches;
   }
 
   async searchRemote(query: string): Promise<LandArea[]> {
