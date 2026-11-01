@@ -44,6 +44,19 @@ describe('grid', () => {
     expect(gridToThreeWords(10, 20)).toMatch(/^[a-z]+\.[a-z]+\.[a-z]+$/);
   });
 
+  it('boundsOf correctly handles single point, negative coordinates, and larger arrays of points', () => {
+    expect(boundsOf([{ gx: 5, gy: -12 }])).toEqual({ minGx: 5, minGy: -12, maxGx: 5, maxGy: -12 });
+    expect(boundsOf([
+      { gx: -10, gy: 5 },
+      { gx: 20, gy: -30 },
+      { gx: -5, gy: -15 },
+      { gx: 15, gy: 40 },
+    ])).toEqual({ minGx: -10, minGy: -30, maxGx: 20, maxGy: 40 });
+
+    const largeSet = Array.from({ length: 1000 }, (_, i) => ({ gx: i - 500, gy: 500 - i }));
+    expect(boundsOf(largeSet)).toEqual({ minGx: -500, minGy: -499, maxGx: 499, maxGy: 500 });
+  });
+
   it('turns any text into a safe /u/ slug', () => {
     expect(slugify('https://flatmeta.io/u/Pepsi Land!')).toBe('pepsi-land');
     expect(slugify('  --My__Shop--  ')).toBe('my-shop');
