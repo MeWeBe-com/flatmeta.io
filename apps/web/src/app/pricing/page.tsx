@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { PageShell } from '@/components/site-chrome';
 import { serverApi } from '@/lib/server-api';
 import { PricingClient, type Plans } from './pricing-client';
+import { PricingLoader } from './pricing-loader';
 
 export const metadata: Metadata = { title: 'Pricing', description: 'Free Homestead plot for everyone. Buy land by the cell, boost your plot, or get Plus, Business or Brand.' };
 
@@ -14,7 +15,7 @@ export default async function PricingPage() {
           <h1 className="text-4xl md:text-6xl font-bold">Simple, <span className="text-gradient">fair</span> pricing</h1>
           <p className="muted mt-4 text-lg">Play for free forever. Pay for more land, more reach and business tools. Never for XP.</p>
         </div>
-        {data ? <PricingClient data={data} /> : <p className="text-center muted">Prices are loading. Please refresh in a moment.</p>}
+        {data ? <PricingClient data={data} /> : <PricingLoader />}
       </div>
     </PageShell>
   );
