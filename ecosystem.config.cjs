@@ -21,7 +21,8 @@ module.exports = {
       name: `flatmeta-web${suffix}`,
       cwd: path.join(root, 'apps/web'),
       script: path.join(root, 'node_modules/next/dist/bin/next'), // hoisted by npm workspaces
-      args: `start -p ${env.WEB_PORT || 3200}`,
+      // Bind to HOST (127.0.0.1 by default): only the Hestia/nginx proxy should reach the app, never the public IP.
+      args: `start -H ${env.HOST || '127.0.0.1'} -p ${env.WEB_PORT || 3200}`,
       interpreter: 'node',
       exec_mode: 'fork',
       instances: 1,

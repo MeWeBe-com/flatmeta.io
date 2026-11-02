@@ -10,7 +10,7 @@ What runs:
 | `flatmeta-api` | Fastify: REST `/v1`, WebSocket `/v1/live`, `/docs`, `/openapi.json`, `/mcp`, Stripe webhook | `PORT` (3201) |
 | `flatmeta-worker` | BullMQ jobs (expiry, stats, payouts, cleanup, image import) | health: `WORKER_HEALTH_PORT` (3203) |
 
-Ports **3000, 3010 and 3100 are taken** on this server; every default here avoids them. Optional: `MCP_PORT` serves `/mcp` on its own port as well (leave empty unless you need it).
+Ports **3000, 3010 and 3100 are taken** on this server; every default here avoids them. All three processes bind to **`HOST`** (default `127.0.0.1`), so they are reachable only through nginx, never on the server's public IP. Keep `HOST=127.0.0.1` in `.env`. Optional: `MCP_PORT` serves `/mcp` on its own port as well (leave empty unless you need it).
 
 Everything is configured by **one file, `.env`, in the repo root** (copy `.env.example`). Every absolute URL, redirect, email link, sitemap entry and share card is built from **`APP_URL`**. The API refuses to start in production if `APP_URL` is `localhost`.
 
@@ -21,16 +21,20 @@ Config values: `APP_NAME=FlatMeta`, `PRODUCTION_DOMAIN=flatmeta.io`, `STAGING_DO
 ## 1. One-time server setup (as root in Hestia, then as the app user)
 
 1. **Hestia:** create a user (e.g. `flatmeta`) and add the web domain (`flatmeta.io`, or `flatmeta.mewebe.net` for staging). Enable SSL with Let's Encrypt.
-2. **Proxy template:** edit the domain → *Proxy Template* → choose the generic **NodeJS** template, and set its port to **3200** (the web port).
-3. **Extra locations:** the template includes a per-domain `nodejs-app.conf` for extra `location` blocks. Find the exact include path in the template itself:
+2. **Proxy template:** edit the domain → *Proxy Template* → choose the generic **NodeJS** template.
+3. **The two include files (both required):** the NodeJS template includes two per-domain files inside the domain's `server { }` block: `nodejs-app.conf` (extra locations) and `nodejs-app-fallback.conf` (the catch-all `location /`). Find their exact include paths in the template:
    ```bash
-   grep -rn "include" /usr/local/hestia/data/templates/web/nginx/NodeJS.tpl /usr/local/hestia/data/templates/web/nginx/NodeJS.stpl
+   grep -rn "nodejs-app" /usr/local/hestia/data/templates/web/nginx/
    ```
-   Copy `deploy/hestia/nodejs-app.conf` to that path, replace `/home/USER/flatmeta` with the real checkout path, then:
+   Copy both files from `deploy/hestia/` to those paths:
+   - `nodejs-app.conf`: `/api/` (with the WebSocket upgrade), `/media/`, `/_next/static/`, `/sw.js`. **Replace `__MEDIA_DIR__`** with the absolute value of `MEDIA_DIR` from `.env` (keep the trailing slash), e.g. `alias /home/flatmeta/flatmeta/apps/api/storage/media/;`. Until you do, every `/media/` URL returns 404 (plot images missing); `nginx -t` does not catch it, so check `grep __MEDIA_DIR__` on the installed file.
+   - `nodejs-app-fallback.conf`: `location /` → Next.js on `127.0.0.1:3200`. Without it the site returns nginx errors for every page.
+
+   If you changed `WEB_PORT`, `PORT` or `MEDIA_DIR` in `.env`, change the same values in these files. Then:
    ```bash
    nginx -t && systemctl reload nginx
    ```
-   If your Hestia version has no such include, put the same file in the domain's config folder as `nginx.conf_flatmeta` **and** `nginx.ssl.conf_flatmeta` (`/home/USER/conf/web/DOMAIN/`); Hestia loads files with those prefixes.
+   If your Hestia version has no such includes, put both files' contents in the domain's config folder as `nginx.conf_flatmeta` **and** `nginx.ssl.conf_flatmeta` (`/home/USER/conf/web/DOMAIN/`); Hestia loads files with those prefixes.
 4. **WebSocket check:** the file passes `Upgrade` through (`proxy_pass_header Upgrade`) because Hestia's site template hides it by default. Without it, avatars and chat won't connect (the page still works).
 5. **Databases (root):** PostgreSQL 16 with `citext`, `pg_trgm`, `unaccent` and Redis 7 (Hestia can create the database; create the extensions as `postgres`):
    ```bash
@@ -100,7 +104,10 @@ The CI deploy job deploys the checkout in `DEPLOY_PATH`. To deploy both environm
 
 | Symptom | Check |
 | --- | --- |
-| 502 from nginx | `pm2 ls`; `pm2 logs`; ports in `.env` and in `nodejs-app.conf` agree |
+| 502 from nginx | `pm2 ls`; `pm2 logs`; ports in `.env` agree with `nodejs-app.conf` and `nodejs-app-fallback.conf` |
+| Every page is an nginx error but `/api/healthz` works | `nodejs-app-fallback.conf` (the `location /` catch-all) is missing |
+| Next.js log shows `Network: <public IP>:3200` | `HOST` is not `127.0.0.1` in `.env`; the ecosystem passes `-H $HOST` to `next start`. Fix `.env`, then `pm2 startOrReload ecosystem.config.cjs --update-env` |
+| Plot images and avatars 404 under `/media/` | the `__MEDIA_DIR__` placeholder in `nodejs-app.conf` was not replaced with your `MEDIA_DIR` (trailing slash included) |
 | API exits on start: "APP_URL … not localhost" | `APP_URL` must be the public https origin in production |
 | Map loads but no avatars or chat | the `/api/` location passes `Upgrade`/`Connection`; `nginx -t`; browser console shows the `/api/v1/live` handshake |
 | Logged out on every request | `COOKIE_SECURE=true` needs https; the site and `/api` must share one origin |

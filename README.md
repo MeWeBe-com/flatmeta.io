@@ -37,7 +37,7 @@ apps/web         Next.js app: map, plot pages, marketplace, clans, dashboard, ad
 apps/api         Fastify API, WebSocket hub, MCP server, worker, showcase generator, migrations, seeds, tests
 packages/shared  Grid maths shared by both (built to dist on npm install)
 docs/            Brief, audit, masterprompts, progress log, Hestia guide
-deploy/hestia/   Sample nodejs-app.conf for HestiaCP's NodeJS proxy template
+deploy/hestia/   nodejs-app.conf + nodejs-app-fallback.conf for HestiaCP's NodeJS proxy template
 scripts/         deploy.sh, backup.sh, print-env.mjs
 ```
 
@@ -115,7 +115,7 @@ One file: **`.env` in the repo root** (copy `.env.example`; every variable is do
 
 ## Deploying
 
-Follow [`docs/deploy-hestia.md`](docs/deploy-hestia.md). In short: HestiaCP domain with the generic **NodeJS** proxy template and [`deploy/hestia/nodejs-app.conf`](deploy/hestia/nodejs-app.conf); Node 22 via nvm and PM2 as a normal user; `.env`; then `bash scripts/deploy.sh`. A push to `v2` runs `.github/workflows/ci.yml`: tests, then, only if they pass and the repository secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KEY`, `DEPLOY_PATH` (optional `DEPLOY_PORT`) exist, a deploy job over SSH. Without the secrets it prints a skip notice.
+Follow [`docs/deploy-hestia.md`](docs/deploy-hestia.md). In short: HestiaCP domain with the generic **NodeJS** proxy template and both [`deploy/hestia/nodejs-app.conf`](deploy/hestia/nodejs-app.conf) and [`nodejs-app-fallback.conf`](deploy/hestia/nodejs-app-fallback.conf) (catch-all `location /`); apps bind to `HOST=127.0.0.1`; Node 22 via nvm and PM2 as a normal user; `.env`; then `bash scripts/deploy.sh`. A push to `v2` runs `.github/workflows/ci.yml`: tests, then, only if they pass and the repository secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KEY`, `DEPLOY_PATH` (optional `DEPLOY_PORT`) exist, a deploy job over SSH. Without the secrets it prints a skip notice.
 
 ---
 
