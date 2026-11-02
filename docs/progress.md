@@ -127,3 +127,5 @@ Each step appends a short summary: what was done, decisions made, what's next.
 15. **Which environment does `ci.yml` deploy?** It deploys whatever `DEPLOY_PATH` points at on every push to `v2`. Until you confirm the staging domain, treat that as staging.
 16. **Marketplace guard rails** are proposals (7-day hold, 50× price cap for 30 days, no resale of Homesteads, 10% fee). All are env values (`MARKETPLACE_*`); legal wording about "not an investment" is in the UI and needs review.
 17. **Guest avatars** appear anonymously on the map ("Guest 1234") and can read chat but not write. Confirm this matches how open you want the world to be.
+
+Session started 2026-11-02
