@@ -106,6 +106,22 @@ Each step appends a short summary: what was done, decisions made, what's next.
 
 **Next:** the owner actions in `tasks.md` (GitHub write access, deploy secrets, Stripe/AI/SMTP keys, staging domain, legal), then a staging deploy and a real Stripe test-mode run, then Phase 2.
 
+## Checkpoint — pushed and re-checked against the kickoff (2026-11-02)
+
+**Done:** GitHub access was granted and `v2` is on `origin` at `a132fdd` (40 commits since the owner's kickoff). A fresh clone of the pushed branch installs, lints, type-checks, passes all tests (50 API, 8 web) and builds; a scan of the tree finds no secrets or env files other than `.env.example`; no v1 (Laravel/Ionic) code remains on `v2`. The first CI run on GitHub passed install, lint, typecheck, unit and API tests, build and stack start (see the run for the e2e and deploy jobs).
+
+**Kickoff re-check, point by point:**
+- Branch rules: all work on `v2`, nothing on `main` or `develop`; v2 code lives in this monorepo; `flatmetaAPI` `v2` holds only the owner's `V2.md` pointer. The `bolt-optimize-*` branches were ignored as instructed.
+- Step 1–3 docs: audit (all branches of both public repos plus `MeWeBe-com/flatmetaAPI` main), brief, research notes, two masterprompts (§12 of Phase 1 is the kickoff alignment). Secrets: one found (v1 `APP_KEY`), listed URGENT, absent from `v2`.
+- Step 4 build: `.env.example` (every variable; no secrets), Postgres migrations and seeds, showcase generator run for a first batch (140 plots, 10 countries; works without any image key), README with local dev, API/MCP use and the server guide, PM2 ecosystem, deploy script, `docs/deploy-hestia.md`, `deploy/hestia/nodejs-app.conf`.
+- CI/deploy: one `ci.yml` with Postgres + Redis, tests, build and e2e, then a final deploy job on push to `v2`; no `workflow_run` or `workflow_dispatch`; secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KEY`, `DEPLOY_PATH` (optional `DEPLOY_PORT`); skips with a notice when unset.
+- Server lessons: normal user with nvm Node 22 and its own PM2, no root; ports from env (`WEB_PORT`, `PORT`, `MCP_PORT`, `WORKER_HEALTH_PORT`, defaults avoid 3000/3010/3100); `deploy.sh` loads nvm and `.env`, exports `COREPACK_ENABLE_DOWNLOAD_PROMPT=0`, defaults to `v2`, health-checks on `$PORT`; every absolute URL comes from `APP_URL`; config values `APP_NAME`, `PRODUCTION_DOMAIN=flatmeta.io`, `STAGING_DOMAIN=flatmeta.mewebe.net`.
+- Phase 1 scope: guest-first map with World/City/Land levels, avatars, nearby and private chat, connections, clans, XP/quests/achievements/leaderboards, Stripe plots/upgrades/subscriptions, marketplace with a 10% fee and ledger, user and organisation accounts, dashboards, admin, AI designer/suggestions/search/moderation with deterministic fallbacks, REST + OpenAPI, MCP server, SEO pages and share cards, unclaimed-showcase system with the Claim flow, PWA, i18n-ready, tests (unit, API, e2e).
+
+**Not verified (needs your environment):** a real Stripe test-mode run; the Hestia proxy include path and WebSocket pass-through on your server; a real deploy through the SSH job (no `DEPLOY_*` secrets yet); real AI-provider calls. All are listed in `tasks.md` and the open questions.
+
+**Next:** with the checkpoint accepted, continue Phase 1 follow-ups (Stripe test-mode run, staging deploy) once the secrets and keys exist, then Phase 2.
+
 ## Open questions
 
 0. **URGENT: rotate the Laravel `APP_KEY`.** `flatmetaAPI/.env.example` (all v1 branches, since commit `363faab`) contains a real key: `APP_KEY=base64:ah1EUh…`. Rotate it on every server that ever ran it. It is removed from `v2`; it stays in v1 history unless you rewrite it.
