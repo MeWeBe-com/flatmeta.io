@@ -101,7 +101,7 @@ One file: **`.env` in the repo root** (copy `.env.example`; every variable is do
 |---|---|
 | `APP_URL` | Public origin. **Every absolute URL, redirect, email link, sitemap entry and share card is built from it.** Production refuses `localhost`. |
 | `APP_ENV` / `NODE_ENV` | `development` · `staging` · `production` (banners, robots, PM2 names) |
-| `PRODUCTION_DOMAIN`, `STAGING_DOMAIN` | `flatmeta.io`, `flatmeta.mewebe.net` (placeholder until confirmed) |
+| `PRODUCTION_DOMAIN`, `STAGING_DOMAIN` | `flatmeta.io`, `staging.flatmeta.io` |
 | `WEB_PORT`, `PORT`, `MCP_PORT`, `WORKER_HEALTH_PORT` | 3200, 3201, (optional), 3203; avoid 3000, 3010 and 3100 which the server uses |
 | `DATABASE_URL`, `REDIS_URL`, `SESSION_SECRET`, `COOKIE_SECURE` | Data and sessions |
 | `STRIPE_*`, `PAYMENTS_MOCK` | Payments. Without keys, development uses a mock checkout (never in production) |

@@ -122,6 +122,19 @@ Each step appends a short summary: what was done, decisions made, what's next.
 
 **Next:** with the checkpoint accepted, continue Phase 1 follow-ups (Stripe test-mode run, staging deploy) once the secrets and keys exist, then Phase 2.
 
+## Staging live and staging fixes (2026-11-02)
+
+**Done:** staging is live at https://staging.flatmeta.io (HestiaCP; app user `najamussaqib`; checkout at `/home/flatmeta/web/staging.flatmeta.io/private/flatmeta`; web 3200, API 3201, worker 3203). The `DEPLOY_*` secrets are set, so every green push to `v2` deploys there through the forced-command SSH key. Fixes for what staging showed:
+1. **Security:** Next.js listened on 0.0.0.0. The PM2 ecosystem now runs `next start -H $HOST -p $WEB_PORT`; the API (and optional MCP port) and the worker health server already listen on `HOST`. Keep `HOST=127.0.0.1`.
+2. **Deploy:** with `NODE_ENV=production`, npm skipped devDependencies and the shared package's `postinstall` (`tsc`) failed. `deploy.sh` runs `npm ci --include=dev` and exports `NPM_CONFIG_INCLUDE=dev`; `DEPLOY_PRUNE=1` prunes afterwards (off by default because tsx scripts need dev deps).
+3. **Hestia:** `deploy/hestia/nodejs-app-fallback.conf` holds the catch-all `location /` → web; the `/media/` alias is an `__MEDIA_DIR__` placeholder. The guide notes that Hestia only rewrites and reloads nginx when the proxy template is re-applied (switch to `default` and back to NodeJS, or `v-change-web-domain-proxy-tpl`).
+4. **Sign-in without SMTP:** with `SMTP_HOST` empty and `APP_ENV` not production, the sign-in code is shown in the dialog and logged (`DEV_CODE_ECHO=auto|true|false`). Production never echoes, refuses `DEV_CODE_ECHO=true` at startup, and never logs email bodies.
+5. **Staging readiness:** the fake checkout and the on-screen codes are now keyed on `APP_ENV` (they were keyed on `NODE_ENV`, so a production build such as staging could not use them). `PAYMENTS_MOCK` works with `APP_ENV=staging` + `NODE_ENV=production` and is forced off when `APP_ENV=production`. A production build with no `APP_ENV` gets production rules. Without AI keys the text, moderation and search features use heuristics and images use the procedural generator, so the showcase generator runs without image keys. New tests load the real config in fresh processes to prove each case.
+
+**Decisions:** staging domain confirmed as `staging.flatmeta.io` (defaults updated); fail safe: an unlabelled production build behaves as production.
+
+**Next:** keys (SMTP, Stripe test, AI) on staging; then the production cutover plan.
+
 ## Open questions
 
 0. **URGENT: rotate the Laravel `APP_KEY`.** `flatmetaAPI/.env.example` (all v1 branches, since commit `363faab`) contains a real key: `APP_KEY=base64:ah1EUh…`. Rotate it on every server that ever ran it. It is removed from `v2`; it stays in v1 history unless you rewrite it.
@@ -145,3 +158,8 @@ Each step appends a short summary: what was done, decisions made, what's next.
 17. **Guest avatars** appear anonymously on the map ("Guest 1234") and can read chat but not write. Confirm this matches how open you want the world to be.
 
 Session started 2026-11-02
+18. **SMTP provider** for sign-in and notification email (Postmark, Mailgun, Amazon SES or the domain's SMTP). Until set, staging shows codes on screen; production cannot sign anyone in without it.
+19. **Stripe test keys** for staging (secret key, webhook secret, price IDs for Plus/Business/Brand) and Connect for marketplace payouts; then live keys for production.
+20. **AI keys:** Anthropic (default text model), and/or OpenAI or Gemini; without them everything falls back to heuristics.
+21. **Image provider:** procedural (free, current), OpenAI Images, Google Imagen (`GEMINI_API_KEY`), or the Google Flow file-drop pipeline.
+22. **Production cutover from v1 flatmeta.io:** proposed plan — (a) freeze v1 writes and take a MySQL dump; (b) import script: v1 users → v2 users (email, username, verified flag; passwords are not carried: email-code sign-in works), v1 `orders` + `user_boxes` → v2 plots (each v1 area becomes a plot rectangle where its squares form a rectangle, otherwise split into rectangles; images copied to media), v1 marketplace listings → v2 listings or dropped; active PayPal rent subscriptions → decide: grandfather as free land, or convert to one-time Deeds; (c) dry-run on staging with a copy of production data; (d) DNS switch of flatmeta.io to the v2 app, v1 kept read-only at a legacy subdomain for 30 days; (e) email all v1 users. Needs owner decisions on rent subscriptions and on users who rely on v1 passwords.

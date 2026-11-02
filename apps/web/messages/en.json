@@ -67,7 +67,7 @@
     "code": "Enter the 6-digit code we sent to {email}",
     "verify": "Sign in",
     "resend": "Send a new code",
-    "devHint": "Dev mode: your code is {code}",
+    "devHint": "Test environment (email is off): your code is {code}. Tap to use it.",
     "google": "Continue with Google",
     "welcome": "Welcome to FlatMeta!",
     "welcomeBack": "Welcome back!"

@@ -14,13 +14,13 @@ Ports **3000, 3010 and 3100 are taken** on this server; every default here avoid
 
 Everything is configured by **one file, `.env`, in the repo root** (copy `.env.example`). Every absolute URL, redirect, email link, sitemap entry and share card is built from **`APP_URL`**. The API refuses to start in production if `APP_URL` is `localhost`.
 
-Config values: `APP_NAME=FlatMeta`, `PRODUCTION_DOMAIN=flatmeta.io`, `STAGING_DOMAIN=flatmeta.mewebe.net` (a placeholder until the owner confirms the staging name).
+Config values: `APP_NAME=FlatMeta`, `PRODUCTION_DOMAIN=flatmeta.io`, `STAGING_DOMAIN=staging.flatmeta.io` (live staging).
 
 ---
 
 ## 1. One-time server setup (as root in Hestia, then as the app user)
 
-1. **Hestia:** create a user (e.g. `flatmeta`) and add the web domain (`flatmeta.io`, or `flatmeta.mewebe.net` for staging). Enable SSL with Let's Encrypt.
+1. **Hestia:** create a user (e.g. `flatmeta`) and add the web domain (`flatmeta.io`, or `staging.flatmeta.io` for staging). Enable SSL with Let's Encrypt.
 2. **Proxy template:** edit the domain → *Proxy Template* → choose the generic **NodeJS** template.
 3. **The two include files (both required):** the NodeJS template includes two per-domain files inside the domain's `server { }` block: `nodejs-app.conf` (extra locations) and `nodejs-app-fallback.conf` (the catch-all `location /`). Find their exact include paths in the template:
    ```bash
@@ -31,6 +31,9 @@ Config values: `APP_NAME=FlatMeta`, `PRODUCTION_DOMAIN=flatmeta.io`, `STAGING_DO
    - `nodejs-app-fallback.conf`: `location /` → Next.js on `127.0.0.1:3200`. Without it the site returns nginx errors for every page.
 
    If you changed `WEB_PORT`, `PORT` or `MEDIA_DIR` in `.env`, change the same values in these files. Then:
+
+   > **Hestia only rewrites and reloads the domain's nginx config when the proxy template is (re)applied.** After creating or editing `nodejs-app.conf` / `nodejs-app-fallback.conf`, switch the domain's *Proxy Template* to `default`, save, then back to **NodeJS**, save (or run `v-change-web-domain-proxy-tpl USER DOMAIN NodeJS` as root). Running `nginx -t && systemctl reload nginx` afterwards is a good check.
+
    ```bash
    nginx -t && systemctl reload nginx
    ```
@@ -87,6 +90,13 @@ command="cd /home/flatmeta/flatmeta && bash scripts/deploy.sh v2",no-port-forwar
 Run it by hand any time: `cd ~/flatmeta && bash scripts/deploy.sh [branch]`.
 
 ## 3. Staging next to production
+
+Staging runs the same production build (`NODE_ENV=production`) with **`APP_ENV=staging`**; if `APP_ENV` is missing with `NODE_ENV=production`, the app applies production rules (no fake checkout, no on-screen codes), so make sure staging sets `APP_ENV=staging`. On staging, without keys:
+
+- **Sign-in:** with `SMTP_HOST` empty, sign-in codes are shown in the sign-in dialog and written to the API log (`DEV_CODE_ECHO=auto`). Set SMTP to switch this off; production never shows codes and won't start with `DEV_CODE_ECHO=true`.
+- **Payments:** with no `STRIPE_SECRET_KEY` and `PAYMENTS_MOCK=true`, checkout goes to a fake "Pay (test)" page. Production ignores `PAYMENTS_MOCK`.
+- **AI:** with no Anthropic/OpenAI/Gemini keys, the designer, suggestions, search and moderation use built-in heuristics; images use the procedural generator (`AI_IMAGE_PROVIDER=procedural`), so the showcase generator works without image keys.
+
 
 Use a second checkout (`~/flatmeta-staging`) with its own `.env`: `APP_ENV=staging`, `APP_URL=https://<STAGING_DOMAIN>`, different `WEB_PORT`/`PORT`/`MCP_PORT`/`WORKER_HEALTH_PORT` (for example 3210/3211/3212/3213), its own database and a different Redis DB index (`redis://127.0.0.1:6379/1`). PM2 names get a `-staging` suffix. Create the second Hestia domain the same way, with the matching ports in its `nodejs-app.conf`. Staging shows a banner and serves `Disallow: /` in `robots.txt`.
 

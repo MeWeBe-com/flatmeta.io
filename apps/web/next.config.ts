@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_URL: env.APP_URL ?? 'http://localhost:3200',
     NEXT_PUBLIC_APP_ENV: env.APP_ENV ?? 'development',
     NEXT_PUBLIC_PRODUCTION_DOMAIN: env.PRODUCTION_DOMAIN ?? 'flatmeta.io',
-    NEXT_PUBLIC_STAGING_DOMAIN: env.STAGING_DOMAIN ?? 'flatmeta.mewebe.net',
+    NEXT_PUBLIC_STAGING_DOMAIN: env.STAGING_DOMAIN ?? 'staging.flatmeta.io',
   },
   // In production the Hestia nginx proxy routes /api and /media before they reach Next; these rewrites make dev (and a bare `next start`) work the same way.
   async rewrites() {

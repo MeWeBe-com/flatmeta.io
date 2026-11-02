@@ -18,7 +18,12 @@ export async function sendMail(to: string, subject: string, text: string, html?:
   if (!transport) {
     outbox.push({ to, subject, text });
     if (outbox.length > 50) outbox.shift();
-    if (config.NODE_ENV !== 'test') logger.info({ to, subject }, `\n────── email (dev) ──────\nTo: ${to}\nSubject: ${subject}\n\n${text}\n─────────────────────────`);
+    if (config.APP_ENV === 'production') {
+      // Never write message bodies (sign-in codes, invite links) to production logs.
+      logger.error({ to, subject }, 'Email not sent: SMTP is not configured (set SMTP_HOST)');
+      return;
+    }
+    if (config.NODE_ENV !== 'test') logger.info({ to, subject }, `\n────── email (not sent: no SMTP) ──────\nTo: ${to}\nSubject: ${subject}\n\n${text}\n─────────────────────────`);
     return;
   }
   await transport.sendMail({ from: config.MAIL_FROM, to, subject, text, html });

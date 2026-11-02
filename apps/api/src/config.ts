@@ -26,7 +26,7 @@ const schema = z.object({
   // Public base of the API (docs, MCP, webhooks). Defaults to APP_URL + /api (the proxy strips the prefix).
   API_URL: z.string().default(''),
   PRODUCTION_DOMAIN: z.string().default('flatmeta.io'),
-  STAGING_DOMAIN: z.string().default('flatmeta.mewebe.net'), // placeholder until confirmed
+  STAGING_DOMAIN: z.string().default('staging.flatmeta.io'),
 
   DATABASE_URL: z.string().default('postgres://flatmeta:flatmeta@localhost:5432/flatmeta'),
   DATABASE_URL_TEST: z.string().default('postgres://flatmeta:flatmeta@localhost:5432/flatmeta_test'),
@@ -67,6 +67,9 @@ const schema = z.object({
   STRIPE_PRICE_BRAND_YEAR: optional,
   STRIPE_AUTOMATIC_TAX: bool,
   CURRENCY: z.string().default('usd'),
+  // Show sign-in codes on screen (and in the log) instead of emailing them. auto = only when no SMTP is set
+  // and APP_ENV is not production. Never allowed in production.
+  DEV_CODE_ECHO: z.enum(['auto', 'true', 'false']).default('auto'),
   PAYMENTS_MOCK: z
     .string()
     .optional()
@@ -113,20 +116,42 @@ function load(): Config {
   c.APP_URL = c.APP_URL.replace(/\/+$/, '');
   c.API_URL = (c.API_URL || `${c.APP_URL}/api`).replace(/\/+$/, '');
   if (c.NODE_ENV === 'test') c.DATABASE_URL = c.DATABASE_URL_TEST;
+  if (c.NODE_ENV === 'production' && c.APP_ENV === 'development') {
+    // A production build that doesn't say what it is gets the safe answer: production rules (no fake checkout,
+    // no on-screen codes). Staging must say APP_ENV=staging to get its test conveniences.
+    console.warn('[config] NODE_ENV=production without APP_ENV: treating as APP_ENV=production. Set APP_ENV=staging on staging.');
+    c.APP_ENV = 'production';
+  }
+  if (c.APP_ENV === 'production') {
+    if (c.DEV_CODE_ECHO === 'true') throw new Error('DEV_CODE_ECHO=true is not allowed when APP_ENV=production');
+    c.PAYMENTS_MOCK = false; // real money only
+  }
   if (c.NODE_ENV === 'production') {
     if (/\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/.test(c.APP_URL) || /\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/.test(c.API_URL)) {
       throw new Error('APP_URL / API_URL must be the public https origin in production, not localhost');
     }
     if (c.SESSION_SECRET === 'dev-only-insecure-secret') throw new Error('SESSION_SECRET must be set in production');
-    if (!c.STRIPE_SECRET_KEY) c.PAYMENTS_MOCK = false;
   }
   return c;
 }
 
 export const config = load();
 
-/** True when checkout should use the local mock instead of Stripe. */
-export const paymentsMock = () => !config.STRIPE_SECRET_KEY && config.PAYMENTS_MOCK && config.NODE_ENV !== 'production';
+type Policy = Pick<Config, 'APP_ENV' | 'SMTP_HOST' | 'STRIPE_SECRET_KEY' | 'PAYMENTS_MOCK' | 'DEV_CODE_ECHO'>;
+
+/**
+ * Fake checkout: only without Stripe keys, only when PAYMENTS_MOCK is on, and never when APP_ENV=production.
+ * Keyed on APP_ENV (not NODE_ENV) so staging, which runs a production build, can still be tested end to end.
+ */
+export const allowPaymentsMock = (c: Policy) => !c.STRIPE_SECRET_KEY && c.PAYMENTS_MOCK && c.APP_ENV !== 'production';
+export const paymentsMock = () => allowPaymentsMock(config);
+
+/** Show sign-in codes on screen when email can't be sent (no SMTP) outside production. */
+export const allowDevCodeEcho = (c: Policy) => {
+  if (c.APP_ENV === 'production' || c.DEV_CODE_ECHO === 'false') return false;
+  return c.DEV_CODE_ECHO === 'true' || !c.SMTP_HOST;
+};
+export const devCodeEcho = () => allowDevCodeEcho(config);
 
 export const textProvider = (): 'anthropic' | 'openai' | 'gemini' | 'heuristic' => {
   if (config.AI_TEXT_PROVIDER) return config.AI_TEXT_PROVIDER;

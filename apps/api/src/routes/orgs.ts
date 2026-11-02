@@ -1,7 +1,7 @@
 import { and, desc, eq, gt, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import type { App } from '../app.js';
-import { config } from '../config.js';
+import { config, devCodeEcho } from '../config.js';
 import { db, schema } from '../db/client.js';
 import { requireUser } from '../lib/auth.js';
 import { hashToken, randomToken } from '../lib/crypto.js';
@@ -101,7 +101,7 @@ export default async function orgRoutes(app: App) {
       await db.insert(schema.orgInvites).values({ orgId: req.params.id, email: req.body.email.toLowerCase(), role: req.body.role, tokenHash: hashToken(token), invitedBy: user.id, expiresAt: new Date(Date.now() + 14 * 86400_000) });
       const link = `${config.APP_URL}/dashboard/orgs?invite=${token}`;
       await sendNoticeEmail(req.body.email, `Join ${org?.name} on FlatMeta`, `${user.displayName} invited you to help manage ${org?.name} on FlatMeta.\n\nAccept the invite: ${link}\n\nThe link works for 14 days.`);
-      return { ok: true, ...(config.NODE_ENV !== 'production' && !config.SMTP_HOST ? { devLink: link } : {}) };
+      return { ok: true, ...(devCodeEcho() ? { devLink: link } : {}) };
     },
   );
 

@@ -22,6 +22,8 @@ Owner `claude` = Claude Code cloud session `01LEq4cqBwnNj9v3GR8k2J4p`.
 | [x] | Expand Phase 1 tasks below with section refs from the masterprompt | claude | done |
 
 ## Phase 1: MVP (about 3 days)
+Staging fixes (2026-11-02): web/API/worker bound to `HOST`; deploy installs devDependencies; Hestia fallback conf; on-screen sign-in codes and fake checkout on staging only; AI and art fall back without keys.
+
 Status note: milestones M1–M12 were first built **before** the kickoff file was visible, as two repos. Rows marked *(rework)* are built but must change to match the kickoff (monorepo, ports, `APP_URL`); rows marked *(new)* were missing.
 
 | ✓ | Task | Owner | Status |
@@ -62,9 +64,13 @@ Status note: milestones M1–M12 were first built **before** the kickoff file wa
 | [ ] | Self-host map tiles (PMTiles) and the geocoder before heavy traffic | — | todo |
 | [ ] | Translate `messages/en.json` when a second locale is chosen | — | todo |
 | [ ] | Owner: rotate the v1 Laravel `APP_KEY` (URGENT, see progress.md) | owner | todo |
-| [ ] | Owner: grant the Claude GitHub App write access to `MeWeBe-com/flatmeta.io` and `flatmetaAPI` | owner | blocked (403 on push) |
-| [ ] | Owner: set `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KEY`, `DEPLOY_PATH` (and optional `DEPLOY_PORT`) repo secrets | owner | todo |
-| [ ] | Owner: confirm `STAGING_DOMAIN` (placeholder `flatmeta.mewebe.net`), Stripe products/webhook, AI keys, SMTP, DNS | owner | todo |
+| [x] | Owner: grant the Claude GitHub App write access to `MeWeBe-com/flatmeta.io` and `flatmetaAPI` | owner | done (2026-11-02) |
+| [x] | Owner: set `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KEY`, `DEPLOY_PATH` (and optional `DEPLOY_PORT`) repo secrets | owner | done: push to v2 deploys staging |
+| [x] | Owner: staging server live at https://staging.flatmeta.io (HestiaCP, user `najamussaqib`, web 3200 / api 3201 / worker 3203, deploy via forced-command SSH key) | owner | done |
+| [ ] | Owner: choose an SMTP provider and set `SMTP_*` (staging shows sign-in codes on screen until then; production requires it) | owner | todo |
+| [ ] | Owner: Stripe test keys, products/prices and webhook for staging; live keys later | owner | todo |
+| [ ] | Owner: AI keys (Anthropic and/or OpenAI/Gemini) and the image provider choice (procedural, OpenAI, Imagen or the Google Flow file drop) | owner | todo |
+| [ ] | Owner: production cutover plan from v1 flatmeta.io, including migrating existing land and users (see progress.md open questions) | owner | todo |
 | [ ] | Owner: legal review and fill `[COMPANY NAME]`, `[COUNTRY]`, `[CONTACT EMAIL]` in the legal pages | owner | todo |
 
 ## Phase 2: see docs/03-masterprompt-phase2.md. Not started.

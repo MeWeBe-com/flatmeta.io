@@ -1,7 +1,8 @@
 import { and, desc, eq, gt, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { App } from '../app.js';
-import { config } from '../config.js';
+import { config, devCodeEcho } from '../config.js';
+import { logger } from '../lib/logger.js';
 import { db, schema } from '../db/client.js';
 import { createSession, destroySession, requireUser } from '../lib/auth.js';
 import { hashPassword, hashToken, randomToken, safeEqual, sixDigitCode, verifyPassword } from '../lib/crypto.js';
@@ -31,7 +32,11 @@ export async function issueCode(email: string, purpose: 'login' | 'claim', ref?:
     expiresAt: new Date(Date.now() + CODE_TTL_MIN * 60_000),
   });
   await sendCodeEmail(normal, code, purpose, orgName);
-  return !config.SMTP_HOST && config.NODE_ENV !== 'production' ? code : undefined;
+  if (devCodeEcho()) {
+    logger.warn({ email: normal }, `Sign-in code for ${normal}: ${code} (shown on screen because email is not configured; APP_ENV=${config.APP_ENV})`);
+    return code;
+  }
+  return undefined;
 }
 
 /** Verifies and consumes the newest code for an email. */
