@@ -54,7 +54,11 @@ build() {
   if [ "${DEPLOY_PRUNE:-0}" = "1" ]; then npm prune --omit=dev --no-audit --no-fund; fi
 }
 
-reload() { pm2 startOrReload ecosystem.config.cjs --update-env; }
+reload() {
+  # Apps whose start command changed (args, script, cwd) are recreated; the rest reload with zero downtime.
+  node scripts/pm2-sync.cjs || true
+  pm2 startOrReload ecosystem.config.cjs --update-env
+}
 
 healthy() {
   for _ in $(seq 1 40); do

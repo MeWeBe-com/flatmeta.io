@@ -116,7 +116,8 @@ The CI deploy job deploys the checkout in `DEPLOY_PATH`. To deploy both environm
 | --- | --- |
 | 502 from nginx | `pm2 ls`; `pm2 logs`; ports in `.env` agree with `nodejs-app.conf` and `nodejs-app-fallback.conf` |
 | Every page is an nginx error but `/api/healthz` works | `nodejs-app-fallback.conf` (the `location /` catch-all) is missing |
-| Next.js log shows `Network: <public IP>:3200` | `HOST` is not `127.0.0.1` in `.env`; the ecosystem passes `-H $HOST` to `next start`. Fix `.env`, then `pm2 startOrReload ecosystem.config.cjs --update-env` |
+| Next.js log shows `Network: <public IP>:3200` | `HOST` is not `127.0.0.1` in `.env`, or the app was started before the ecosystem passed `-H $HOST`. `pm2 reload` keeps an app's original start arguments, so `deploy.sh` runs `scripts/pm2-sync.cjs` first, which recreates FlatMeta apps whose start command changed. By hand: `node scripts/pm2-sync.cjs && pm2 startOrReload ecosystem.config.cjs --update-env` |
+| Deploy log says "In-memory PM2 is out-of-date" | run `pm2 update` once as the app user (it restarts the PM2 daemon and keeps your apps) |
 | Plot images and avatars 404 under `/media/` | the `__MEDIA_DIR__` placeholder in `nodejs-app.conf` was not replaced with your `MEDIA_DIR` (trailing slash included) |
 | API exits on start: "APP_URL … not localhost" | `APP_URL` must be the public https origin in production |
 | Map loads but no avatars or chat | the `/api/` location passes `Upgrade`/`Connection`; `nginx -t`; browser console shows the `/api/v1/live` handshake |
