@@ -49,6 +49,8 @@ Config values: `APP_NAME=FlatMeta`, `PRODUCTION_DOMAIN=flatmeta.io`, `STAGING_DO
    cp .env.example .env && nano .env
    ```
    Minimum for production: `NODE_ENV=production`, `APP_ENV=production` (or `staging`), `APP_URL=https://flatmeta.io`, `DATABASE_URL`, `REDIS_URL`, a long random `SESSION_SECRET` (`openssl rand -hex 32`), `COOKIE_SECURE=true`, `SEED_ADMIN_EMAIL`, SMTP settings, `MEDIA_DIR=/home/USER/flatmeta/apps/api/storage/media`, and the Stripe and AI keys when you have them. `API_INTERNAL_URL` must match `PORT` (`http://127.0.0.1:3201`).
+
+   **`NODE_ENV=production` and npm:** with that set, `npm install`/`npm ci` skip devDependencies, and the build then fails (for example the shared package's `postinstall` runs `tsc` and exits with code 127, "command not found"). The build needs them. `scripts/deploy.sh` always runs `npm ci --include=dev` and exports `NPM_CONFIG_INCLUDE=dev`; keep `NPM_CONFIG_INCLUDE=dev` in `.env` (it is in `.env.example`) and use `npm ci --include=dev` for any manual install. Set `DEPLOY_PRUNE=1` only if disk is tight: it prunes devDependencies after each deploy, and then `npm run db:seed`, `npm run showcase` and other tsx scripts won't run until the next install.
 8. **First deploy and seed:**
    ```bash
    bash scripts/deploy.sh v2
@@ -104,4 +106,5 @@ The CI deploy job deploys the checkout in `DEPLOY_PATH`. To deploy both environm
 | Logged out on every request | `COOKIE_SECURE=true` needs https; the site and `/api` must share one origin |
 | Share images or sitemap use the wrong host | `APP_URL`; rebuild after changing it (`bash scripts/deploy.sh`) |
 | Deploy job says "skipped" | add the four `DEPLOY_*` secrets |
+| `postinstall` fails with `tsc: not found` (exit 127) | `NODE_ENV=production` made npm skip devDependencies: install with `npm ci --include=dev` (deploy.sh does) and keep `NPM_CONFIG_INCLUDE=dev` in `.env` |
 | `permission denied to create extension` | create the extensions as `postgres` (step 1.5) |

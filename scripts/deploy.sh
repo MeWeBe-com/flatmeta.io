@@ -32,8 +32,14 @@ APP_ENV="${APP_ENV:-production}"
 
 PREV="$(git rev-parse HEAD 2>/dev/null || echo '')"
 
+# .env usually sets NODE_ENV=production, which makes npm skip devDependencies. The build needs them
+# (tsc for the shared package's postinstall and the API, tsx for migrations and seeds), so always
+# install them. NPM_CONFIG_INCLUDE=dev covers any nested npm call too.
+export NPM_CONFIG_INCLUDE=dev
+install_deps() { npm ci --include=dev --no-audit --no-fund; }
+
 build() {
-  npm ci --no-audit --no-fund
+  install_deps
   npm run build:shared
   npm run build -w flatmeta-api
   rm -rf apps/web/.next-build
@@ -43,6 +49,9 @@ build() {
   rm -rf apps/web/.next-prev
   [ -d apps/web/.next ] && mv apps/web/.next apps/web/.next-prev
   mv apps/web/.next-build apps/web/.next
+  # Optional: drop devDependencies after the build to save disk (DEPLOY_PRUNE=1 in .env). Off by default,
+  # because `npm run db:seed`, `npm run showcase` and other maintenance scripts run through tsx (a dev dependency).
+  if [ "${DEPLOY_PRUNE:-0}" = "1" ]; then npm prune --omit=dev --no-audit --no-fund; fi
 }
 
 reload() { pm2 startOrReload ecosystem.config.cjs --update-env; }
@@ -72,7 +81,7 @@ echo "✗ Health check failed (API :$PORT, web :$WEB_PORT)"
 if [ -n "$PREV" ] && [ "$PREV" != "$(git rev-parse HEAD)" ]; then
   echo "↩ Rolling back to ${PREV:0:7} (database migrations are not reverted)"
   git checkout --force --quiet "$PREV"
-  npm ci --no-audit --no-fund && npm run build:shared && npm run build -w flatmeta-api || true
+  install_deps && npm run build:shared && npm run build -w flatmeta-api || true
   if [ -d apps/web/.next-prev ]; then rm -rf apps/web/.next && mv apps/web/.next-prev apps/web/.next; fi
   reload || true
 fi
