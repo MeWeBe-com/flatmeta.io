@@ -40,6 +40,18 @@ describe('grid', () => {
   it('builds bounds and deterministic 3-word addresses', () => {
     expect(boundsOf([{ gx: 3, gy: 9 }, { gx: 1, gy: 4 }])).toEqual({ minGx: 1, minGy: 4, maxGx: 3, maxGy: 9 });
     expect(boundsOf([])).toBeNull();
+    expect(boundsOf([{ gx: 5, gy: -12 }])).toEqual({ minGx: 5, minGy: -12, maxGx: 5, maxGy: -12 });
+    expect(
+      boundsOf([
+        { gx: -10, gy: -20 },
+        { gx: 5, gy: 3 },
+        { gx: -15, gy: 12 },
+        { gx: 2, gy: -25 },
+      ])
+    ).toEqual({ minGx: -15, minGy: -25, maxGx: 5, maxGy: 12 });
+    // Handles large point arrays without call stack overflow
+    const largeList = Array.from({ length: 150000 }, (_, i) => ({ gx: i, gy: 100 - i }));
+    expect(boundsOf(largeList)).toEqual({ minGx: 0, minGy: -149899, maxGx: 149999, maxGy: 100 });
     expect(gridToThreeWords(10, 20)).toBe(gridToThreeWords(10, 20));
     expect(gridToThreeWords(10, 20)).toMatch(/^[a-z]+\.[a-z]+\.[a-z]+$/);
   });

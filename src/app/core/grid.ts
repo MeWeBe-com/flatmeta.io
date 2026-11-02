@@ -59,13 +59,34 @@ export function gridKey(gx: number, gy: number): string {
 }
 
 export function boundsOf(points: GridPoint[]): GridBounds | null {
-  if (!points.length) return null;
-  return {
-    minGx: Math.min(...points.map((p) => p.gx)),
-    minGy: Math.min(...points.map((p) => p.gy)),
-    maxGx: Math.max(...points.map((p) => p.gx)),
-    maxGy: Math.max(...points.map((p) => p.gy)),
-  };
+  const len = points.length;
+  if (!len) {
+    return null;
+  }
+  // Single-pass linear scan to compute min/max coordinates in O(N) time and O(1) space.
+  // Avoids 4 separate array allocations from .map() and prevents call-stack overflow
+  // (RangeError) caused by spreading large arrays into Math.min / Math.max.
+  let minGx = points[0].gx;
+  let maxGx = points[0].gx;
+  let minGy = points[0].gy;
+  let maxGy = points[0].gy;
+
+  for (let i = 1; i < len; i++) {
+    const p = points[i];
+    if (p.gx < minGx) {
+      minGx = p.gx;
+    } else if (p.gx > maxGx) {
+      maxGx = p.gx;
+    }
+
+    if (p.gy < minGy) {
+      minGy = p.gy;
+    } else if (p.gy > maxGy) {
+      maxGy = p.gy;
+    }
+  }
+
+  return { minGx, minGy, maxGx, maxGy };
 }
 
 export function isValidBounds(b: any): b is GridBounds {
