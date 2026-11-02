@@ -19,3 +19,5 @@ dist/
 storage/
 *.log
 apps/web/public/vendor/
+dump.rdb
+*.rdb
