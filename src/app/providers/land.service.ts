@@ -169,6 +169,14 @@ export class LandService {
   private resync$ = new Subject<void>();
   private identityId = '';
 
+  /**
+   * PERFORMANCE: Memoized areas and O(1) order_id index.
+   * Computing areas groups up to 15,000 tiles and calculates averages and bounds.
+   * Caching avoids recalculating during map clicks, hovers, searches, and zoom changes.
+   */
+  private cachedAreas: LandArea[] | null = null;
+  private areasByOrderId: Map<string, LandArea> | null = null;
+
   /** Tiles to draw: loaded server land + this guest's drafts + the official plaza. */
   readonly tiles$ = new BehaviorSubject<LandTile[]>([]);
   readonly stats$ = new BehaviorSubject<PortfolioStats>(this.computeStats());
@@ -223,6 +231,8 @@ export class LandService {
 
   /** Areas built from the loaded squares (an area at the edge of the view may be partly loaded). */
   areas(): LandArea[] {
+    if (this.cachedAreas) return this.cachedAreas;
+
     const groups = new Map<string, LandTile[]>();
     for (const t of this.tiles) {
       const list = groups.get(t.order_id) || [];
@@ -230,13 +240,21 @@ export class LandService {
       groups.set(t.order_id, list);
     }
     const out: LandArea[] = [];
-    groups.forEach((tiles, orderId) => out.push(this.buildArea(orderId, tiles)));
+    const index = new Map<string, LandArea>();
+    groups.forEach((tiles, orderId) => {
+      const area = this.buildArea(orderId, tiles);
+      out.push(area);
+      index.set(orderId, area);
+    });
+    this.cachedAreas = out;
+    this.areasByOrderId = index;
     return out;
   }
 
   area(orderId: string): LandArea | undefined {
     const id = String(orderId);
-    return this.areas().find((a) => a.order_id === id) || this.mine.find((a) => a.order_id === id);
+    if (!this.areasByOrderId) this.areas();
+    return this.areasByOrderId?.get(id) || this.mine.find((a) => a.order_id === id);
   }
 
   myAreas(): LandArea[] {
@@ -998,6 +1016,8 @@ export class LandService {
   }
 
   private publish() {
+    this.cachedAreas = null;
+    this.areasByOrderId = null;
     const all: LandTile[] = [];
     this.official.forEach((t) => all.push(t));
     this.server.forEach((t, k) => !this.official.has(k) && all.push(t));
