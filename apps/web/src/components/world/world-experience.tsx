@@ -15,6 +15,7 @@ import { useLive, useSession, useTheme } from '../providers';
 import { UserMenu } from '../site-chrome';
 import { Logo, clsx } from '../ui';
 import { ChatPanel } from './chat-panel';
+import { ErrorBoundary } from '../error-boundary';
 import { ClaimPanel } from './claim-panel';
 import { LEVEL_ZOOM, LevelSwitch, type Level } from './level-switch';
 import { PeerCard } from './peer-card';
@@ -246,6 +247,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
       )}
 
       {peer && !claimMode && !openPlot && (
+        <ErrorBoundary name="PeerCard">
         <PeerCard
           peer={peer}
           onClose={() => setPeer(null)}
@@ -254,8 +256,16 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
             setChatWith(u);
           }}
         />
+        </ErrorBoundary>
       )}
-      {!claimMode && <ChatPanel position={() => map.current?.myPosition() ?? { ...center.current }} openWith={chatWith} onOpenedWith={() => setChatWith(null)} />}
+      {!claimMode && (
+        <ErrorBoundary
+          name="ChatPanel"
+          fallback={<p role="alert" className="absolute z-20 right-3 bottom-[152px] md:bottom-6 glass rounded-2xl px-3 py-2 text-xs">Chat is unavailable. <button className="underline" onClick={() => location.reload()}>Reload</button></p>}
+        >
+          <ChatPanel position={() => map.current?.myPosition() ?? { ...center.current }} openWith={chatWith} onOpenedWith={() => setChatWith(null)} />
+        </ErrorBoundary>
+      )}
 
       {/* Bottom stats pill */}
       <div className="absolute z-10 left-1/2 -translate-x-1/2 top-[70px] hidden sm:flex glass rounded-full h-8 px-3 items-center gap-3 text-xs pointer-events-none">

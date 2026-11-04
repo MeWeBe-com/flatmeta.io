@@ -181,6 +181,34 @@ Reported: chat (nearby, private, clan) never reached the other player, and follo
 9. Guest: in a third private window (signed out), Chat shows "Guests can read. Sign in to chat, follow and connect.", and tapping an avatar → Connect/Follow opens sign-in with the reason.
 10. Logs (optional): set `LOG_LEVEL=debug` in the staging `.env`, run `pm2 reload flatmeta-api flatmeta-worker --update-env`, then `pm2 logs flatmeta-api | grep 'live:'` while repeating a step. `published notification … receivers: 1` followed by `delivered notification … sockets: 1` means the path works end to end.
 
+## Staging bugs after the live fix: DM page crash and Redis "Connection is closed" (2026-11-04)
+
+**1. "This page couldn't load", with `⨯ Error: useSession outside provider` in the web log.** I could not reproduce it. On a staging-like build, every component that calls `useSession` renders under `<Providers>` in the root layout. There are no parallel/intercepting routes, no portals, and no separate React roots. Building a new version into the build folder while the old server runs, and swapping folders under a running server, both break things in other ways, but not with this error. (The swap window in `deploy.sh` is closed by the PM2 restart.) So the fix is defensive and diagnostic:
+- `useSession`, `useGame` and `useLive` no longer throw. Outside the providers they return a signed-out, inert context and log once: `[flatmeta] useSession() used outside <Providers>; rendering as a guest.` plus a stack naming the component. If it happens again, `pm2 logs flatmeta-web-staging` shows where.
+- Error boundaries around the chat panel ("Chat is unavailable. Reload"), the peer card and the notification bell, so a failure there can't take the page down.
+- `app/error.tsx` (keeps the header, offers Try again) and `app/global-error.tsx` replace Next's bare "This page couldn't load".
+- Profile pages (`/u/<username>`) have a **Message** button. It opens `/?dm=<username>` when connected, and offers Connect otherwise.
+
+**2. ioredis `Connection is closed` (with `previousErrors`) in the API.** That error means a command ran on a client after `quit()`. `previousErrors` is the shape of a failed `multi().exec()`, which the live hub's socket close handler ran without a catch. The API only quits Redis in its shutdown handler, so the likely trigger was work still running during a PM2 reload. A second problem made it loud: the rate limiter used the same client on every request without `skipOnError`, so whenever that client was unusable, every request failed (DM history included).
+- `lib/redis.ts`: separate long-lived clients: `redis` (commands), `publisher()` (PUBLISH only), `subscriber()` (subscribe mode only, auto re-subscribe), and BullMQ's own. They reconnect forever with a capped backoff (200 ms … 5 s). Commands give up after 3 retries instead of hanging. Drops, reconnects and an unexpected `end` are logged (`redis: connection error / reconnecting / reconnected`). Connections are named `<REDIS_PREFIX>:<cmd|pub|sub|bull>:<pid>` (see `redis-cli -n 6 CLIENT LIST`).
+- All publishing goes through `publish()`, which never throws and returns -1 when Redis is unavailable. After shutdown starts, socket close handlers and timers skip Redis. The welcome step's Redis calls are caught.
+- Shutdown: idempotent (PM2 can send SIGINT and SIGTERM), then app (sockets) → short drain → database → Redis.
+- Rate limiter: `skipOnError: true`, so a Redis hiccup doesn't 500 every request.
+- Ghost avatars: a `move` that was still being written when its socket closed could re-add the avatar for up to 40 s. It is now removed again.
+- Test: kills this process's pub and sub connections server-side (`CLIENT KILL`), waits for the hub to recover, then checks that a notification published afterwards still reaches the open socket (68 API tests).
+
+**3. Two-player e2e extended.** It now opens a DM from a profile page (Message → map with the thread open → send → the other player gets it live with an unread badge and a toast) and from the peer card on the map. It also checks there's exactly one avatar per player after a reload. Every test fails on any page error or console error (except blocked map tiles from the public tile server). 8/8 passed three times in a row on the staging-like stack. A PM2-style SIGINT with five live sockets logged no Redis errors.
+
+**How to verify on staging** (after the CI deploy of this commit)
+1. `https://staging.flatmeta.io/api/v1/live/health` → `"ok": true`.
+2. On the server: `redis-cli -n 6 CLIENT LIST | grep -o 'name=fm-staging:[a-z]*:[0-9]*'`. Expect `cmd`, `pub` and `sub` for the API pid, and `cmd` plus `bull` for the worker.
+3. Two windows, A and B, signed in with two emails (codes on screen), already connected (or connect via a peer card → Connect, then Accept in the bell).
+4. **DM from a profile:** B opens `https://staging.flatmeta.io/u/<A's username>` → **Message**. The map opens with the private chat to A. B sends a message. A (chat closed) gets a toast "New message from B: …", the chat button shows 1 unread, and Chat → Friends → B shows the message.
+5. **DM from the map:** both at `https://staging.flatmeta.io/?at=41.3874,2.1686,12`. A taps B's avatar → **Message** → sends. B gets it live with the unread badge.
+6. Open DevTools → Console in both windows during steps 4–5: there should be no red errors, and the page must not show "This page couldn't load".
+7. Logs: `pm2 logs flatmeta-api-staging --lines 200 | grep -E 'Connection is closed|redis:'` should show nothing new. `pm2 logs flatmeta-web-staging --lines 200 | grep 'outside <Providers>'` should be empty; if not, send me the stack.
+8. Optional reconnect check: `redis-cli -n 6 CLIENT KILL TYPE pubsub`. The API logs `redis: reconnecting` then `redis: reconnected`, health stays `ok`, and DMs keep arriving live.
+
 ## Open questions
 
 0. **URGENT: rotate the Laravel `APP_KEY`.** `flatmetaAPI/.env.example` (all v1 branches, since commit `363faab`) contains a real key: `APP_KEY=base64:ah1EUh…`. Rotate it on every server that ever ran it. It is removed from `v2`; it stays in v1 history unless you rewrite it.

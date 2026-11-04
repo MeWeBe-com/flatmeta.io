@@ -3,6 +3,7 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import { PageShell } from '@/components/site-chrome';
 import { Avatar, EmptyState, NamedIcon, PlotGrid, SectionTitle } from '@/components/ui';
 import { FollowButton } from '@/components/follow-button';
+import { MessageButton } from '@/components/message-button';
 import { FaceBadge } from '@/components/face-badge';
 import { serverApi } from '@/lib/server-api';
 import { flag, RARITY_COLOR } from '@/lib/format';
@@ -48,7 +49,10 @@ export default async function UserPage({ params }: Params) {
             </div>
             {d.orgs.length > 0 && <div className="flex gap-2 mt-3">{d.orgs.map((o) => <Link key={o.id} href={`/o/${o.slug}`} className="chip chip-teal normal-case tracking-normal">{o.name}{o.verified && ' ✓'}</Link>)}</div>}
           </div>
-          <FollowButton username={u.username} initial={d.followedByMe} />
+          <div className="flex flex-wrap gap-2">
+            <FollowButton username={u.username} initial={d.followedByMe} />
+            <MessageButton username={u.username} />
+          </div>
         </header>
         <section>
           <SectionTitle>Plots</SectionTitle>

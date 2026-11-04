@@ -5,10 +5,16 @@ import { closeRedis } from './lib/redis.js';
 
 const app = await buildApp();
 
+let stopping = false;
 const shutdown = async (signal: string) => {
+  if (stopping) return; // PM2 can send SIGINT and SIGTERM
+  stopping = true;
   app.log.info(`${signal} received, shutting down`);
+  // Order matters: stop taking requests and close sockets first, let their close handlers run, then close
+  // the database and Redis. Closing Redis earlier makes late work fail with "Connection is closed".
   await mcpApp?.close();
   await app.close();
+  await new Promise((r) => setTimeout(r, 250));
   await pool.end();
   await closeRedis();
   process.exit(0);

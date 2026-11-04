@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Award, Code2, CreditCard, LayoutDashboard, LogOut, Map, Moon, Shield, Sun, User, Building2, Menu, X, Download, Settings } from 'lucide-react';
 import { APP_ENV, STAGING_DOMAIN } from '@/lib/config';
 import { t } from '@/lib/i18n';
+import { ErrorBoundary } from './error-boundary';
 import { NotificationBell } from './notification-bell';
 import { useSession, useTheme } from './providers';
 import { Avatar, LevelRing, Logo, clsx } from './ui';
@@ -62,7 +63,9 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
   ];
   return (
     <div className="flex items-center gap-2">
-      <NotificationBell />
+      <ErrorBoundary name="NotificationBell">
+        <NotificationBell />
+      </ErrorBoundary>
       <div className="relative">
       <button className="flex items-center gap-2 rounded-full pl-1 pr-3 h-11 glass" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu">
         {me.progress && !compact ? <LevelRing level={me.progress.level} progress={me.progress.progress} size={36} /> : <Avatar name={u.displayName} url={u.avatarUrl} size={34} />}

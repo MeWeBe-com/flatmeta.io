@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import WebSocket from 'ws';
 import { db, pool, schema } from '../src/db/client.js';
-import { closeRedis } from '../src/lib/redis.js';
+import { closeRedis, redis } from '../src/lib/redis.js';
 import type { App } from '../src/app.js';
 import { getApp, login } from './helpers.js';
 
@@ -193,5 +193,38 @@ describe('notifications fan-out', () => {
     b.close();
     await new Promise((res) => setTimeout(res, 300));
     expect(json(await app.inject({ url: '/v1/live/health' })).userChannels).toBe(h.userChannels - 2);
+  });
+});
+
+describe('redis reconnects', () => {
+  it('keeps delivering notifications after the publisher and subscriber connections drop', async () => {
+    const ana = await login();
+    const ben = await login();
+    const b = await client(ben.cookie);
+    await b.waitFor((m) => m.type === 'welcome');
+    // Wait until Ben's user channel is subscribed.
+    for (let i = 0; i < 40 && json(await app.inject({ url: '/v1/live/health' })).userChannels < 1; i++) await new Promise((r) => setTimeout(r, 50));
+    await app.inject({ method: 'POST', url: `/v1/users/${ben.user.username}/follow`, headers: ana.headers }); // opens the publisher
+
+    // Kill this process's pub and sub connections server-side, like a Redis restart or an idle timeout would.
+    const list = String(await redis.client('LIST'));
+    const ids = list
+      .split('\n')
+      .filter((l) => new RegExp(`name=\\S+:(pub|sub):${process.pid}(\\s|$)`).test(l))
+      .map((l) => /\bid=(\d+)/.exec(l)![1]!);
+    expect(ids.length).toBe(2);
+    for (const id of ids) await redis.client('KILL', 'ID', id);
+
+    // The hub comes back by itself (reconnect + automatic re-subscribe) …
+    let h = { ok: false };
+    for (let i = 0; i < 60 && !h.ok; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+      h = json(await app.inject({ url: '/v1/live/health' }));
+    }
+    expect(h.ok).toBe(true);
+    // … and a notification published after the drop still reaches Ben's open socket.
+    await app.inject({ method: 'POST', url: '/v1/connections', headers: ana.headers, payload: { username: ben.user.username } });
+    await b.waitFor((m) => m.type === 'notification' && (m.notification as { kind: string }).kind === 'connection_request', 8000);
+    b.close();
   });
 });

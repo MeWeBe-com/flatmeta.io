@@ -43,6 +43,8 @@ export async function buildApp() {
     max: config.RATE_LIMIT_PER_MINUTE,
     timeWindow: '1 minute',
     redis: config.NODE_ENV === 'test' ? undefined : redis,
+    // A Redis outage must not turn every request into a 500: let requests through until it is back.
+    skipOnError: true,
     nameSpace: `${config.REDIS_PREFIX}:rl:`,
     keyGenerator: (req) => req.user?.id ?? req.ip,
     errorResponseBuilder: (_req, ctx) => ({

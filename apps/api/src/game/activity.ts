@@ -1,6 +1,6 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db, schema } from '../db/client.js';
-import { redis, key } from '../lib/redis.js';
+import { key, publish } from '../lib/redis.js';
 import { logger } from '../lib/logger.js';
 
 export const LIVE_CHANNEL = () => key('live');
@@ -30,7 +30,7 @@ export async function publishActivity(input: ActivityInput) {
     })
     .returning();
   if (row) {
-    await redis.publish(LIVE_CHANNEL(), JSON.stringify({ type: 'activity', activity: row })).catch(() => undefined);
+    await publish(LIVE_CHANNEL(), JSON.stringify({ type: 'activity', activity: row }));
   }
   return row;
 }
@@ -70,11 +70,7 @@ export async function signal(userId: string, kind: string, payload: Record<strin
 
 async function publishToUser(userId: string, event: Record<string, unknown>) {
   const channel = NOTIFY_CHANNEL(userId);
-  try {
-    const receivers = await redis.publish(channel, JSON.stringify(event));
-    // receivers = API processes subscribed to this user (0 means the user has no open socket right now).
-    logger.debug({ channel, kind: event.kind, receivers }, 'live: published notification');
-  } catch (err) {
-    logger.warn({ channel, kind: event.kind, err: (err as Error).message }, 'live: publish failed');
-  }
+  const receivers = await publish(channel, JSON.stringify(event));
+  // receivers = API processes subscribed to this user (0: no open socket right now; -1: Redis unavailable).
+  logger.debug({ channel, kind: event.kind, receivers }, 'live: published notification');
 }

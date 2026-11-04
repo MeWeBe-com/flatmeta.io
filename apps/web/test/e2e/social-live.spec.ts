@@ -17,6 +17,8 @@ interface Player {
   req: APIRequestContext;
   username: string;
   name: string;
+  /** Page errors and console errors seen so far; every test fails if any appear. */
+  errors: string[];
 }
 
 async function signIn(browser: Browser, name: string): Promise<Player> {
@@ -31,10 +33,23 @@ async function signIn(browser: Browser, name: string): Promise<Player> {
   const username = `${name.toLowerCase()}_${stamp()}`.slice(0, 20);
   expect((await req.patch('/api/v1/me', { data: { username } })).ok()).toBeTruthy();
   const page = await ctx.newPage();
-  page.on('crash', () => console.log(`[${name}] page crashed`));
-  page.on('pageerror', (e) => console.log(`[${name}] pageerror: ${e.message.slice(0, 300)}\n${(e.stack ?? '').split('\n').slice(0, 6).join('\n')}`));
-  page.on('console', (m) => m.type() === 'error' && console.log(`[${name}] console.error: ${m.text().slice(0, 300)}`));
-  return { ctx, page, req, username, name };
+  const errors = watchErrors(page, name);
+  return { ctx, page, req, username, name, errors };
+}
+
+/** Collects uncaught page errors and console errors (crashes, React errors, failed hooks). */
+function watchErrors(page: Page, name: string): string[] {
+  const errors: string[] = [];
+  page.on('crash', () => errors.push(`[${name}] page crashed`));
+  page.on('pageerror', (e) => errors.push(`[${name}] pageerror: ${e.message}\n${(e.stack ?? '').split('\n').slice(0, 4).join('\n')}`));
+  page.on('console', (m) => {
+    if (m.type() !== 'error') return;
+    const text = m.text();
+    // Map tiles come from a public tile server: a blocked or slow tile is not an app error.
+    if (/Failed to load resource/.test(text) && /tiles|openfreemap|photon/i.test(m.location().url ?? '')) return;
+    errors.push(`[${name}] console.error: ${text.slice(0, 500)} @ ${m.location().url ?? ''}`);
+  });
+  return errors;
 }
 
 async function openMap(p: Player) {
@@ -47,6 +62,21 @@ const bell = (p: Player) => p.page.getByRole('button', { name: /^Notifications/ 
 /** The bell's unread count, read from its accessible name ("Notifications, 3 unread"). */
 const unreadOf = async (p: Player) => Number((await bell(p).getAttribute('aria-label'))?.match(/(\d+) unread/)?.[1] ?? 0);
 
+
+/** Opens the chat panel on the private thread with `other` (from the friends list, or already open). */
+async function openThread(p: Player, other: Player) {
+  if (await chatButton(p).isVisible()) await chatButton(p).click();
+  const chat = p.page.getByRole('region', { name: 'Chat' });
+  await chat.getByRole('button', { name: /Friends/ }).click();
+  const back = chat.getByRole('button', { name: /All friends/ });
+  if (await back.isVisible()) {
+    if ((await back.textContent())?.includes(`@${other.username}`)) return chat;
+    await back.click();
+  }
+  await chat.getByRole('button', { name: new RegExp(`${other.name}.*@${other.username}`) }).click();
+  return chat;
+}
+
 let a: Player;
 let b: Player;
 
@@ -54,6 +84,12 @@ test.beforeAll(async ({ browser }) => {
   a = await signIn(browser, 'Ana');
   b = await signIn(browser, 'Ben');
   await Promise.all([openMap(a), openMap(b)]);
+});
+test.afterEach(() => {
+  const all = [...(a?.errors ?? []), ...(b?.errors ?? [])];
+  a?.errors.splice(0);
+  b?.errors.splice(0);
+  expect(all, 'no page errors or console errors').toEqual([]);
 });
 test.afterAll(async () => {
   await a?.ctx.close();
@@ -111,18 +147,57 @@ test('follow and connection request notify the recipient live; accepting notifie
 
 test('private messages arrive live with an unread badge', async () => {
   const text = `Private hello ${stamp()}`;
-  await chatButton(a).click();
-  await a.page.getByRole('button', { name: /Friends/ }).click();
-  await a.page.getByRole('button', { name: new RegExp(`Ben.*@${b.username}`) }).click();
+  await openThread(a, b);
   await a.page.getByLabel('Message').fill(text);
   await a.page.getByLabel('Message').press('Enter');
   await expect(a.page.getByRole('region', { name: 'Chat' }).getByText(text)).toBeVisible();
 
   await expect(chatButton(b)).toHaveAccessibleName(/1 unread/, { timeout: 10_000 });
   await expect(b.page.getByRole('status').filter({ hasText: /message from Ana/i })).toBeVisible();
-  await chatButton(b).click();
-  await b.page.getByRole('button', { name: /Friends/ }).click();
-  await b.page.getByRole('button', { name: new RegExp(`Ana.*@${a.username}`) }).click();
+  await openThread(b, a);
+  await expect(b.page.getByRole('region', { name: 'Chat' }).getByText(text)).toBeVisible();
+  await b.page.getByRole('button', { name: 'Close chat' }).click();
+  await a.page.getByRole('button', { name: 'Close chat' }).click();
+});
+
+test('a private chat opened from a profile page reaches the other player live', async () => {
+  // B opens A's profile and presses Message: the map opens with the private chat to A.
+  await b.page.goto(`/u/${a.username}`);
+  await b.page.getByRole('link', { name: 'Message' }).click();
+  await expect(b.page).toHaveURL(new RegExp(`dm=${a.username}`));
+  const chatB = b.page.getByRole('region', { name: 'Chat' });
+  await expect(chatB.getByText(`@${a.username}`)).toBeVisible({ timeout: 30_000 });
+  const text = `From your profile ${stamp()}`;
+  await chatB.getByLabel('Message').fill(text);
+  await chatB.getByLabel('Message').press('Enter');
+  await expect(chatB.getByText(text)).toBeVisible();
+
+  // A (chat closed) gets it live: unread badge on the chat button, a toast and the thread.
+  await expect(chatButton(a)).toHaveAccessibleName(/1 unread/, { timeout: 10_000 });
+  await expect(a.page.getByRole('status').filter({ hasText: /message from Ben/i })).toBeVisible();
+  await openThread(a, b);
+  await expect(a.page.getByRole('region', { name: 'Chat' }).getByText(text)).toBeVisible();
+  await a.page.getByRole('button', { name: 'Close chat' }).click();
+  // Ben walks back to the shared spot (the profile link opened the map at the world view).
+  await openMap(b);
+});
+
+test('a private chat opened from the peer card on the map reaches the other player live', async () => {
+  // A taps Ben's avatar on the map, then Message.
+  // Exactly one Ben: his previous page's avatar must be gone (no ghosts after a reload).
+  const ben = a.page.locator('.fm-avatar', { hasText: 'Ben' });
+  await expect(ben).toHaveCount(1, { timeout: 15_000 });
+  await ben.click();
+  const card = a.page.getByRole('dialog', { name: /Ben/ });
+  await card.getByRole('button', { name: 'Message' }).click();
+  const chatA = a.page.getByRole('region', { name: 'Chat' });
+  await expect(chatA.getByText(`@${b.username}`)).toBeVisible();
+  const text = `From the map ${stamp()}`;
+  await chatA.getByLabel('Message').fill(text);
+  await chatA.getByLabel('Message').press('Enter');
+
+  await expect(chatButton(b)).toHaveAccessibleName(/1 unread/, { timeout: 10_000 });
+  await openThread(b, a);
   await expect(b.page.getByRole('region', { name: 'Chat' }).getByText(text)).toBeVisible();
   await b.page.getByRole('button', { name: 'Close chat' }).click();
   await a.page.getByRole('button', { name: 'Close chat' }).click();
@@ -157,6 +232,7 @@ test('guests are asked to sign in before chatting, with a clear message', async 
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
   await ctx.addInitScript(() => localStorage.setItem('fm-tour-done', '1'));
   const page = await ctx.newPage();
+  const errors = watchErrors(page, 'Guest');
   await page.goto(`/?at=${SPOT.lat},${SPOT.lng},11.5`);
   await page.getByRole('button', { name: /^Chat/ }).click();
   const chat = page.getByRole('region', { name: 'Chat' });
@@ -164,4 +240,5 @@ test('guests are asked to sign in before chatting, with a clear message', async 
   await chat.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('dialog').getByText(/Sign in to chat/)).toBeVisible();
   await ctx.close();
+  expect(errors, 'no page errors or console errors').toEqual([]);
 });

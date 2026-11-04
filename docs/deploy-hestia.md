@@ -141,6 +141,8 @@ Emails are queued in Redis and sent by **`flatmeta-worker`**: if the worker is d
 | Deploy log says "In-memory PM2 is out-of-date" | run `pm2 update` once as the app user (it restarts the PM2 daemon and keeps your apps) |
 | Plot images and avatars 404 under `/media/` | the `__MEDIA_DIR__` placeholder in `nodejs-app.conf` was not replaced with your `MEDIA_DIR` (trailing slash included) |
 | API exits on start: "APP_URL … not localhost" | `APP_URL` must be the public https origin in production |
+| API log: ioredis `Connection is closed` | a client was used after shutdown began, or Redis went away for good. Look for `redis: connection ended and will not reconnect` or `redis: reconnecting` in `pm2 logs flatmeta-api`; `redis-cli -n <db> CLIENT LIST` shows the app's named connections (`<prefix>:cmd|pub|sub|bull:<pid>`) |
+| Web log: `useSession() used outside <Providers>` | the page still renders (as a guest), and the stack after the message names the component that is mounted outside the root layout |
 | Chat or notifications don't reach the other player | `/api/v1/live/health` must say `ok: true`; with `LOG_LEVEL=debug`, `published notification … receivers: 0` means the recipient has no open socket (or a different `REDIS_PREFIX` on the publishing process) |
 | Map loads but no avatars or chat | the `/api/` location passes `Upgrade`/`Connection`; `nginx -t`; browser console shows the `/api/v1/live` handshake |
 | Logged out on every request | `COOKIE_SECURE=true` needs https; the site and `/api` must share one origin |

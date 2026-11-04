@@ -23,9 +23,36 @@ interface SessionCtx {
   setUnread: (fn: (n: number) => number) => void;
 }
 const Session = createContext<SessionCtx | null>(null);
+
+/**
+ * A component rendered outside <Providers> must not take the page down: it gets a signed-out, inert context
+ * and we log once (with a stack, so the server or browser log names the component) instead of throwing.
+ */
+const warned = new Set<string>();
+function outsideProvider(name: string) {
+  if (warned.has(name)) return;
+  warned.add(name);
+  console.error(`[flatmeta] ${name}() used outside <Providers>; rendering as a guest. ${new Error().stack ?? ''}`);
+}
+const noop = () => undefined;
+const GUEST_SESSION: SessionCtx = {
+  me: { user: null },
+  loading: false,
+  refresh: async () => undefined,
+  signInOpen: false,
+  openSignIn: noop,
+  closeSignIn: noop,
+  signInReason: null,
+  onSignedIn: noop,
+  signOut: async () => undefined,
+  setUnread: noop,
+};
 export const useSession = () => {
   const ctx = useContext(Session);
-  if (!ctx) throw new Error('useSession outside provider');
+  if (!ctx) {
+    outsideProvider('useSession');
+    return GUEST_SESSION;
+  }
   return ctx;
 };
 
@@ -102,9 +129,13 @@ interface GameCtx {
   progressVersion: number;
 }
 const Game = createContext<GameCtx | null>(null);
+const INERT_GAME: GameCtx = { toasts: [], toast: noop, dismiss: noop, handleGame: noop, levelUp: null, clearLevelUp: noop, confetti: noop, progressVersion: 0 };
 export const useGame = () => {
   const ctx = useContext(Game);
-  if (!ctx) throw new Error('useGame outside provider');
+  if (!ctx) {
+    outsideProvider('useGame');
+    return INERT_GAME;
+  }
   return ctx;
 };
 
@@ -209,9 +240,28 @@ interface LiveCtx {
   onNotification: (fn: (n: AppNotification) => void) => () => void;
 }
 const Live = createContext<LiveCtx | null>(null);
+const unsub = () => noop;
+const INERT_LIVE: LiveCtx = {
+  online: 0,
+  activity: [],
+  connected: false,
+  subscribe: unsub,
+  you: null,
+  peers: [],
+  sendMove: noop,
+  sendView: noop,
+  sendChat: noop,
+  onChat: unsub,
+  onChatError: unsub,
+  onPeers: unsub,
+  onNotification: unsub,
+};
 export const useLive = () => {
   const ctx = useContext(Live);
-  if (!ctx) throw new Error('useLive outside provider');
+  if (!ctx) {
+    outsideProvider('useLive');
+    return INERT_LIVE;
+  }
   return ctx;
 };
 

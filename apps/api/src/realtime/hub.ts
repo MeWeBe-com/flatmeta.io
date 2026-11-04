@@ -4,7 +4,7 @@ import { eq, inArray } from 'drizzle-orm';
 import type { App } from '../app.js';
 import { db, schema } from '../db/client.js';
 import { flagEmoji, haversineKm } from '../lib/geo.js';
-import { key, redis, subscriber } from '../lib/redis.js';
+import { key, publish, redis, redisOpen, subscriber } from '../lib/redis.js';
 import { LIVE_CHANNEL, NOTIFY_CHANNEL } from '../game/activity.js';
 import { config } from '../config.js';
 import { CHAT_CHANNEL, NEARBY_RADIUS_KM, clanRoom, dmRoom, nearbyRoom, sendMessage, type ChatOut } from '../services/chat.js';
@@ -177,7 +177,7 @@ export function registerHub(app: App) {
         resolve(true);
       });
     });
-    const receivers = await redis.publish(probeChannel, token).catch(() => -1);
+    const receivers = await publish(probeChannel, token);
     const ok = await got;
     probes.delete(token);
     let signedIn = 0;
@@ -220,12 +220,15 @@ export function registerHub(app: App) {
   async function setPosition(c: Conn, lat: number, lng: number) {
     c.lat = lat;
     c.lng = lng;
+    if (!conns.has(c.id) || !redisOpen()) return;
     const m = redis.multi();
     m.geoadd(GEO(), lng, lat, c.id);
     m.hset(CONN(c.id), { n: c.name, un: c.username ?? '', a: JSON.stringify(c.avatar), u: c.userId ?? '', l: String(c.level), lat: String(lat), lng: String(lng) });
     m.expire(CONN(c.id), 40);
     m.zadd(PRESENCE(), Date.now(), c.id);
     await m.exec().catch(() => undefined);
+    // The socket may have closed while this write was in flight: don't leave a ghost avatar behind.
+    if (!conns.has(c.id) && redisOpen()) await redis.multi().zrem(PRESENCE(), c.id).zrem(GEO(), c.id).del(CONN(c.id)).exec().catch(() => undefined);
   }
 
   async function avatarsFor(c: Conn) {
@@ -249,7 +252,7 @@ export function registerHub(app: App) {
   // 1 Hz: avatars in each viewport. 10 s: heartbeat and the online count.
   let ticks = 0;
   const timer = setInterval(async () => {
-    if (!conns.size) return;
+    if (!conns.size || !redisOpen()) return;
     ticks++;
     try {
       if (ticks % 10 === 0) {
@@ -327,10 +330,10 @@ export function registerHub(app: App) {
           conn.clanId = m?.clanId ?? null;
         }
       }
-      await redis.zadd(PRESENCE(), Date.now(), id);
       send(conn, { type: 'welcome', you: youOf(conn) });
+      await redis.zadd(PRESENCE(), Date.now(), id);
       send(conn, { type: 'presence', online: await onlineCount() });
-    })();
+    })().catch((err: Error) => log.warn({ conn: id, err: err.message }, 'live: welcome failed'));
 
     socket.on('message', (raw: Buffer) => {
       if (raw.length > 2048) return socket.close(1009, 'Message too big');
@@ -399,7 +402,8 @@ export function registerHub(app: App) {
       conns.delete(id);
       if (conn.userId) unwatchUser(conn.userId);
       log.debug({ conn: id, sockets: conns.size }, 'live: socket closed');
-      void redis.multi().zrem(PRESENCE(), id).zrem(GEO(), id).del(CONN(id)).exec();
+      // Late closes during shutdown must not touch a closed client.
+      if (redisOpen()) void redis.multi().zrem(PRESENCE(), id).zrem(GEO(), id).del(CONN(id)).exec().catch(() => undefined);
     });
   });
 }

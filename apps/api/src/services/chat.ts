@@ -4,7 +4,7 @@ import type { User } from '../db/schema.js';
 import { heuristicModeration } from '../ai/moderation.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { stripText } from '../lib/markdown.js';
-import { key, redis } from '../lib/redis.js';
+import { key, publish, redis } from '../lib/redis.js';
 import { logger } from '../lib/logger.js';
 import { notify } from '../game/activity.js';
 import { recordAction } from '../game/engine.js';
@@ -199,7 +199,7 @@ export async function sendMessage(sender: User, input: SendInput): Promise<ChatO
     lng: input.lng,
   };
   if (!mod.flagged) {
-    const receivers = await redis.publish(CHAT_CHANNEL(), JSON.stringify(out)).catch(() => -1);
+    const receivers = await publish(CHAT_CHANNEL(), JSON.stringify(out));
     logger.debug({ channel: CHAT_CHANNEL(), room: out.room.split(':')[0], id: out.id, receivers }, 'live: published chat message');
     // Private messages also land in the recipient's notifications (one entry per sender while unread).
     if (dmTo) await notify(dmTo.id, 'dm', { from: sender.displayName, fromUsername: sender.username, preview: body.slice(0, 80) }, { collapseBy: 'fromUsername' });
