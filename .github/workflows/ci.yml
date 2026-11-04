@@ -50,10 +50,11 @@ jobs:
           APP_URL: https://ci.example.test
         run: npm run build
 
-      # Smoke tests against the built app: API (compiled) + web (next start), seeded database.
+      # Smoke tests against the built app: API (compiled) + worker + web (next start), seeded database, behind
+      # scripts/edge-proxy.mjs, which routes /api (WebSockets included) like the Hestia nginx config does.
       - name: Start the stack
         env:
-          APP_URL: http://localhost:3200
+          APP_URL: http://localhost:8080
           DATABASE_URL: postgres://flatmeta:flatmeta@localhost:5432/flatmeta_test
           REDIS_URL: redis://localhost:6379/14
           SESSION_SECRET: ci-only-secret
@@ -63,20 +64,22 @@ jobs:
           NODE_ENV=development npm run db:seed
           # NODE_ENV=development only for the API (it allows the localhost APP_URL); Next runs its own production build.
           NODE_ENV=development nohup node apps/api/dist/src/server.js > api.log 2>&1 &
+          NODE_ENV=development nohup node apps/api/dist/src/worker.js > worker.log 2>&1 &
           nohup npm run start:web > web.log 2>&1 &
+          EDGE_PORT=8080 WEB_INTERNAL_URL=http://127.0.0.1:3200 nohup node scripts/edge-proxy.mjs > edge.log 2>&1 &
           for i in $(seq 1 60); do
-            curl -fsS http://127.0.0.1:3201/healthz >/dev/null && curl -fsS http://127.0.0.1:3200/robots.txt >/dev/null && exit 0
+            curl -fsS http://127.0.0.1:8080/api/v1/live/health >/dev/null && curl -fsS http://127.0.0.1:8080/robots.txt >/dev/null && exit 0
             sleep 2
           done
-          echo "stack did not start"; tail -n 50 api.log web.log; exit 1
+          echo "stack did not start"; tail -n 50 api.log web.log edge.log; exit 1
       - run: npx playwright install --with-deps chromium
       - name: End-to-end smoke tests
         run: npm run test:e2e
         env:
-          E2E_BASE_URL: http://localhost:3200
+          E2E_BASE_URL: http://localhost:8080
       - name: Logs on failure
         if: failure()
-        run: tail -n 80 api.log web.log || true
+        run: tail -n 80 api.log worker.log web.log edge.log || true
 
   deploy:
     # Runs only after the tests pass, only on a push to v2, and only when the server secrets exist.

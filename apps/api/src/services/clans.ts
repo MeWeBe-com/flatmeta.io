@@ -5,7 +5,7 @@ import type { Clan, User } from '../db/schema.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { stripText } from '../lib/markdown.js';
 import { slugify, uniqueSlug } from '../lib/slug.js';
-import { notify, publishActivity } from '../game/activity.js';
+import { notify, publishActivity, signal } from '../game/activity.js';
 import { recordAction, unlock } from '../game/engine.js';
 
 export const MAX_CLAN_MEMBERS = 50;
@@ -68,6 +68,7 @@ export async function createClan(me: User, input: ClanInput): Promise<Clan> {
     await tx.insert(schema.clanMembers).values({ clanId: c!.id, userId: me.id, role: 'leader' });
     return c!;
   });
+  await signal(me.id, 'clan_changed', { clanId: clan.id });
   await recordAction(me.id, 'create_clan', { ref: clan.id });
   await unlock(me.id, 'clan-founder');
   await publishActivity({ kind: 'clan_created', actorUserId: me.id, payload: { clan: clan.name, slug: clan.slug, tag: clan.tag } });
@@ -78,6 +79,7 @@ async function addMember(clan: Clan, userId: string) {
   if (await membershipOf(userId)) throw conflict('That player is already in a clan.');
   if (clan.memberCount >= MAX_CLAN_MEMBERS) throw conflict(`This clan is full (${MAX_CLAN_MEMBERS} members).`);
   await db.insert(schema.clanMembers).values({ clanId: clan.id, userId, role: 'member' });
+  await signal(userId, 'clan_changed', { clanId: clan.id });
   const n = await recount(clan.id);
   await recordAction(userId, 'join_clan', { ref: clan.id });
   await unlock(userId, 'clan-member');
@@ -141,6 +143,7 @@ export async function leaveClan(me: User) {
   if (!m) throw badRequest('You are not in a clan.');
   const clan = (await db.select().from(schema.clans).where(eq(schema.clans.id, m.clanId)))[0]!;
   await db.delete(schema.clanMembers).where(eq(schema.clanMembers.userId, me.id));
+  await signal(me.id, 'clan_changed', { clanId: null });
   const left = await recount(clan.id);
   if (left === 0) {
     await db.delete(schema.clans).where(eq(schema.clans.id, clan.id)); // nobody left: disband
@@ -181,6 +184,7 @@ export async function kick(me: User, slug: string, username: string) {
   if (!theirs) throw notFound('Member');
   if (rank[theirs] >= rank[mine!]) throw forbidden('You can only remove members ranked below you.');
   await db.delete(schema.clanMembers).where(and(eq(schema.clanMembers.clanId, clan.id), eq(schema.clanMembers.userId, target.id)));
+  await signal(target.id, 'clan_changed', { clanId: null });
   await recount(clan.id);
   await notify(target.id, 'clan_removed', { clan: clan.name });
 }
@@ -215,7 +219,9 @@ export async function updateClan(me: User, slug: string, patch: { description?: 
 export async function disband(me: User, slug: string) {
   const clan = await clanBySlug(slug);
   needRole(await roleIn(clan.id, me.id), 'leader');
+  const members = await db.select({ userId: schema.clanMembers.userId }).from(schema.clanMembers).where(eq(schema.clanMembers.clanId, clan.id));
   await db.delete(schema.clans).where(eq(schema.clans.id, clan.id));
+  for (const m of members) await signal(m.userId, 'clan_changed', { clanId: null });
 }
 
 // ─── Views and leaderboards ──────────────────────────────────────────────────

@@ -44,7 +44,13 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
   });
   const [mobilePanel, setMobilePanel] = useState(false);
   const [peer, setPeer] = useState<Peer | null>(null);
-  const [chatWith, setChatWith] = useState<string | null>(null);
+  const [chatWith, setChatWith] = useState<string | null>(() => params.get('dm'));
+  // "Reply" on a message notification opens that private chat.
+  useEffect(() => {
+    const open = (e: Event) => setChatWith((e as CustomEvent<string>).detail);
+    window.addEventListener('fm:open-dm', open);
+    return () => window.removeEventListener('fm:open-dm', open);
+  }, []);
   const center = useRef({ lng: 8, lat: 28 });
   const viewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [initialView] = useState(() => {
@@ -162,7 +168,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
       />
 
       {/* Top bar */}
-      <header className="absolute top-0 inset-x-0 z-20 p-3 flex items-center gap-2 pointer-events-none">
+      <header className="absolute top-0 inset-x-0 z-40 p-3 flex items-center gap-2 pointer-events-none">
         <Link href="/explore" className="pointer-events-auto glass rounded-full h-11 px-3 flex items-center" aria-label="Explore FlatMeta">
           <Logo size={26} withText={false} />
           <span className="hidden sm:inline font-display font-bold ml-2">FlatMeta</span>

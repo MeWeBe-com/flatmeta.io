@@ -48,7 +48,7 @@ export default async function socialRoutes(app: App) {
     if (target.id === me.id) throw badRequest("You can't follow yourself");
     const inserted = await db.insert(schema.follows).values({ followerId: me.id, followeeId: target.id }).onConflictDoNothing().returning();
     if (!inserted.length) return { following: true, game: null };
-    await notify(target.id, 'follow', { from: me.displayName, fromUsername: me.username });
+    await notify(target.id, 'follow', { from: me.displayName, fromUsername: me.username }, { collapseBy: 'fromUsername' });
     return { following: true, game: await recordAction(me.id, 'follow', { ref: target.id }) };
   });
 

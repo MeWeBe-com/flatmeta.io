@@ -7,28 +7,11 @@ import { api, post } from '@/lib/api';
 import { timeAgo } from '@/lib/format';
 import type { Plot, Progress } from '@/lib/types';
 import { useSession } from '@/components/providers';
+import { describeNotification, type AppNotification } from '@/lib/notifications';
 import { EmptyState, LevelRing, NamedIcon, PlotCard, SectionTitle, Stat } from '@/components/ui';
 
-interface Notification { id: string; kind: string; payload: Record<string, string | number | string[]>; readAt: string | null; createdAt: string }
-
-function describe(n: Notification): string {
-  const p = n.payload;
-  switch (n.kind) {
-    case 'like': return `${p.from} liked ${p.plotTitle}`;
-    case 'wave': return `${p.from} waved at ${p.plotTitle} 👋`;
-    case 'guestbook': return `${p.from} signed ${p.plotTitle}: “${p.body}”`;
-    case 'follow': return `${p.from} started following you`;
-    case 'achievement': return `Achievement unlocked: ${p.name}`;
-    case 'level_up': return `Level ${p.level}! You are now a ${p.title}`;
-    case 'quest_completed': return `Quest complete: ${p.title}. Claim your reward!`;
-    case 'broken_links': return `Some links on ${p.plotTitle} look broken`;
-    case 'dormant_soon': return `${p.plotTitle} has been quiet for a while. Give it a refresh?`;
-    case 'landmark': return `${p.title} is now your verified Landmark`;
-    case 'refund': return String(p.reason);
-    case 'payment_failed': return `Payment failed for your ${p.plan} plan. Update your card in Billing.`;
-    default: return n.kind;
-  }
-}
+type Notification = AppNotification;
+const describe = describeNotification;
 
 export default function DashboardHome() {
   const { me } = useSession();

@@ -147,3 +147,51 @@ describe('connections and chat', () => {
     expect(codes.slice(5).every((c) => c === 400)).toBe(true);
   });
 });
+
+describe('notifications fan-out', () => {
+  it('pushes follow, connection request, accept and DM notifications live and stores them', async () => {
+    const ana = await login();
+    const ben = await login();
+    const a = await client(ana.cookie);
+    const b = await client(ben.cookie);
+    await Promise.all([a, b].map((x) => x.waitFor((m) => m.type === 'welcome')));
+    // The per-user channel is subscribed on connect.
+    const h = json(await app.inject({ url: '/v1/live/health' }));
+    expect(h.ok).toBe(true);
+    expect(h.userChannels).toBeGreaterThanOrEqual(2);
+    expect(h.notifyChannelPattern).toMatch(/:notify:<userId>$/);
+
+    const kinds = (x: { inbox: Msg[] }) => x.inbox.filter((m) => m.type === 'notification').map((m) => (m.notification as { kind: string }).kind);
+    await app.inject({ method: 'POST', url: `/v1/users/${ben.user.username}/follow`, headers: ana.headers });
+    const f = await b.waitFor((m) => m.type === 'notification' && (m.notification as { kind: string }).kind === 'follow');
+    expect((f.notification as { id: string; payload: { fromUsername: string } }).payload.fromUsername).toBe(ana.user.username);
+    expect((f.notification as { id: string }).id).toBeTruthy();
+
+    await app.inject({ method: 'POST', url: '/v1/connections', headers: ana.headers, payload: { username: ben.user.username } });
+    const r = await b.waitFor((m) => m.type === 'notification' && (m.notification as { kind: string }).kind === 'connection_request');
+    const connectionId = (r.notification as { payload: { connectionId: string } }).payload.connectionId;
+    await app.inject({ method: 'POST', url: `/v1/connections/${connectionId}/accept`, headers: ben.headers });
+    await a.waitFor((m) => m.type === 'notification' && (m.notification as { kind: string }).kind === 'connection_accepted');
+
+    // Two DMs from the same sender collapse into one unread notification with a count.
+    a.send({ type: 'chat', scope: 'dm', to: ben.user.username, body: 'first' });
+    await b.waitFor((m) => m.type === 'chat' && (m.message as { body: string }).body === 'first');
+    a.send({ type: 'chat', scope: 'dm', to: ben.user.username, body: 'second' });
+    const chat = await b.waitFor((m) => m.type === 'chat' && (m.message as { body: string }).body === 'second');
+    expect((chat.message as { senderUsername: string; toUsername: string }).senderUsername).toBe(ana.user.username);
+    expect((chat.message as { toUsername: string }).toUsername).toBe(ben.user.username);
+    await b.waitFor(() => kinds(b).filter((k) => k === 'dm').length === 2);
+
+    const list = json(await app.inject({ url: '/v1/me/notifications', headers: ben.headers })).notifications as { kind: string; payload: { count?: number } }[];
+    expect(list.map((n) => n.kind)).toEqual(expect.arrayContaining(['follow', 'connection_request', 'dm']));
+    expect(list.filter((n) => n.kind === 'dm')).toHaveLength(1);
+    expect(list.find((n) => n.kind === 'dm')!.payload.count).toBe(2);
+    expect(json(await app.inject({ url: '/v1/me', headers: ben.headers })).unreadNotifications).toBe(3);
+
+    // Closing the sockets releases the user channels.
+    a.close();
+    b.close();
+    await new Promise((res) => setTimeout(res, 300));
+    expect(json(await app.inject({ url: '/v1/live/health' })).userChannels).toBe(h.userChannels - 2);
+  });
+});

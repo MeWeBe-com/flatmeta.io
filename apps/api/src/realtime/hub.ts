@@ -5,7 +5,8 @@ import type { App } from '../app.js';
 import { db, schema } from '../db/client.js';
 import { flagEmoji, haversineKm } from '../lib/geo.js';
 import { key, redis, subscriber } from '../lib/redis.js';
-import { LIVE_CHANNEL } from '../game/activity.js';
+import { LIVE_CHANNEL, NOTIFY_CHANNEL } from '../game/activity.js';
+import { config } from '../config.js';
 import { CHAT_CHANNEL, NEARBY_RADIUS_KM, clanRoom, dmRoom, nearbyRoom, sendMessage, type ChatOut } from '../services/chat.js';
 
 /**
@@ -16,6 +17,13 @@ import { CHAT_CHANNEL, NEARBY_RADIUS_KM, clanRoom, dmRoom, nearbyRoom, sendMessa
  *   fm:presence:geo      geo   connId → position
  *   fm:presence:c:<id>   hash  name, avatar, userId, level, lat, lng   (40 s TTL, refreshed by heartbeat)
  * Each process owns only its own sockets and polls Redis once a second for avatars in each viewport.
+ *
+ * Fan-out (all channel names go through key(), so they carry REDIS_PREFIX; pub/sub ignores the Redis DB number):
+ *   <prefix>:live            public activity (publishActivity)
+ *   <prefix>:chat            stored chat messages (sendMessage), routed here per socket
+ *   <prefix>:notify:<userId> one user's notifications and signals (notify/signal, from the API or the worker),
+ *                            subscribed while that user has at least one socket on this process
+ *   <prefix>:live:probe      round-trip self-test used by GET /v1/live/health
  */
 const PRESENCE = () => key('presence');
 const GEO = () => key('presence', 'geo');
@@ -72,11 +80,59 @@ export function registerHub(app: App) {
   };
 
   const sub = subscriber();
+  const log = app.log;
   const liveChannel = LIVE_CHANNEL();
   const chatChannel = CHAT_CHANNEL();
-  const notifyPattern = key('notify', '*');
-  void sub.subscribe(liveChannel, chatChannel);
-  void sub.psubscribe(notifyPattern);
+  const probeChannel = key('live', 'probe');
+  const notifyPrefix = NOTIFY_CHANNEL('');
+  const probes = new Map<string, () => void>();
+  void sub
+    .subscribe(liveChannel, chatChannel, probeChannel)
+    .then(() => log.debug({ channels: [liveChannel, chatChannel, probeChannel] }, 'live: subscribed to shared channels'))
+    .catch((err: Error) => log.error({ err: err.message }, 'live: subscribe failed'));
+
+  /** userId → sockets on this process. The user's notify channel is subscribed while the count is above zero. */
+  const userSockets = new Map<string, number>();
+  const subscribedUsers = new Set<string>();
+  function watchUser(userId: string) {
+    const n = (userSockets.get(userId) ?? 0) + 1;
+    userSockets.set(userId, n);
+    if (n === 1) {
+      const channel = NOTIFY_CHANNEL(userId);
+      void sub
+        .subscribe(channel)
+        .then(() => {
+          subscribedUsers.add(userId);
+          log.debug({ channel }, 'live: subscribed user channel');
+        })
+        .catch((err: Error) => log.error({ channel, err: err.message }, 'live: user subscribe failed'));
+    }
+  }
+  function unwatchUser(userId: string) {
+    const n = (userSockets.get(userId) ?? 1) - 1;
+    if (n > 0) return void userSockets.set(userId, n);
+    userSockets.delete(userId);
+    const channel = NOTIFY_CHANNEL(userId);
+    void sub
+      .unsubscribe(channel)
+      .then(() => {
+        // A new socket may have arrived while unsubscribing: subscribe again if so.
+        if (userSockets.has(userId)) return void sub.subscribe(channel);
+        subscribedUsers.delete(userId);
+        log.debug({ channel }, 'live: unsubscribed user channel');
+      })
+      .catch(() => undefined);
+  }
+
+  async function refreshClan(c: Conn) {
+    if (!c.userId) return;
+    const [m] = await db.select({ clanId: schema.clanMembers.clanId }).from(schema.clanMembers).where(eq(schema.clanMembers.userId, c.userId));
+    const clanId = m?.clanId ?? null;
+    if (clanId !== c.clanId) {
+      c.clanId = clanId;
+      send(c, { type: 'you', you: youOf(c) });
+    }
+  }
 
   sub.on('message', async (channel, message) => {
     try {
@@ -87,19 +143,65 @@ export function registerHub(app: App) {
         for (const c of conns.values()) if (c.ws.readyState === 1) c.ws.send(out);
       } else if (channel === chatChannel) {
         deliverChat(JSON.parse(message) as ChatOut);
+      } else if (channel === probeChannel) {
+        probes.get(message)?.();
+      } else if (channel.startsWith(notifyPrefix)) {
+        const userId = channel.slice(notifyPrefix.length);
+        const event = JSON.parse(message) as { kind: string; signal?: boolean };
+        let delivered = 0;
+        for (const c of conns.values()) {
+          if (c.userId !== userId) continue;
+          if (event.kind === 'clan_changed') void refreshClan(c);
+          if (!event.signal) {
+            send(c, { type: 'notification', notification: event });
+            delivered++;
+          }
+        }
+        log.debug({ channel, kind: event.kind, sockets: delivered }, 'live: delivered notification');
       }
-    } catch {
-      /* ignore malformed */
+    } catch (err) {
+      log.debug({ channel, err: (err as Error).message }, 'live: dropped malformed pub/sub message');
     }
   });
-  sub.on('pmessage', (_pattern, channel, message) => {
-    const userId = channel.split(':').pop();
-    for (const c of conns.values()) if (c.userId && c.userId === userId) send(c, { type: 'notification', ...JSON.parse(message) });
-  });
+
+  const youOf = (c: Conn) => ({ id: c.id, name: c.name, username: c.username, avatar: c.avatar, userId: c.userId, guest: !c.userId, clanId: c.clanId });
+
+  /** Counts for GET /v1/live/health (no ids or names). */
+  async function health() {
+    const token = randomUUID();
+    const started = Date.now();
+    const got = new Promise<boolean>((resolve) => {
+      const t = setTimeout(() => resolve(false), 2000);
+      probes.set(token, () => {
+        clearTimeout(t);
+        resolve(true);
+      });
+    });
+    const receivers = await redis.publish(probeChannel, token).catch(() => -1);
+    const ok = await got;
+    probes.delete(token);
+    let signedIn = 0;
+    for (const c of conns.values()) if (c.userId) signedIn++;
+    return {
+      ok,
+      prefix: config.REDIS_PREFIX,
+      pid: process.pid,
+      sockets: conns.size,
+      signedIn,
+      guests: conns.size - signedIn,
+      userChannels: subscribedUsers.size,
+      sharedChannels: [liveChannel, chatChannel, probeChannel],
+      notifyChannelPattern: NOTIFY_CHANNEL('<userId>'),
+      // Every API process with a hub subscribes to the probe channel: this is how many are listening.
+      apiProcessesListening: receivers,
+      pubsubRoundTripMs: ok ? Date.now() - started : null,
+    };
+  }
 
   /** Routes one stored message to the local sockets that should see it. */
   function deliverChat(m: ChatOut) {
-    const payload = { type: 'chat', message: { id: m.id, room: m.room, senderId: m.senderId, senderName: m.senderName, avatar: m.avatar, body: m.body, createdAt: m.createdAt } };
+    const payload = { type: 'chat', message: { id: m.id, room: m.room, senderId: m.senderId, senderName: m.senderName, senderUsername: m.senderUsername ?? null, toUsername: m.toUsername ?? null, avatar: m.avatar, body: m.body, createdAt: m.createdAt } };
+    let delivered = 0;
     for (const c of conns.values()) {
       let ok = false;
       if (m.room.startsWith('dm:')) ok = !!c.userId && m.room.split(':').slice(1).includes(c.userId);
@@ -107,8 +209,12 @@ export function registerHub(app: App) {
       else if (m.room.startsWith('nearby:')) {
         if (c.lat !== null && c.lng !== null) ok = m.lat !== undefined && m.lng !== undefined ? haversineKm(c.lat, c.lng, m.lat, m.lng) <= NEARBY_RADIUS_KM : nearbyRoom(c.lat, c.lng) === m.room;
       }
-      if (ok) send(c, payload);
+      if (ok) {
+        send(c, payload);
+        delivered++;
+      }
     }
+    log.debug({ room: m.room.split(':')[0], id: m.id, sockets: delivered }, 'live: delivered chat message');
   }
 
   async function setPosition(c: Conn, lat: number, lng: number) {
@@ -154,6 +260,8 @@ export function registerHub(app: App) {
           m.expire(CONN(c.id), 40);
         }
         await m.exec();
+        // Clan membership can change through another process (or the worker): keep clan chat routing current.
+        if (ticks % 30 === 0) for (const c of conns.values()) if (c.userId) await refreshClan(c).catch(() => undefined);
         const online = await onlineCount();
         for (const c of conns.values()) send(c, { type: 'presence', online });
       }
@@ -175,9 +283,14 @@ export function registerHub(app: App) {
     clearInterval(timer);
     // Don't await unsubscribe (it can hang in pattern mode); closeRedis() quits the connection.
     sub.removeAllListeners('message');
-    sub.removeAllListeners('pmessage');
     for (const c of conns.values()) c.ws.terminate();
     conns.clear();
+  });
+
+  app.get('/v1/live/health', { schema: { tags: ['world'], summary: 'Live hub health: sockets, subscriptions and a Redis pub/sub round trip on this process' } }, async (_req, reply) => {
+    const h = await health();
+    if (!h.ok) reply.code(503);
+    return h;
   });
 
   app.get('/v1/live', { websocket: true, schema: { hide: true } }, (socket, req) => {
@@ -199,6 +312,8 @@ export function registerHub(app: App) {
       lastSent: '',
     };
     conns.set(id, conn);
+    if (conn.userId) watchUser(conn.userId);
+    log.debug({ conn: id, signedIn: !!conn.userId, sockets: conns.size }, 'live: socket opened');
 
     void (async () => {
       if (conn.userId) {
@@ -213,7 +328,7 @@ export function registerHub(app: App) {
         }
       }
       await redis.zadd(PRESENCE(), Date.now(), id);
-      send(conn, { type: 'welcome', you: { id, name: conn.name, username: conn.username, avatar: conn.avatar, userId: conn.userId, guest: !conn.userId, clanId: conn.clanId } });
+      send(conn, { type: 'welcome', you: youOf(conn) });
       send(conn, { type: 'presence', online: await onlineCount() });
     })();
 
@@ -263,7 +378,9 @@ export function registerHub(app: App) {
                 const [other] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.username, msg.to));
                 if (!other) return send(conn, { type: 'error', code: 'not_found', message: 'Player not found.' });
                 room = dmRoom(me.id, other.id);
-              } else if (msg.scope === 'clan' && conn.clanId) {
+              } else if (msg.scope === 'clan') {
+                await refreshClan(conn);
+                if (!conn.clanId) return send(conn, { type: 'error', code: 'no_clan', message: 'Join a clan to use clan chat.' });
                 room = clanRoom(conn.clanId);
               } else {
                 if (conn.lat === null || conn.lng === null) return send(conn, { type: 'error', code: 'no_position', message: 'Move on the map first so we know who is nearby.' });
@@ -280,6 +397,8 @@ export function registerHub(app: App) {
     });
     socket.on('close', () => {
       conns.delete(id);
+      if (conn.userId) unwatchUser(conn.userId);
+      log.debug({ conn: id, sockets: conns.size }, 'live: socket closed');
       void redis.multi().zrem(PRESENCE(), id).zrem(GEO(), id).del(CONN(id)).exec();
     });
   });

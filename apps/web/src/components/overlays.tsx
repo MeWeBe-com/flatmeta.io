@@ -18,10 +18,10 @@ function Toasts() {
       {toasts.map((x) => {
         const color = x.kind === 'achievement' ? RARITY_COLOR[x.rarity ?? 'common'] : x.kind === 'error' ? 'var(--color-coral)' : x.kind === 'xp' ? 'var(--color-teal)' : 'var(--color-violet)';
         return (
+          <div key={x.id} role="status" className="pointer-events-auto">
           <button
-            key={x.id}
             onClick={() => dismiss(x.id)}
-            className="glass pointer-events-auto rounded-2xl px-4 py-3 flex items-center gap-3 text-left animate-pop"
+            className="glass w-full rounded-2xl px-4 py-3 flex items-center gap-3 text-left animate-pop"
             style={{ borderColor: `${color}55` }}
           >
             <span className="size-9 shrink-0 rounded-xl grid place-items-center" style={{ background: `${color}22`, color }}>
@@ -45,6 +45,7 @@ function Toasts() {
               {x.kind === 'achievement' && x.rarity && <span className="block text-xs muted capitalize">{x.rarity}</span>}
             </span>
           </button>
+          </div>
         );
       })}
     </div>

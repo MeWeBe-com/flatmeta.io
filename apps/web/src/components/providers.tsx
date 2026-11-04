@@ -5,6 +5,7 @@ import { api, post } from '@/lib/api';
 import { WS_URL } from '@/lib/config';
 import type { Activity, ChatMsg, GameResult, MeResponse, Peer, You } from '@/lib/types';
 import { t } from '@/lib/i18n';
+import { QUIET_KINDS, describeNotification, type AppNotification } from '@/lib/notifications';
 
 // ─── Session ────────────────────────────────────────────────────────────────
 
@@ -18,6 +19,8 @@ interface SessionCtx {
   signInReason: string | null;
   onSignedIn: () => void;
   signOut: () => Promise<void>;
+  /** Update the unread notification count without refetching /me (live events, mark-as-read). */
+  setUnread: (fn: (n: number) => number) => void;
 }
 const Session = createContext<SessionCtx | null>(null);
 export const useSession = () => {
@@ -70,6 +73,7 @@ function SessionProvider({ children }: { children: ReactNode }) {
         await post('/auth/logout');
         setMe({ user: null });
       },
+      setUnread: (fn) => setMe((m) => (m.user ? { ...m, unreadNotifications: Math.max(0, fn(m.unreadNotifications ?? 0)) } : m)),
     }),
     [me, loading, refresh, signInOpen, signInReason],
   );
@@ -201,6 +205,8 @@ interface LiveCtx {
   onChatError: (fn: (message: string, code: string) => void) => () => void;
   /** Subscribe to peer snapshots without re-rendering (used by the map layer). */
   onPeers: (fn: (p: Peer[]) => void) => () => void;
+  /** Subscribe to my notifications as they arrive (follows, requests, DMs, clan invites…). */
+  onNotification: (fn: (n: AppNotification) => void) => () => void;
 }
 const Live = createContext<LiveCtx | null>(null);
 export const useLive = () => {
@@ -217,13 +223,25 @@ function LiveProvider({ children }: { children: ReactNode }) {
   const chatListeners = useRef(new Set<(m: ChatMsg) => void>());
   const errorListeners = useRef(new Set<(message: string, code: string) => void>());
   const peerListeners = useRef(new Set<(p: Peer[]) => void>());
+  const notifyListeners = useRef(new Set<(n: AppNotification) => void>());
   const wsRef = useRef<WebSocket | null>(null);
   const lastView = useRef<string | null>(null);
   const lastMove = useRef<string | null>(null);
   const [you, setYou] = useState<You | null>(null);
   const [peers, setPeers] = useState<Peer[]>([]);
-  const { me } = useSession();
+  const { me, setUnread } = useSession();
+  const { toast } = useGame();
   const userId = me.user?.id;
+  // The socket handler is created once per connection: read the latest callbacks through a ref.
+  const onNote = useRef<(n: AppNotification) => void>(() => undefined);
+  useEffect(() => {
+    onNote.current = (n) => {
+      // A DM collapsed into an unread entry (count > 1) is not a new unread row.
+      setUnread((u) => u + (n.kind === 'dm' && typeof n.payload.count === 'number' && n.payload.count > 1 ? 0 : 1));
+      if (!QUIET_KINDS.has(n.kind)) toast({ kind: 'info', title: describeNotification(n) });
+      for (const fn of notifyListeners.current) fn(n);
+    };
+  }, [setUnread, toast]);
 
   useEffect(() => {
     api<{ activity: Activity[] }>('/world/activity?limit=20')
@@ -254,8 +272,9 @@ function LiveProvider({ children }: { children: ReactNode }) {
       };
       ws.onmessage = (ev) => {
         try {
-          const msg = JSON.parse(ev.data as string) as { type: string; online?: number; activity?: Activity; you?: You; avatars?: Peer[]; message?: ChatMsg & { code?: string }; code?: string };
-          if (msg.type === 'welcome' && msg.you) setYou(msg.you);
+          const msg = JSON.parse(ev.data as string) as { type: string; online?: number; activity?: Activity; you?: You; avatars?: Peer[]; message?: ChatMsg & { code?: string }; code?: string; notification?: AppNotification };
+          if ((msg.type === 'welcome' || msg.type === 'you') && msg.you) setYou(msg.you);
+          if (msg.type === 'notification' && msg.notification) onNote.current(msg.notification);
           if (msg.type === 'avatars' && msg.avatars) {
             setPeers(msg.avatars);
             for (const fn of peerListeners.current) fn(msg.avatars);
@@ -308,6 +327,7 @@ function LiveProvider({ children }: { children: ReactNode }) {
       onChat: (fn) => add(chatListeners.current, fn),
       onChatError: (fn) => add(errorListeners.current, fn),
       onPeers: (fn) => add(peerListeners.current, fn),
+      onNotification: (fn) => add(notifyListeners.current, fn),
       sendMove: (lat, lng) => {
         lastMove.current = JSON.stringify({ type: 'move', lat, lng });
         sendRaw(lastMove.current);

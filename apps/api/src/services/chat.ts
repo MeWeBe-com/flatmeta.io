@@ -5,6 +5,7 @@ import { heuristicModeration } from '../ai/moderation.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { stripText } from '../lib/markdown.js';
 import { key, redis } from '../lib/redis.js';
+import { logger } from '../lib/logger.js';
 import { notify } from '../game/activity.js';
 import { recordAction } from '../game/engine.js';
 
@@ -22,6 +23,10 @@ export interface ChatOut {
   room: string;
   senderId: string | null;
   senderName: string;
+  /** Sender's @username, so private threads can be keyed without loading the friends list. */
+  senderUsername?: string | null;
+  /** For private messages: the recipient's @username. */
+  toUsername?: string | null;
   avatar: { face: string; color: string; accessory?: string } | null;
   body: string;
   createdAt: string;
@@ -147,10 +152,14 @@ export async function sendMessage(sender: User, input: SendInput): Promise<ChatO
   if (!body) throw badRequest('Say something first.');
 
   // Access rules per room kind.
+  let dmTo: { id: string; username: string } | null = null;
   if (input.room.startsWith('dm:')) {
     const [, a, b] = input.room.split(':');
     if (![a, b].includes(sender.id)) throw forbidden();
     const other = a === sender.id ? b! : a!;
+    const [o] = await db.select({ id: schema.users.id, username: schema.users.username }).from(schema.users).where(eq(schema.users.id, other));
+    if (!o) throw notFound('Player');
+    dmTo = o;
     const rel = await relation(sender.id, other);
     if (rel.status !== 'accepted') throw forbidden(rel.status.startsWith('blocked') ? 'You can’t message this player.' : 'Connect with this player first to chat privately.');
   } else if (input.room.startsWith('clan:')) {
@@ -181,13 +190,20 @@ export async function sendMessage(sender: User, input: SendInput): Promise<ChatO
     room: row!.room,
     senderId: sender.id,
     senderName: sender.displayName,
+    senderUsername: sender.username,
+    toUsername: dmTo?.username ?? null,
     avatar: sender.avatar ?? null,
     body,
     createdAt: row!.createdAt.toISOString(),
     lat: input.lat,
     lng: input.lng,
   };
-  if (!mod.flagged) await redis.publish(CHAT_CHANNEL(), JSON.stringify(out)).catch(() => undefined);
+  if (!mod.flagged) {
+    const receivers = await redis.publish(CHAT_CHANNEL(), JSON.stringify(out)).catch(() => -1);
+    logger.debug({ channel: CHAT_CHANNEL(), room: out.room.split(':')[0], id: out.id, receivers }, 'live: published chat message');
+    // Private messages also land in the recipient's notifications (one entry per sender while unread).
+    if (dmTo) await notify(dmTo.id, 'dm', { from: sender.displayName, fromUsername: sender.username, preview: body.slice(0, 80) }, { collapseBy: 'fromUsername' });
+  }
   return out;
 }
 
@@ -206,11 +222,12 @@ export async function history(rooms: string[], opts: { before?: number; limit?: 
     .orderBy(desc(schema.chatMessages.id))
     .limit(opts.limit ?? 50);
   const senders = [...new Set(rows.map((r) => r.senderId).filter((x): x is string => !!x))];
-  const users = senders.length ? await db.select({ id: schema.users.id, avatar: schema.users.avatar }).from(schema.users).where(inArray(schema.users.id, senders)) : [];
-  const am = new Map(users.map((u) => [u.id, u.avatar]));
-  return rows
-    .reverse()
-    .map((r) => ({ id: r.id, room: r.room, senderId: r.senderId, senderName: r.senderName, avatar: (r.senderId ? am.get(r.senderId) : null) ?? null, body: r.body, createdAt: r.createdAt.toISOString() }));
+  const users = senders.length ? await db.select({ id: schema.users.id, avatar: schema.users.avatar, username: schema.users.username }).from(schema.users).where(inArray(schema.users.id, senders)) : [];
+  const am = new Map(users.map((u) => [u.id, u]));
+  return rows.reverse().map((r) => {
+    const u = r.senderId ? am.get(r.senderId) : undefined;
+    return { id: r.id, room: r.room, senderId: r.senderId, senderName: r.senderName, senderUsername: u?.username ?? null, avatar: u?.avatar ?? null, body: r.body, createdAt: r.createdAt.toISOString() };
+  });
 }
 
 /** The 3×3 block of nearby rooms around a point, for chat history. */

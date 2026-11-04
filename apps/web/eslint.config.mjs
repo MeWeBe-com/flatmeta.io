@@ -1,7 +1,7 @@
 import next from 'eslint-config-next';
 
 const config = [
-  { ignores: ['.next/**', 'node_modules/**', 'public/sw.js', 'playwright-report/**', 'test-results/**'] },
+  { ignores: ['.next/**', '.next-*/**', 'node_modules/**', 'public/sw.js', 'playwright-report/**', 'test-results/**'] },
   ...next,
   {
     rules: {

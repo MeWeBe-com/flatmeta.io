@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Award, Code2, CreditCard, LayoutDashboard, LogOut, Map, Moon, Shield, Sun, User, Building2, Menu, X, Download, Settings } from 'lucide-react';
 import { APP_ENV, STAGING_DOMAIN } from '@/lib/config';
 import { t } from '@/lib/i18n';
+import { NotificationBell } from './notification-bell';
 import { useSession, useTheme } from './providers';
 import { Avatar, LevelRing, Logo, clsx } from './ui';
 
@@ -60,7 +61,9 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
     ...(u.role !== 'user' ? [{ href: '/admin', label: t('nav.admin'), icon: Shield }] : []),
   ];
   return (
-    <div className="relative">
+    <div className="flex items-center gap-2">
+      <NotificationBell />
+      <div className="relative">
       <button className="flex items-center gap-2 rounded-full pl-1 pr-3 h-11 glass" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu">
         {me.progress && !compact ? <LevelRing level={me.progress.level} progress={me.progress.progress} size={36} /> : <Avatar name={u.displayName} url={u.avatarUrl} size={34} />}
         <span className="hidden sm:block text-sm font-semibold max-w-28 truncate">{u.displayName}</span>
@@ -105,6 +108,7 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
           </button>
         </div>
       )}
+      </div>
     </div>
   );
 }

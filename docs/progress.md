@@ -150,6 +150,37 @@ Each step appends a short summary: what was done, decisions made, what's next.
 
 **Next (owner):** create the Resend account, verify the domain in Cloudflare DNS (SPF on the `send` subdomain, DKIM `resend._domainkey`, DMARC), then set `RESEND_API_KEY`, `MAIL_FROM` and the webhook secret on staging.
 
+## Staging bug: live chat and notifications (2026-11-04)
+
+Reported: chat (nearby, private, clan) never reached the other player, and follows or connection requests gave the recipient nothing. Reproduced locally on a staging-like stack: production builds, `APP_ENV=staging`, Redis DB 6 with `REDIS_PREFIX=fm-staging`, one API process plus a separate worker, and `scripts/edge-proxy.mjs` in front, which routes `/api` and the WebSocket upgrade the way the Hestia nginx template does.
+
+**Causes found**
+1. **The chat panel crashed the page when opened.** `useEffect(() => endRef.current?.scrollIntoView(...))` returned the value of `scrollIntoView`, and current Chromium returns a Promise from scroll methods. React then called that Promise as a cleanup function ("destroy is not a function"), which unmounted the map, so nothing after it could work. Fixed with a block body.
+2. **The client ignored `notification` events**, and the map had no bell. The server stored rows for follows and requests, but nothing showed them live.
+3. **DMs created no notification**, and DM threads were keyed by user id until the friends list had loaded, so a first message could land in the wrong thread.
+4. **Clan chat used the clan known when the socket connected**, so after joining a clan, chat only worked after a reload.
+
+**Changes**
+- API: `notify()` stores the row and publishes `{id, kind, payload, createdAt}` on `<prefix>:notify:<userId>` (from the API or the worker; both read the same `.env`). DMs notify the recipient and collapse into one unread entry per sender, with a count. Chat messages carry `senderUsername` and `toUsername`.
+- Live hub: each signed-in socket subscribes its own user channel on connect (ref-counted per process, released on close). Signing in reconnects the socket, so the subscription follows the user without a reload. A `clan_changed` signal (no stored row) updates clan routing live, and so does a membership check every 30 s and before each clan message.
+- `GET /v1/live/health`: sockets, signed-in vs guests, user channels subscribed on this process, the API processes listening, and a Redis publish → receive round trip (HTTP 503 if it fails). Counts only.
+- `LOG_LEVEL=debug` logs `live: socket opened/closed`, `subscribed/unsubscribed user channel`, `published notification` (with `receivers`), `delivered notification`, and `published/delivered chat message` (with `sockets`).
+- Web: the live provider turns `notification` events into a toast, bumps the unread count and tells listeners. A new bell in the map and site headers shows "Notifications, N unread" and opens a list that marks everything read, with Accept/Decline on connection requests and Reply on messages. Toasts are announced (`role="status"`). The peer card gained Follow. Guests see "Guests can read. Sign in to chat, follow and connect." with a Sign in button, instead of silent failures.
+- Map header raised above the quests rail: its dropdowns (bell and account menu) were hidden under it.
+- Tests: an API test covers the fan-out, DM collapsing, health and channel release (67 API tests). The new e2e `social-live.spec.ts` uses two browser contexts and covers nearby chat, DM with unread badge and toast, follow plus connection request with toast, bell count and list, accept notifying the sender, clan chat without reload, and the guest prompt. It passes 3/3 on the staging-like stack. CI now runs the whole e2e suite (and the worker) behind the edge proxy, so WebSockets go same-origin through `/api` as on staging.
+
+**How to verify on staging with two accounts** (two browsers, or one normal and one private window)
+1. Open `https://staging.flatmeta.io/api/v1/live/health`: expect `"ok": true`, `"prefix": "fm-staging"`, `apiProcessesListening: 1`.
+2. Window A: sign in with email 1 (the code is shown on screen on staging). Window B: sign in with email 2. Each can change their @username in Settings.
+3. Both open `https://staging.flatmeta.io/?at=41.3874,2.1686,12`. Each should see the other's avatar within a few seconds. Health now shows `signedIn: 2`, `userChannels: 2`.
+4. Nearby: A opens Chat → Nearby and sends a message. B sees a speech bubble over A and the message in Chat → Nearby; B's chat button shows "1".
+5. Follow: B taps A's avatar → Follow. A gets a toast "B started following you", and the bell shows 1.
+6. Connect: B taps A's avatar → Connect (or Chat → Friends → add `@A`). A gets a toast "B wants to connect", and the bell count goes up. A opens the bell: both entries are listed and the count clears. A presses Accept; B gets "A accepted your connection request".
+7. DM: A opens Chat → Friends → B, and sends a message. B gets a toast "New message from A: …", an unread badge on the chat button and a bell entry. Reply in the bell opens the thread.
+8. Clan: A (level 2+, e.g. after claiming the free Homestead) founds a clan at /clans and invites `@B`. B gets "A invited you to join …", then accepts on /clans. Both use Chat → Clan, with no reload needed.
+9. Guest: in a third private window (signed out), Chat shows "Guests can read. Sign in to chat, follow and connect.", and tapping an avatar → Connect/Follow opens sign-in with the reason.
+10. Logs (optional): set `LOG_LEVEL=debug` in the staging `.env`, run `pm2 reload flatmeta-api flatmeta-worker --update-env`, then `pm2 logs flatmeta-api | grep 'live:'` while repeating a step. `published notification … receivers: 1` followed by `delivered notification … sockets: 1` means the path works end to end.
+
 ## Open questions
 
 0. **URGENT: rotate the Laravel `APP_KEY`.** `flatmetaAPI/.env.example` (all v1 branches, since commit `363faab`) contains a real key: `APP_KEY=base64:ah1EUh…`. Rotate it on every server that ever ran it. It is removed from `v2`; it stays in v1 history unless you rewrite it.

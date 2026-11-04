@@ -127,6 +127,9 @@ Emails are queued in Redis and sent by **`flatmeta-worker`**: if the worker is d
 - **Restore:** `gunzip -c file.sql.gz | psql "$DATABASE_URL"`.
 - **Stripe:** webhook endpoint `https://<APP_URL host>/api/v1/stripe/webhook` (events listed in the README).
 - **Health:** API `/api/healthz` (through the proxy) or `127.0.0.1:$PORT/healthz`; worker `127.0.0.1:$WORKER_HEALTH_PORT/healthz`.
+- **Live hub (chat and notifications):** `https://<APP_URL host>/api/v1/live/health` returns `ok`, `prefix` (your `REDIS_PREFIX`), open `sockets` (`signedIn` and `guests`), `userChannels` (signed-in users whose `<prefix>:notify:<userId>` channel this API process is subscribed to), `apiProcessesListening` and `pubsubRoundTripMs` (a publish → receive round trip through Redis). `ok: false` with HTTP 503 means pub/sub isn't reaching the API. Counts only, no ids.
+- **Debug logs for the live hub:** set `LOG_LEVEL=debug` in `.env`, then `pm2 reload flatmeta-api flatmeta-worker --update-env` and `pm2 logs flatmeta-api | grep 'live:'`. You'll see `socket opened`, `subscribed user channel`, `published notification` (with `receivers`: 0 means no API process had that user's socket), `delivered notification` and `delivered chat message` (with `sockets`). Set it back to `info` afterwards.
+- **Channel names:** every pub/sub channel starts with `REDIS_PREFIX` (`<prefix>:live`, `<prefix>:chat`, `<prefix>:notify:<userId>`, `<prefix>:live:probe`). Redis pub/sub ignores the database number, so staging and production on one Redis need different prefixes (they have: `fm-staging` and `fm`). The API and the worker read the same `.env`, so they always agree.
 
 ## 5. Troubleshooting
 
@@ -138,6 +141,7 @@ Emails are queued in Redis and sent by **`flatmeta-worker`**: if the worker is d
 | Deploy log says "In-memory PM2 is out-of-date" | run `pm2 update` once as the app user (it restarts the PM2 daemon and keeps your apps) |
 | Plot images and avatars 404 under `/media/` | the `__MEDIA_DIR__` placeholder in `nodejs-app.conf` was not replaced with your `MEDIA_DIR` (trailing slash included) |
 | API exits on start: "APP_URL … not localhost" | `APP_URL` must be the public https origin in production |
+| Chat or notifications don't reach the other player | `/api/v1/live/health` must say `ok: true`; with `LOG_LEVEL=debug`, `published notification … receivers: 0` means the recipient has no open socket (or a different `REDIS_PREFIX` on the publishing process) |
 | Map loads but no avatars or chat | the `/api/` location passes `Upgrade`/`Connection`; `nginx -t`; browser console shows the `/api/v1/live` handshake |
 | Logged out on every request | `COOKIE_SECURE=true` needs https; the site and `/api` must share one origin |
 | Share images or sitemap use the wrong host | `APP_URL`; rebuild after changing it (`bash scripts/deploy.sh`) |

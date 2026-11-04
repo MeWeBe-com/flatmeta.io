@@ -216,7 +216,7 @@ export interface GuestbookEntry { id: string; body: string; createdAt: string; a
 
 // ─── Realtime, chat, social ────────────────────────────────────────────────
 export interface Peer { id: string; name: string; username: string | null; userId: string | null; avatar: AvatarLook | null; level: number; lat: number; lng: number }
-export interface ChatMsg { id: number; room: string; senderId: string | null; senderName: string; avatar: AvatarLook | null; body: string; createdAt: string }
+export interface ChatMsg { id: number; room: string; senderId: string | null; senderName: string; senderUsername?: string | null; toUsername?: string | null; avatar: AvatarLook | null; body: string; createdAt: string }
 export interface You { id: string; name: string; username: string | null; avatar: AvatarLook | null; userId: string | null; guest: boolean; clanId: string | null }
 export interface ConnUser { id: string; username: string; displayName: string; avatar: AvatarLook | null; avatarUrl: string | null; level: number }
 export interface Connections {

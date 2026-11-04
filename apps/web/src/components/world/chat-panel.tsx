@@ -33,8 +33,11 @@ export function ChatPanel({ position, openWith, onOpenedWith }: { position: () =
     (m: ChatMsg) => {
       if (m.room.startsWith('nearby:')) return 'nearby';
       if (m.room.startsWith('clan:')) return 'clan';
-      const other = m.room.split(':').slice(1).find((id) => id !== meId);
-      return other ? `dm:${idToName.get(other) ?? other}` : 'nearby';
+      // Private threads are keyed by the other player's @username, which the server sends with each message.
+      const other = m.senderId === meId ? m.toUsername : m.senderUsername;
+      if (other) return `dm:${other}`;
+      const otherId = m.room.split(':').slice(1).find((id) => id !== meId);
+      return otherId ? `dm:${idToName.get(otherId) ?? otherId}` : 'nearby';
     },
     [meId, idToName],
   );
@@ -62,7 +65,22 @@ export function ChatPanel({ position, openWith, onOpenedWith }: { position: () =
       }),
     [live, keyFor, add, meId, open, tab, dm],
   );
-  useEffect(() => live.onChatError((message, code) => (code === 'sign_in' ? openSignIn('Sign in to chat. Reading is free.') : setErr(message))), [live, openSignIn]);
+  useEffect(
+    () =>
+      live.onChatError((message, code) => {
+        if (code === 'sign_in') openSignIn('Sign in to chat. Reading is free.');
+        else setErr(message);
+      }),
+    [live, openSignIn],
+  );
+  // Connection requests and accepts arrive as notifications: keep the friends list current.
+  useEffect(
+    () =>
+      live.onNotification((n) => {
+        if (n.kind === 'connection_request' || n.kind === 'connection_accepted') refreshConns();
+      }),
+    [live, refreshConns],
+  );
 
   // Notifications about connections arrive on the socket too: refresh the list when the panel is open.
   useEffect(() => {
@@ -93,7 +111,10 @@ export function ChatPanel({ position, openWith, onOpenedWith }: { position: () =
 
   const key = tab === 'friends' ? (dm ? `dm:${dm}` : '') : tab;
   const msgs = threads[key] ?? [];
-  useEffect(() => endRef.current?.scrollIntoView({ block: 'end' }), [msgs.length, open, key]);
+  // Braces matter: scroll methods return a Promise in current Chromium, and an effect must not return one.
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: 'end' });
+  }, [msgs.length, open, key]);
   useEffect(() => {
     if (open) setUnread(0);
   }, [open, tab, dm]);
@@ -101,7 +122,7 @@ export function ChatPanel({ position, openWith, onOpenedWith }: { position: () =
   const send = () => {
     const body = text.trim();
     if (!body) return;
-    if (!me.user) return openSignIn('Sign in to chat. Reading is free.');
+    if (!me.user) return openSignIn('Sign in to chat. Guests can read nearby chat; sending messages, following and connecting need an account.');
     setErr(null);
     if (tab === 'friends' && dm) live.sendChat('dm', body, dm);
     else if (tab === 'clan') live.sendChat('clan', body);
@@ -147,7 +168,10 @@ export function ChatPanel({ position, openWith, onOpenedWith }: { position: () =
       {tab === 'friends' && !dm ? (
         <div className="flex-1 overflow-y-auto p-3 space-y-3 text-sm">
           {!me.user ? (
-            <p className="muted">Sign in to connect with other explorers and chat privately.</p>
+            <div className="space-y-2">
+              <p className="muted">You are exploring as a guest. Sign in (it takes one email code) to pick a @username, connect with other explorers and chat privately.</p>
+              <button className="btn-primary btn-sm" onClick={() => openSignIn('Sign in to connect with other explorers and chat privately.')}>Sign in</button>
+            </div>
           ) : (
             <>
               <form
@@ -203,6 +227,12 @@ export function ChatPanel({ position, openWith, onOpenedWith }: { position: () =
             ))}
             <div ref={endRef} />
           </div>
+          {!me.user && (
+            <p className="px-3 py-2 text-xs border-t border-[var(--line)] flex items-center gap-2">
+              <span className="muted flex-1">Guests can read. Sign in to chat, follow and connect.</span>
+              <button className="btn-primary btn-sm h-7" onClick={() => openSignIn('Sign in to chat. Guests can read nearby chat; sending messages, following and connecting need an account.')}>Sign in</button>
+            </p>
+          )}
           {err && <p role="alert" className="px-3 text-xs text-[var(--color-coral)]">{err}</p>}
           {canType && (
             <form

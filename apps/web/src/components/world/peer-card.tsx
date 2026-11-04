@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MessageCircle, UserPlus, X, Check } from 'lucide-react';
+import { MessageCircle, UserPlus, X, Check, Heart } from 'lucide-react';
 import { api, post, ApiError } from '@/lib/api';
-import type { Peer } from '@/lib/types';
+import type { GameResult, Peer } from '@/lib/types';
 import { FaceBadge } from '../face-badge';
 import { useGame, useSession } from '../providers';
 
@@ -12,9 +12,11 @@ type Rel = { status: 'none' | 'pending_out' | 'pending_in' | 'accepted' | 'block
 /** Small card shown when you tap another explorer on the map. */
 export function PeerCard({ peer, onClose, onChat }: { peer: Peer; onClose: () => void; onChat: (username: string) => void }) {
   const { me, openSignIn } = useSession();
-  const { toast } = useGame();
+  const { toast, handleGame } = useGame();
   const [rel, setRel] = useState<Rel['status'] | null>(null);
   const [busy, setBusy] = useState(false);
+  const [following, setFollowing] = useState(false);
+  const signInFirst = (what: string) => openSignIn(`Sign in to ${what}. Guests explore anonymously; an account gives you a @username others can find.`);
 
   useEffect(() => {
     if (!me.user || !peer.username) return;
@@ -22,7 +24,7 @@ export function PeerCard({ peer, onClose, onChat }: { peer: Peer; onClose: () =>
   }, [me.user, peer.username]);
 
   const connect = async () => {
-    if (!me.user) return openSignIn('Sign in to connect with other explorers.');
+    if (!me.user) return signInFirst('connect with other explorers');
     if (!peer.username) return;
     setBusy(true);
     try {
@@ -33,6 +35,19 @@ export function PeerCard({ peer, onClose, onChat }: { peer: Peer; onClose: () =>
       toast({ kind: 'error', title: e instanceof ApiError ? e.message : 'Could not send the request' });
     } finally {
       setBusy(false);
+    }
+  };
+
+  const follow = async () => {
+    if (!me.user) return signInFirst('follow explorers');
+    if (!peer.username) return;
+    try {
+      const r = await post<{ game: GameResult | null }>(`/users/${peer.username}/follow`);
+      setFollowing(true);
+      toast({ kind: 'success', title: `You follow ${peer.name}` });
+      handleGame(r.game);
+    } catch (e) {
+      toast({ kind: 'error', title: e instanceof ApiError ? e.message : 'Could not follow' });
     }
   };
 
@@ -56,10 +71,11 @@ export function PeerCard({ peer, onClose, onChat }: { peer: Peer; onClose: () =>
             ) : (
               <button className="btn-primary btn-sm flex-1" disabled={busy || rel === 'blocked_by_me' || rel === 'blocked_me'} onClick={connect}><UserPlus size={14} /> {rel === 'pending_in' ? 'Accept' : 'Connect'}</button>
             )}
+            <button className="btn-ghost btn-sm" onClick={follow} disabled={following} aria-label={following ? 'Following' : `Follow ${peer.name}`}><Heart size={14} /> {following ? 'Following' : 'Follow'}</button>
             <a className="btn-ghost btn-sm" href={`/u/${peer.username}`}>Profile</a>
           </>
         ) : (
-          <p className="text-xs muted">Guests are anonymous. Sign-in unlocks profiles, connections and private chat.</p>
+          <p className="text-xs muted">{peer.name} is exploring as a guest, so they can’t be followed or messaged until they sign in. Say hi in nearby chat instead.</p>
         )}
       </div>
     </div>
