@@ -106,7 +106,7 @@ One file: **`.env` in the repo root** (copy `.env.example`; every variable is do
 | `DATABASE_URL`, `REDIS_URL`, `SESSION_SECRET`, `COOKIE_SECURE` | Data and sessions |
 | `STRIPE_*`, `PAYMENTS_MOCK` | Payments. Without keys, development uses a mock checkout (never in production) |
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `AI_*_PROVIDER` | AI (all optional; heuristics and procedural art are the fallback) |
-| `SMTP_*`, `MAIL_FROM` | Email (printed to the log in development) |
+| `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `MAIL_FROM`, `MAIL_REPLY_TO` | Email through [Resend](https://resend.com) (queued in the worker with retries and rate limiting; bounces and complaints suppressed via the webhook). `SMTP_*` is the fallback; with neither, emails are logged and sign-in codes shown on screen outside production |
 | `STORAGE_DRIVER`, `MEDIA_DIR`, `S3_*` | Media storage |
 | `MARKETPLACE_FEE_BPS`, `MARKETPLACE_MIN_HOLD_DAYS`, `MARKETPLACE_PRICE_CAP_*`, `PAYOUT_MIN_CENTS` | Marketplace rules |
 | `NEXT_PUBLIC_*` | Browser-visible map, analytics and feature flags (baked in at build time: rebuild after changing) |
@@ -143,6 +143,9 @@ npm run showcase -- --countries IT --source ai --count 12
 ```
 
 Options: `--countries` (ISO codes or `all`), `--source curated|ai`, `--count`, `--names`, `--images procedural|openai|gemini|external`, `--approve`, `--force`, `--regenerate-images`. Curated data is in `apps/api/seed/showcase/<CC>.json`; the same controls are in **Admin → Showcase**. For Google Flow (no public API), set `AI_IMAGE_PROVIDER=external`: prompts are written to `EXTERNAL_IMAGE_DIR/outbox/prompts.jsonl`; drop the finished images in `EXTERNAL_IMAGE_DIR/inbox/<id>.png` and the worker imports them hourly (or run `npm run -w flatmeta-api images:import`).
+
+### Email (Resend)
+All email goes through `apps/api/src/email`: templates (HTML + plain text) for sign-in and claim codes, organisation and clan invites, marketplace sale, purchase, refund and payout emails, showcase claim results and Landmark confirmation, removal-request results, and admin notices (claims needing review, removal requests). Provider: `RESEND_API_KEY` → Resend; else `SMTP_*`; else log-only. Each email carries Resend tags `type` and `env`. With a provider set, sends go through the BullMQ `email` queue in the worker: sign-in codes first, 8 attempts with exponential backoff, `rate_limit_exceeded` honoured with the provider's `retry-after`, permanent errors (bad address, unverified sender) dropped. The webhook `POST /v1/email/webhooks/resend` verifies the Svix signature (`RESEND_WEBHOOK_SECRET`) and adds bounced and complained addresses to `email_suppressions`, which are never emailed again. The API key and message bodies are never logged. Domain setup: see [`docs/deploy-hestia.md`](docs/deploy-hestia.md#email-resend).
 
 ### Stripe
 Create recurring Prices for Plus ($5/mo, $48/yr), Business ($29/mo, $290/yr), Brand ($249/mo, $2,490/yr) and put the IDs in `STRIPE_PRICE_*`. Add a webhook to `<APP_URL>/api/v1/stripe/webhook` for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.expired`, `customer.subscription.created|updated|deleted`, `invoice.payment_failed`, `charge.refunded`. Enable the Customer Portal and Connect (Express) for seller payouts. Prices per zone are editable in **Admin → Pricing**. A PayPal adapter can implement the same `PaymentProvider` interface (`apps/api/src/services/payments/provider.ts`); it is not built in Phase 1.

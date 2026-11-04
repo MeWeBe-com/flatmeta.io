@@ -6,6 +6,7 @@ import billingRoutes from './billing.js';
 import liveRoutes from './live.js';
 import chatRoutes from './chat.js';
 import clanRoutes from './clans.js';
+import emailRoutes from './email.js';
 import marketplaceRoutes from './marketplace.js';
 import meRoutes from './me.js';
 import orgRoutes from './orgs.js';
@@ -16,7 +17,7 @@ import showcaseRoutes from './showcase.js';
 import socialRoutes from './social.js';
 
 export async function registerRoutes(app: App) {
-  for (const r of [authRoutes, meRoutes, plotRoutes, regionRoutes, sitemapRoutes, socialRoutes, chatRoutes, clanRoutes, marketplaceRoutes, searchRoutes, orgRoutes, billingRoutes, aiRoutes, showcaseRoutes, adminRoutes, liveRoutes]) {
+  for (const r of [authRoutes, meRoutes, plotRoutes, regionRoutes, sitemapRoutes, socialRoutes, chatRoutes, clanRoutes, emailRoutes, marketplaceRoutes, searchRoutes, orgRoutes, billingRoutes, aiRoutes, showcaseRoutes, adminRoutes, liveRoutes]) {
     await r(app);
   }
 }

@@ -22,6 +22,13 @@
       "when": 1793362631343,
       "tag": "0002_old_energizer",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793780004341,
+      "tag": "0003_fat_vertigo",
+      "breakpoints": true
     }
   ]
 }

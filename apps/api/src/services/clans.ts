@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { db, schema } from '../db/client.js';
+import { emailUser, quietly, templates } from '../email/index.js';
 import type { Clan, User } from '../db/schema.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { stripText } from '../lib/markdown.js';
@@ -114,6 +115,7 @@ export async function invite(me: User, slug: string, username: string) {
   if (open) throw conflict('Invite already sent.');
   const [row] = await db.insert(schema.clanRequests).values({ clanId: clan.id, userId: target.id, kind: 'invite' }).returning();
   await notify(target.id, 'clan_invite', { clan: clan.name, slug: clan.slug, requestId: row!.id, by: me.displayName });
+  await quietly(emailUser(target.id, templates.clanInvite(me.displayName, clan), { idempotencyKey: `clan-invite-${row!.id}` }));
   return { status: 'invited' as const };
 }
 

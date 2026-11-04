@@ -46,6 +46,13 @@ const schema = z.object({
   SMTP_PASS: optional,
   SMTP_SECURE: bool,
   MAIL_FROM: z.string().default('FlatMeta <hello@flatmeta.io>'),
+  MAIL_REPLY_TO: optional,
+  // Resend (https://resend.com) is the primary email provider; SMTP is the fallback; neither = log only.
+  RESEND_API_KEY: optional,
+  RESEND_WEBHOOK_SECRET: optional, // whsec_… from the Resend webhook; enables /v1/email/webhooks/resend
+  EMAIL_QUEUE: z.enum(['auto', 'true', 'false']).default('auto'), // auto = queue through the worker whenever a real provider is set
+  EMAIL_RATE_PER_SECOND: z.coerce.number().int().min(1).max(100).default(2), // Resend's default API limit is 2 requests/s
+  ADMIN_EMAILS: z.string().default(''), // extra comma-separated addresses for admin notifications (admins in the DB are always included)
 
   STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
   MEDIA_DIR: z.string().default('./storage/media'),
@@ -139,6 +146,7 @@ export const config = load();
 
 type Policy = Pick<Config, 'APP_ENV' | 'SMTP_HOST' | 'STRIPE_SECRET_KEY' | 'PAYMENTS_MOCK' | 'DEV_CODE_ECHO'>;
 
+
 /**
  * Fake checkout: only without Stripe keys, only when PAYMENTS_MOCK is on, and never when APP_ENV=production.
  * Keyed on APP_ENV (not NODE_ENV) so staging, which runs a production build, can still be tested end to end.
@@ -146,10 +154,14 @@ type Policy = Pick<Config, 'APP_ENV' | 'SMTP_HOST' | 'STRIPE_SECRET_KEY' | 'PAYM
 export const allowPaymentsMock = (c: Policy) => !c.STRIPE_SECRET_KEY && c.PAYMENTS_MOCK && c.APP_ENV !== 'production';
 export const paymentsMock = () => allowPaymentsMock(config);
 
-/** Show sign-in codes on screen when email can't be sent (no SMTP) outside production. */
-export const allowDevCodeEcho = (c: Policy) => {
+/** Which email provider is active: Resend if keyed, else SMTP, else log-only. */
+export const emailProviderFor = (c: Pick<Config, 'RESEND_API_KEY' | 'SMTP_HOST'>): 'resend' | 'smtp' | 'log' => (c.RESEND_API_KEY ? 'resend' : c.SMTP_HOST ? 'smtp' : 'log');
+export const emailProvider = () => emailProviderFor(config);
+
+/** Show sign-in codes on screen when email can't be sent (no provider) outside production. */
+export const allowDevCodeEcho = (c: Policy & Partial<Pick<Config, 'RESEND_API_KEY'>>) => {
   if (c.APP_ENV === 'production' || c.DEV_CODE_ECHO === 'false') return false;
-  return c.DEV_CODE_ECHO === 'true' || !c.SMTP_HOST;
+  return c.DEV_CODE_ECHO === 'true' || emailProviderFor({ RESEND_API_KEY: c.RESEND_API_KEY, SMTP_HOST: c.SMTP_HOST }) === 'log';
 };
 export const devCodeEcho = () => allowDevCodeEcho(config);
 

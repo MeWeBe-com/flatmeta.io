@@ -1,3 +1,4 @@
+import { emailUser, quietly, templates } from '../email/index.js';
 import { and, eq, inArray } from 'drizzle-orm';
 import { getDomain } from 'tldts';
 import { db, schema } from '../db/client.js';
@@ -101,6 +102,7 @@ export async function completeLandmarkClaim(order: Order) {
   if (order.userId) {
     await unlock(order.userId, 'brand-verified');
     await notify(order.userId, 'landmark', { plotId: plot.id, title: updated?.title });
+    if (updated) await quietly(emailUser(order.userId, templates.landmarkReady(updated), { idempotencyKey: `landmark-${order.id}` }));
   }
   if (updated) {
     await afterClaim(updated, order.userId);

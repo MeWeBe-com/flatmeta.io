@@ -1,5 +1,6 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { config } from '../config.js';
+import { emailUser, quietly, templates } from '../email/index.js';
 import { db, schema } from '../db/client.js';
 import type { Listing, Order, Plot, User } from '../db/schema.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
@@ -163,6 +164,7 @@ export async function fulfilListing(order: Order): Promise<'sold' | 'refunded'> 
   if (!outcome.ok) {
     await refundOrder(order, outcome.reason);
     await notify(buyerId, 'refund', { reason: `${outcome.reason} You have been refunded in full.` });
+    await quietly(emailUser(buyerId, templates.listingRefund(outcome.reason, order.amountCents), { idempotencyKey: `refund-${order.id}` }));
     return 'refunded';
   }
   const { plot, sellerId } = outcome;
@@ -171,6 +173,8 @@ export async function fulfilListing(order: Order): Promise<'sold' | 'refunded'> 
     if (sellerId) await unlock(sellerId, 'first-sale').catch(() => undefined);
     if (sellerId) await notify(sellerId, 'sold', { plotId: plot.id, title: plot.title, slug: plot.slug, priceCents: order.amountCents, feeCents: outcome.fee });
     await notify(buyerId, 'purchased', { plotId: plot.id, title: plot.title, slug: plot.slug });
+    if (sellerId) await quietly(emailUser(sellerId, templates.listingSold(plot, order.amountCents, outcome.fee), { idempotencyKey: `sold-${order.id}` }));
+    await quietly(emailUser(buyerId, templates.listingPurchased(plot, order.amountCents), { idempotencyKey: `purchased-${order.id}` }));
     await recordAction(buyerId, 'claim_plot', { ref: order.id, noXp: true });
   } catch (err) {
     logger.warn({ err }, 'post-sale notifications failed');
@@ -212,6 +216,7 @@ export async function runPayouts(): Promise<{ paid: number; failed: number; skip
       failed++;
       logger.error({ userId, error: res.error }, 'payout failed');
       await notify(userId, 'payout_failed', { amountCents: r.balance });
+      await quietly(emailUser(userId, templates.payoutFailed(r.balance), { idempotencyKey: `payout-failed-${key}` }));
       continue;
     }
     await recordPayout(userId, r.balance, res.reference);
@@ -232,4 +237,5 @@ export async function recordPayout(userId: string, amountCents: number, referenc
     { account: 'external', kind: 'payout', amountCents, currency: config.CURRENCY, meta: { reference, userId, ...meta } },
   ]);
   await notify(userId, 'payout', { amountCents });
+  await quietly(emailUser(userId, templates.payoutSent(amountCents)));
 }

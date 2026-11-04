@@ -67,7 +67,8 @@ Status note: milestones M1–M12 were first built **before** the kickoff file wa
 | [x] | Owner: grant the Claude GitHub App write access to `MeWeBe-com/flatmeta.io` and `flatmetaAPI` | owner | done (2026-11-02) |
 | [x] | Owner: set `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KEY`, `DEPLOY_PATH` (and optional `DEPLOY_PORT`) repo secrets | owner | done: push to v2 deploys staging |
 | [x] | Owner: staging server live at https://staging.flatmeta.io (HestiaCP, user `najamussaqib`, web 3200 / api 3201 / worker 3203, deploy via forced-command SSH key) | owner | done |
-| [ ] | Owner: choose an SMTP provider and set `SMTP_*` (staging shows sign-in codes on screen until then; production requires it) | owner | todo |
+| [x] | Email provider: Resend integrated (`apps/api/src/email`: templates, Resend/SMTP/log providers, worker queue with retries and rate limits, Svix-verified webhook suppressing bounces and complaints, tests with a mocked client) | claude | done (2026-11-04) |
+| [ ] | Owner: Resend account, verify `flatmeta.io` in Resend (SPF/DKIM/DMARC records in Cloudflare), set `RESEND_API_KEY`, `MAIL_FROM`, `RESEND_WEBHOOK_SECRET` on staging (see docs/deploy-hestia.md → Email) | owner | todo |
 | [ ] | Owner: Stripe test keys, products/prices and webhook for staging; live keys later | owner | todo |
 | [ ] | Owner: AI keys (Anthropic and/or OpenAI/Gemini) and the image provider choice (procedural, OpenAI, Imagen or the Google Flow file drop) | owner | todo |
 | [ ] | Owner: production cutover plan from v1 flatmeta.io, including migrating existing land and users (see progress.md open questions) | owner | todo |

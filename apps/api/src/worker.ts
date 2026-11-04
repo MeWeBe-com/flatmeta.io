@@ -7,6 +7,7 @@ import { Queue, Worker } from 'bullmq';
 import { config } from './config.js';
 import { pool } from './db/client.js';
 import { JOBS } from './jobs/maintenance.js';
+import { createEmailWorker } from './email/queue.js';
 import { logger } from './lib/logger.js';
 import { bullConnection, closeRedis } from './lib/redis.js';
 
@@ -34,13 +35,17 @@ const worker = new Worker(
 );
 worker.on('failed', (job, err) => logger.error({ job: job?.name, err }, 'job failed'));
 
+// Outgoing email: retries with backoff and the provider's rate limit (see src/email/queue.ts).
+const emailWorker = createEmailWorker();
+
 logger.info(`Worker started (${Object.keys(JOBS).length} scheduled jobs, env ${config.APP_ENV})`);
 
 // Tiny health endpoint so deploy scripts and monitors can check the worker (WORKER_HEALTH_PORT).
 const health = createServer((req, res) => {
   if (req.url === '/healthz') {
-    res.writeHead(worker.isRunning() ? 200 : 503, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ ok: worker.isRunning(), jobs: Object.keys(JOBS).length, env: config.APP_ENV }));
+    const up = worker.isRunning() && emailWorker.isRunning();
+    res.writeHead(up ? 200 : 503, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ ok: up, jobs: Object.keys(JOBS).length, env: config.APP_ENV }));
   } else {
     res.writeHead(404).end();
   }
@@ -50,6 +55,7 @@ process.send?.('ready');
 
 const shutdown = async () => {
   health.close();
+  await emailWorker.close();
   await worker.close();
   await queue.close();
   await pool.end();

@@ -745,6 +745,16 @@ export const clanRequests = pgTable(
   (t) => [uniqueIndex('clan_requests_pending_idx').on(t.clanId, t.userId, t.kind).where(sql`${t.status} = 'pending'`)],
 );
 
+// ─── Email ───────────────────────────────────────────────────────────────────
+
+/** Addresses we must not email again (hard bounce, spam complaint, or manual). Fed by the Resend webhook. */
+export const emailSuppressions = pgTable('email_suppressions', {
+  email: citext('email').primaryKey(),
+  reason: text('reason').notNull(), // bounced | complained | manual
+  detail: text('detail'),
+  createdAt: createdAt(),
+});
+
 export type User = typeof users.$inferSelect;
 export type Plot = typeof plots.$inferSelect;
 export type Organization = typeof organizations.$inferSelect;

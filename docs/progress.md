@@ -137,6 +137,19 @@ Each step appends a short summary: what was done, decisions made, what's next.
 
 **Next:** keys (SMTP, Stripe test, AI) on staging; then the production cutover plan.
 
+## Email through Resend (2026-11-04)
+
+**Done:** Resend (official `resend` SDK) is the email provider, with SMTP as fallback and log-only when neither is set (`RESEND_API_KEY` → Resend; else `SMTP_*`; else logged, and on non-production the sign-in code is shown on screen). New module `apps/api/src/email`:
+- **Templates** (HTML + plain text from one layout, user text escaped): sign-in and claim codes, organisation and clan invites, marketplace sold / purchased / refund / payout sent / payout failed, claim approved / rejected, Landmark ready, removal-request result, admin notices (claim needing manual review, removal request), and a generic notice. Every email carries Resend tags `type` and `env`, and `MAIL_REPLY_TO` when set.
+- **Queue:** with a real provider, emails go through the BullMQ `email` queue in `flatmeta-worker`: sign-in codes first, 8 attempts with exponential backoff, `rate_limit_exceeded` honoured using Resend's `retry-after` without spending an attempt, permanent errors (invalid address, unverified sender, bad key) dropped and logged, limiter `EMAIL_RATE_PER_SECOND` (default 2, Resend's default limit). Idempotency keys on event emails. If Redis is unreachable the API sends inline with short retries. The worker health check includes the email worker.
+- **Suppression:** table `email_suppressions` (migration 0003). `POST /v1/email/webhooks/resend` verifies the Svix signature with `RESEND_WEBHOOK_SECRET` (standardwebhooks, the library the Resend SDK uses) and suppresses `email.bounced` and `email.complained` recipients; suppressed addresses are skipped.
+- **Privacy:** the API key, recipients and message bodies never reach the logs (only provider, message id and type); production logs no bodies even without a provider.
+- **Tests:** 10 new (mocked Resend client): payload (from, reply-to, HTML + text, tags, idempotency key), HTML escaping, inline retries vs permanent failure, worker rate-limit / permanent / network handling, no secrets in logs, suppression, webhook signature (valid, wrong secret, tampered body, disabled without secret), queue, and that a marketplace sale and a clan invite actually send their emails. Provider selection is tested by loading the real config in fresh processes.
+
+**Decisions:** one sending path for all email; side-effect emails never break the flow that triggers them; admins in the database plus `ADMIN_EMAILS` get admin notices. The YourBidReady project's code wasn't available here, so this follows the same described pattern (SDK, env names, queue, Svix webhook) rather than copying its code.
+
+**Next (owner):** create the Resend account, verify the domain in Cloudflare DNS (SPF on the `send` subdomain, DKIM `resend._domainkey`, DMARC), then set `RESEND_API_KEY`, `MAIL_FROM` and the webhook secret on staging.
+
 ## Open questions
 
 0. **URGENT: rotate the Laravel `APP_KEY`.** `flatmetaAPI/.env.example` (all v1 branches, since commit `363faab`) contains a real key: `APP_KEY=base64:ah1EUh…`. Rotate it on every server that ever ran it. It is removed from `v2`; it stays in v1 history unless you rewrite it.
@@ -160,7 +173,7 @@ Each step appends a short summary: what was done, decisions made, what's next.
 17. **Guest avatars** appear anonymously on the map ("Guest 1234") and can read chat but not write. Confirm this matches how open you want the world to be.
 
 Session started 2026-11-02
-18. **SMTP provider** for sign-in and notification email (Postmark, Mailgun, Amazon SES or the domain's SMTP). Until set, staging shows codes on screen; production cannot sign anyone in without it.
+18. **Email provider:** decided: Resend (integrated 2026-11-04). Still needed: the Resend account, domain verification and keys. Sending domain: `flatmeta.io` for both environments, or a subdomain such as `mail.flatmeta.io` to keep staging and production reputations apart?
 19. **Stripe test keys** for staging (secret key, webhook secret, price IDs for Plus/Business/Brand) and Connect for marketplace payouts; then live keys for production.
 20. **AI keys:** Anthropic (default text model), and/or OpenAI or Gemini; without them everything falls back to heuristics.
 21. **Image provider:** procedural (free, current), OpenAI Images, Google Imagen (`GEMINI_API_KEY`), or the Google Flow file-drop pipeline.

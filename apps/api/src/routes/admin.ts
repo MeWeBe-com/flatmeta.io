@@ -7,7 +7,7 @@ import { db, schema } from '../db/client.js';
 import type { ShowcaseInfo } from '../db/schema.js';
 import { requireAdmin, requireStaff } from '../lib/auth.js';
 import { badRequest, notFound } from '../lib/errors.js';
-import { sendNoticeEmail } from '../lib/mail.js';
+import { sendEmail, templates } from '../email/index.js';
 import { DEFAULT_TIERS } from '../lib/pricing.js';
 import { refundOrder } from '../services/billing.js';
 import { clearPriceCache, recountCountry, releasePlot } from '../services/plots.js';
@@ -438,14 +438,7 @@ export default async function adminRoutes(app: App) {
       const [plot] = await db.select().from(schema.plots).where(eq(schema.plots.id, c.plotId));
       const status = req.body.action === 'approve' ? 'approved' : 'rejected';
       await db.update(schema.claimRequests).set({ status, note: req.body.note ?? c.note, updatedAt: new Date() }).where(eq(schema.claimRequests.id, c.id));
-      const link = `${config.APP_URL}/claim/${plot?.slug}?request=${c.id}`;
-      await sendNoticeEmail(
-        c.email,
-        req.body.action === 'approve' ? `Your FlatMeta claim for ${c.orgName} is approved` : `About your FlatMeta claim for ${c.orgName}`,
-        req.body.action === 'approve'
-          ? `Good news: we verified your claim for ${plot?.title}. Complete it here: ${link}`
-          : `We couldn't verify your claim for ${plot?.title}.${req.body.note ? `\n\n${req.body.note}` : ''}\n\nReply to this email if you think this is a mistake.`,
-      );
+      await sendEmail(c.email, req.body.action === 'approve' ? templates.claimApproved(c.orgName, plot?.slug ?? '', c.id) : templates.claimRejected(c.orgName, req.body.note ?? null));
       await audit(admin.id, `claim.${req.body.action}`, 'claim', c.id, { note: req.body.note });
       return { ok: true, status };
     },
@@ -477,7 +470,7 @@ export default async function adminRoutes(app: App) {
       await recountCountry(p?.c ?? null);
     }
     await db.update(schema.takedownRequests).set({ status: req.body.action === 'remove' ? 'removed' : 'rejected' }).where(eq(schema.takedownRequests.id, t.id));
-    await sendNoticeEmail(t.email, 'Your FlatMeta removal request', req.body.action === 'remove' ? 'We have removed the showcase plot you reported. Thank you for letting us know.' : 'We reviewed your request and kept the plot online. Reply to this email if you would like to discuss it.');
+    await sendEmail(t.email, templates.takedownResult(req.body.action === 'remove'));
     await audit(admin.id, `takedown.${req.body.action}`, 'plot', t.plotId);
     return { ok: true };
   });

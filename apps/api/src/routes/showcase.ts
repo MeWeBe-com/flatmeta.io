@@ -1,5 +1,6 @@
 import { desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { emailAdmins, quietly, templates } from '../email/index.js';
 import type { App } from '../app.js';
 import { db, schema } from '../db/client.js';
 import { requireUser } from '../lib/auth.js';
@@ -38,6 +39,7 @@ export default async function showcaseRoutes(app: App) {
         })
         .returning();
       if (!matches) {
+        await quietly(emailAdmins(templates.adminClaimReview(stripText(req.body.orgName, 100), req.body.email.toLowerCase(), plot.title)));
         return { requestId: request!.id, status: 'manual_review', message: `Your email isn't at ${new URL(plot.showcase.website).hostname}, so our team will verify your claim by hand (usually within 2 working days).` };
       }
       const devCode = await issueCode(req.body.email, 'claim', request!.id, plot.showcase.brand);
@@ -103,6 +105,7 @@ export default async function showcaseRoutes(app: App) {
         organisation: req.body.organisation ? stripText(req.body.organisation, 120) : null,
         message: stripText(req.body.message, 2000),
       });
+      await quietly(emailAdmins(templates.adminTakedown(stripText(req.body.name, 100), req.body.email, plot.title, stripText(req.body.message, 2000))));
       return { ok: true, message: 'Thanks. Our team reviews removal requests within 2 working days.' };
     },
   );

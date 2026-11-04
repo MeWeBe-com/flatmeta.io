@@ -55,7 +55,7 @@ Config values: `APP_NAME=FlatMeta`, `PRODUCTION_DOMAIN=flatmeta.io`, `STAGING_DO
    git clone -b v2 git@github.com:MeWeBe-com/flatmeta.io.git ~/flatmeta && cd ~/flatmeta
    cp .env.example .env && nano .env
    ```
-   Minimum for production: `NODE_ENV=production`, `APP_ENV=production` (or `staging`), `APP_URL=https://flatmeta.io`, `DATABASE_URL`, `REDIS_URL`, a long random `SESSION_SECRET` (`openssl rand -hex 32`), `COOKIE_SECURE=true`, `SEED_ADMIN_EMAIL`, SMTP settings, `MEDIA_DIR=/home/USER/flatmeta/apps/api/storage/media`, and the Stripe and AI keys when you have them. `API_INTERNAL_URL` must match `PORT` (`http://127.0.0.1:3201`).
+   Minimum for production: `NODE_ENV=production`, `APP_ENV=production` (or `staging`), `APP_URL=https://flatmeta.io`, `DATABASE_URL`, `REDIS_URL`, a long random `SESSION_SECRET` (`openssl rand -hex 32`), `COOKIE_SECURE=true`, `SEED_ADMIN_EMAIL`, `RESEND_API_KEY` and `MAIL_FROM` (see Email below), `MEDIA_DIR=/home/USER/flatmeta/apps/api/storage/media`, and the Stripe and AI keys when you have them. `API_INTERNAL_URL` must match `PORT` (`http://127.0.0.1:3201`).
 
    **`NODE_ENV=production` and npm:** with that set, `npm install`/`npm ci` skip devDependencies, and the build then fails (for example the shared package's `postinstall` runs `tsc` and exits with code 127, "command not found"). The build needs them. `scripts/deploy.sh` always runs `npm ci --include=dev` and exports `NPM_CONFIG_INCLUDE=dev`; keep `NPM_CONFIG_INCLUDE=dev` in `.env` (it is in `.env.example`) and use `npm ci --include=dev` for any manual install. Set `DEPLOY_PRUNE=1` only if disk is tight: it prunes devDependencies after each deploy, and then `npm run db:seed`, `npm run showcase` and other tsx scripts won't run until the next install.
 8. **First deploy and seed:**
@@ -93,7 +93,7 @@ Run it by hand any time: `cd ~/flatmeta && bash scripts/deploy.sh [branch]`.
 
 Staging runs the same production build (`NODE_ENV=production`) with **`APP_ENV=staging`**; if `APP_ENV` is missing with `NODE_ENV=production`, the app applies production rules (no fake checkout, no on-screen codes), so make sure staging sets `APP_ENV=staging`. On staging, without keys:
 
-- **Sign-in:** with `SMTP_HOST` empty, sign-in codes are shown in the sign-in dialog and written to the API log (`DEV_CODE_ECHO=auto`). Set SMTP to switch this off; production never shows codes and won't start with `DEV_CODE_ECHO=true`.
+- **Sign-in:** with no email provider (`RESEND_API_KEY` and `SMTP_HOST` empty), sign-in codes are shown in the sign-in dialog and written to the API log (`DEV_CODE_ECHO=auto`). Set `RESEND_API_KEY` to switch this off; production never shows codes and won't start with `DEV_CODE_ECHO=true`.
 - **Payments:** with no `STRIPE_SECRET_KEY` and `PAYMENTS_MOCK=true`, checkout goes to a fake "Pay (test)" page. Production ignores `PAYMENTS_MOCK`.
 - **AI:** with no Anthropic/OpenAI/Gemini keys, the designer, suggestions, search and moderation use built-in heuristics; images use the procedural generator (`AI_IMAGE_PROVIDER=procedural`), so the showcase generator works without image keys.
 
@@ -101,6 +101,24 @@ Staging runs the same production build (`NODE_ENV=production`) with **`APP_ENV=s
 Use a second checkout (`~/flatmeta-staging`) with its own `.env`: `APP_ENV=staging`, `APP_URL=https://<STAGING_DOMAIN>`, different `WEB_PORT`/`PORT`/`MCP_PORT`/`WORKER_HEALTH_PORT` (for example 3210/3211/3212/3213), its own database and a different Redis DB index (`redis://127.0.0.1:6379/1`). PM2 names get a `-staging` suffix. Create the second Hestia domain the same way, with the matching ports in its `nodejs-app.conf`. Staging shows a banner and serves `Disallow: /` in `robots.txt`.
 
 The CI deploy job deploys the checkout in `DEPLOY_PATH`. To deploy both environments, create the secrets as **GitHub Environments** (`staging`, `production`) or point `DEPLOY_PATH` at staging until the go-live decision.
+
+## Email (Resend)
+
+FlatMeta sends email through [Resend](https://resend.com). Set it up once per sending domain (use `flatmeta.io` for both staging and production, or a subdomain such as `mail.flatmeta.io` to keep reputations apart):
+
+1. **Add the domain** in Resend → *Domains* → *Add domain* (region: EU or US, close to the server).
+2. **DNS in Cloudflare** (*DNS → Records*). Resend shows the exact records; copy them as shown:
+   - **DKIM:** a `TXT` record named `resend._domainkey` (value starts `p=…`).
+   - **SPF / return path:** an `MX` record on the `send` subdomain pointing at Resend's feedback host (priority 10), and a `TXT` record on `send` with `v=spf1 include:amazonses.com ~all`.
+   - **DMARC** (recommended): `TXT` on `_dmarc` with at least `v=DMARC1; p=none; rua=mailto:dmarc@flatmeta.io`, tightened to `quarantine` once reports look clean.
+   - Set all of them to **DNS only** (grey cloud). Cloudflare can't proxy MX or TXT records, and proxied CNAMEs break verification.
+   - If the root domain already has an SPF record for another sender, don't add a second `v=spf1` record on the root: Resend's SPF lives on the `send` subdomain, so the root record stays as it is.
+3. Press **Verify** in Resend (minutes to a few hours). Sending from an unverified domain fails with `invalid_from_address`, and the worker drops those jobs and logs an error.
+4. **API key:** Resend → *API Keys* → create one with *Sending access*, limited to this domain. Put it in `.env` as `RESEND_API_KEY` (staging and production can use separate keys). Set `MAIL_FROM="FlatMeta <hello@flatmeta.io>"` (an address on the verified domain) and optionally `MAIL_REPLY_TO`.
+5. **Webhook (recommended):** Resend → *Webhooks* → add `https://<APP_URL host>/api/v1/email/webhooks/resend` with the events `email.bounced` and `email.complained`. Copy its signing secret into `RESEND_WEBHOOK_SECRET`. Bounced and complained addresses are then suppressed (table `email_suppressions`; delete a row there to allow an address again).
+6. Redeploy (or `pm2 restart flatmeta-api flatmeta-worker` with `--update-env`). Check: sign in on the site with your own address; the worker log shows `email sent` with the Resend id, and the email appears in Resend → *Emails* with tags `type` and `env`.
+
+Emails are queued in Redis and sent by **`flatmeta-worker`**: if the worker is down, codes wait in the queue (its health check, `127.0.0.1:$WORKER_HEALTH_PORT/healthz`, covers the email worker too). If Redis is unreachable, the API sends inline instead.
 
 ## 4. Operations
 
@@ -125,4 +143,5 @@ The CI deploy job deploys the checkout in `DEPLOY_PATH`. To deploy both environm
 | Share images or sitemap use the wrong host | `APP_URL`; rebuild after changing it (`bash scripts/deploy.sh`) |
 | Deploy job says "skipped" | add the four `DEPLOY_*` secrets |
 | `postinstall` fails with `tsc: not found` (exit 127) | `NODE_ENV=production` made npm skip devDependencies: install with `npm ci --include=dev` (deploy.sh does) and keep `NPM_CONFIG_INCLUDE=dev` in `.env` |
+| Sign-in emails don't arrive | `pm2 logs flatmeta-worker`: `invalid_from_address` = `MAIL_FROM` isn't on a verified Resend domain; `invalid_api_key` = wrong key; `rate_limit_exceeded` is retried automatically. Check the address isn't in `email_suppressions` |
 | `permission denied to create extension` | create the extensions as `postgres` (step 1.5) |
