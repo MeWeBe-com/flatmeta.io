@@ -60,12 +60,32 @@ export function gridKey(gx: number, gy: number): string {
 
 export function boundsOf(points: GridPoint[]): GridBounds | null {
   if (!points.length) return null;
-  return {
-    minGx: Math.min(...points.map((p) => p.gx)),
-    minGy: Math.min(...points.map((p) => p.gy)),
-    maxGx: Math.max(...points.map((p) => p.gx)),
-    maxGy: Math.max(...points.map((p) => p.gy)),
-  };
+
+  // Single-pass O(n) min/max calculation avoids creating 4 intermediate arrays via .map()
+  // and eliminates spread operations (...arr) in Math.min/Math.max that can cause call-stack
+  // overflow on large point arrays while reducing memory allocation overhead.
+  const first = points[0];
+  let minGx = first.gx;
+  let maxGx = first.gx;
+  let minGy = first.gy;
+  let maxGy = first.gy;
+
+  for (let i = 1; i < points.length; i++) {
+    const p = points[i];
+    if (p.gx < minGx) {
+      minGx = p.gx;
+    } else if (p.gx > maxGx) {
+      maxGx = p.gx;
+    }
+
+    if (p.gy < minGy) {
+      minGy = p.gy;
+    } else if (p.gy > maxGy) {
+      maxGy = p.gy;
+    }
+  }
+
+  return { minGx, minGy, maxGx, maxGy };
 }
 
 export function isValidBounds(b: any): b is GridBounds {
