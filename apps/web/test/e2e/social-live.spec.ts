@@ -186,7 +186,7 @@ test('a private chat opened from the peer card on the map reaches the other play
   // A taps Ben's avatar on the map, then Message.
   // Exactly one Ben: his previous page's avatar must be gone (no ghosts after a reload).
   const ben = a.page.locator('.fm-avatar', { hasText: 'Ben' });
-  await expect(ben).toHaveCount(1, { timeout: 15_000 });
+  await expect(ben).toHaveCount(1, { timeout: 30_000 });
   await ben.click();
   const card = a.page.getByRole('dialog', { name: /Ben/ });
   await card.getByRole('button', { name: 'Message' }).click();

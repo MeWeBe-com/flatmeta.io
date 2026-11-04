@@ -197,7 +197,16 @@ h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0
 @keyframes confetti-fall { to { transform: translateY(110vh) rotate(720deg); opacity: .9; } }
 
 /* ── Avatars on the map ─────────────────────────────────────────────────── */
-.fm-avatar { position: relative; display: grid; justify-items: center; cursor: pointer; transform-origin: bottom center; user-select: none; -webkit-tap-highlight-color: transparent; }
+/* Avatars are MapLibre markers: they must stay absolutely positioned and shrink-wrapped. A `position: relative`
+   here once made each marker a full-width block, so a click anywhere on the avatar's row opened its card.
+   Only the face (with a 44 px hit area) takes pointer events; the wrapper, the name and the bubble let clicks
+   through to the map (walk, select land). */
+.maplibregl-marker.fm-avatar { position: absolute; }
+.fm-avatar { display: grid; justify-items: center; width: max-content; pointer-events: none; transform-origin: bottom center; user-select: none; -webkit-tap-highlight-color: transparent; }
+.fm-avatar .fm-face { pointer-events: auto; cursor: pointer; }
+.fm-avatar .fm-face::before { content: ''; position: absolute; inset: -7px; border-radius: 999px; } /* 34 px face, 2 px border: a 44 px target */
+.fm-avatar-me .fm-face { cursor: default; }
+.fm-avatar .fm-name, .fm-avatar .fm-acc { pointer-events: none; }
 .fm-avatar .fm-face { width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center; font-size: 19px; line-height: 1; background: color-mix(in srgb, var(--av) 35%, #0b1020); border: 2px solid var(--av); box-shadow: 0 4px 14px rgb(0 0 0 / .45), 0 0 0 3px rgb(11 16 32 / .35); position: relative; }
 .fm-avatar .fm-acc { position: absolute; top: -9px; right: -6px; font-size: 13px; }
 .fm-avatar .fm-name { margin-top: 3px; font: 600 10px/1 var(--font-sans, system-ui); color: #fff; background: rgb(11 16 32 / .75); padding: 2px 6px; border-radius: 999px; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -209,6 +209,16 @@ Reported: chat (nearby, private, clan) never reached the other player, and follo
 7. Logs: `pm2 logs flatmeta-api-staging --lines 200 | grep -E 'Connection is closed|redis:'` should show nothing new. `pm2 logs flatmeta-web-staging --lines 200 | grep 'outside <Providers>'` should be empty; if not, send me the stack.
 8. Optional reconnect check: `redis-cli -n 6 CLIENT KILL TYPE pubsub`. The API logs `redis: reconnecting` then `redis: reconnected`, health stays `ok`, and DMs keep arriving live.
 
+## Staging bug: an avatar's whole row opened its card (2026-11-04)
+
+**Cause.** `.fm-avatar` had `position: relative` and `display: grid`. Our stylesheet loads after MapLibre's, so this overrode `.maplibregl-marker { position: absolute }`. Each avatar marker became a block as wide as the map (1280 px on desktop, 412 px on a Pixel 7), placed at the avatar's height. Any click on that row hit the marker and opened the card.
+
+**Fix (CSS only).** `.maplibregl-marker.fm-avatar` stays `position: absolute` with `width: max-content`. The wrapper, the name label, the accessory and the speech bubble have `pointer-events: none`. Only the face takes clicks, with a transparent ring that makes a 44 px target (34 px face, 2 px border, 7 px padding). Clicks anywhere else reach the map as before: tap to walk, or open a plot. Keyboard access (Tab, then Enter on an avatar) is unchanged.
+
+**Test.** `avatar-hit.spec.ts` runs on desktop and mobile (Pixel 7, touch taps). Two guests are about 120 m apart in a quiet valley. It checks that the marker is narrower than 160 px; that clicks 150 px left and right of the avatar on the same row open no card, and that my avatar walks toward them; and that a tap on the icon, or 2–3 px outside it within the 44 px ring, opens the card. Against the old CSS it failed (marker 1280 px / 412 px wide); with the fix it passes on both viewports, twice in a row.
+
+**Verify on staging.** Open `https://staging.flatmeta.io/?at=41.3874,2.1686,15` in two windows (guests are fine). In window A, click empty map well to the left and right of B's avatar on the same row: A's avatar walks there and no card opens. Click B's avatar icon: B's card opens. On a phone, do the same with taps.
+
 ## Open questions
 
 0. **URGENT: rotate the Laravel `APP_KEY`.** `flatmetaAPI/.env.example` (all v1 branches, since commit `363faab`) contains a real key: `APP_KEY=base64:ah1EUh…`. Rotate it on every server that ever ran it. It is removed from `v2`; it stays in v1 history unless you rewrite it.
