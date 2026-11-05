@@ -66,3 +66,24 @@ describe('i18n', () => {
     expect(missing).toEqual([]);
   });
 });
+
+import { HOME_PLAZA, pickSpawn, wantsPrecise } from '../../src/lib/spawn';
+
+describe('spawn order', () => {
+  const ip = { source: 'ip' as const, lat: 48.85, lng: 2.35, zoom: 12, approximate: true, city: 'Paris', country: 'FR' };
+  it('prefers the saved spot, then this device, then the approximate location, then home', () => {
+    expect(pickSpawn({ server: { ...ip, source: 'saved', approximate: false }, device: { lat: 1, lng: 1 } })).toMatchObject({ source: 'saved', lat: 48.85 });
+    expect(pickSpawn({ server: ip, device: { lat: 40.4, lng: -3.7 } })).toMatchObject({ source: 'device', lat: 40.4, approximate: false });
+    expect(pickSpawn({ server: ip, device: null })).toMatchObject({ source: 'ip', city: 'Paris', approximate: true, zoom: 12 });
+    expect(pickSpawn({ server: { ...ip, source: 'country', city: null }, device: null })).toMatchObject({ source: 'country', zoom: 7 });
+    expect(pickSpawn({ server: null, device: null })).toMatchObject({ source: 'home', lat: HOME_PLAZA.lat, lng: HOME_PLAZA.lng });
+  });
+  it('ignores broken or empty positions instead of spawning somewhere random', () => {
+    expect(pickSpawn({ server: { ...ip, lat: NaN }, device: { lat: 0, lng: 0 } }).source).toBe('home');
+    expect(pickSpawn({ server: null, device: { lat: 99, lng: 10 } }).source).toBe('home');
+  });
+  it('offers precise location only after an approximate start', () => {
+    expect(wantsPrecise(pickSpawn({ server: ip, device: null }))).toBe(true);
+    expect(wantsPrecise(pickSpawn({ server: null, device: { lat: 40, lng: 2 } }))).toBe(false);
+  });
+});

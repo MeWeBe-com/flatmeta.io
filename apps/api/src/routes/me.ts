@@ -7,6 +7,7 @@ import { badRequest, conflict, notFound } from '../lib/errors.js';
 import { stripText } from '../lib/markdown.js';
 import { storeImage } from '../lib/storage.js';
 import { aiCreditsStatus } from '../lib/users.js';
+import { resolveStart } from '../lib/start-location.js';
 import { ACHIEVEMENTS } from '../game/achievements.js';
 import { addDays, dayKey } from '../game/dates.js';
 import { claimQuest, ensureQuests, recordAction } from '../game/engine.js';
@@ -191,6 +192,29 @@ export default async function meRoutes(app: App) {
       const user = requireUser(req);
       const ref = `${req.body.plotId ?? req.body.target ?? 'site'}:${req.body.channel ?? 'link'}`;
       return { game: await recordAction(user.id, 'share', { ref }) };
+    },
+  );
+
+  // Where to start the map: saved spot (signed in), else Cloudflare's approximate location, else the country
+  // centre, else the Home plaza. Nothing is stored and the request isn't logged (no IP, no coordinates in logs).
+  app.get(
+    '/v1/me/approx-location',
+    { logLevel: 'warn', schema: { tags: ['me'], summary: 'Start position for the map (saved, approximate from the network, or a safe default)' } },
+    async (req, reply) => {
+      reply.header('cache-control', 'private, no-store');
+      let saved: { lat: number | null; lng: number | null } | null = null;
+      if (req.user) {
+        const [u] = await db.select({ lat: schema.users.lastLat, lng: schema.users.lastLng }).from(schema.users).where(eq(schema.users.id, req.user.id));
+        saved = u ?? null;
+      }
+      return resolveStart({
+        saved,
+        headers: req.headers,
+        countryCentre: async (code) => {
+          const [c] = await db.select({ lat: schema.countries.lat, lng: schema.countries.lng }).from(schema.countries).where(eq(schema.countries.code, code));
+          return c ?? null;
+        },
+      });
     },
   );
 

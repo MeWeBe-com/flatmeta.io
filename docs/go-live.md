@@ -113,6 +113,8 @@ As root (or in the Hestia panel). Replace `USER` with the Hestia user that owns 
 | 11 | `/legal/terms` | no `[brackets]`; company, country and contact filled in |
 | 12 | `/does-not-exist` | the FlatMeta 404 page |
 | 13 | `pm2 logs flatmeta-api-production --lines 100` | no errors, no `Connection is closed` |
+| 14 | Fresh private window, first visit | the avatar starts at your approximate location (City level, "Approximate location · <your city>"), never a random spot; "Use my location" glides it to your exact spot |
+| 15 | `curl -s https://flatmeta.io/api/v1/me/approx-location` from your machine | `"source":"ip"` with your city (needs Cloudflare's *Add visitor location headers* Managed Transform; `"home"` means the headers aren't arriving) |
 
 ## 4. Rollback (under a minute)
 

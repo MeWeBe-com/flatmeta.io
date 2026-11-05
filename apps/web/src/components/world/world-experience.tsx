@@ -3,17 +3,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Compass, LocateFixed, Minus, Plus, Search, Sparkles, Users, Flag, X, HelpCircle } from 'lucide-react';
+import { Compass, LocateFixed, MapPin, Minus, Plus, Search, Sparkles, Users, Flag, X, HelpCircle } from 'lucide-react';
 import type { Rect } from '@/lib/grid';
 import { rectCenter } from '@/lib/grid';
-import { guessStart } from '@/lib/locate';
+import { geoConsent, geoPermission, pickSpawn, precisePosition, readDevicePos, setGeoConsent, SPAWN_ZOOM, wantsPrecise, type ServerStart, type Spawn } from '@/lib/spawn';
 import { compact } from '@/lib/format';
 import { t } from '@/lib/i18n';
 import type { Activity, Peer, Plot, WorldPlot } from '@/lib/types';
 import { WorldMap, type SelectionState, type WorldMapHandle } from '../map/world-map';
-import { useLive, useSession, useTheme } from '../providers';
+import { useGame, useLive, useSession, useTheme } from '../providers';
 import { UserMenu } from '../site-chrome';
-import { Logo, clsx } from '../ui';
+import { Logo, Spinner, clsx } from '../ui';
 import { ChatPanel } from './chat-panel';
 import { ErrorBoundary } from '../error-boundary';
 import { ClaimPanel } from './claim-panel';
@@ -78,12 +78,70 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
     map.current?.flyTo(at.lng, at.lat, LEVEL_ZOOM[l]);
   };
 
-  // First visit: fly from the globe to the visitor's region (no permission prompt).
+  // ── Where I start (see lib/spawn.ts): saved spot → this device → approximate (Cloudflare) → country → Home plaza.
+  // Precise geolocation is offered after a friendly prompt and glides me there when it arrives.
+  const { toast } = useGame();
+  const [spawn, setSpawn] = useState<Spawn | null>(null);
+  const [askGeo, setAskGeo] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const spawnStarted = useRef(false);
+
+  const goPrecise = useCallback(
+    async (fromButton: boolean) => {
+      setAskGeo(false);
+      setLocating(true);
+      try {
+        const p = await precisePosition();
+        setGeoConsent('granted');
+        map.current?.glideMeTo(p.lng, p.lat);
+        map.current?.flyTo(p.lng, p.lat, Math.max(map.current.getZoom(), SPAWN_ZOOM.precise));
+        setSpawn({ source: 'precise', lat: p.lat, lng: p.lng, zoom: SPAWN_ZOOM.precise, approximate: false });
+      } catch (err) {
+        if ((err as { code?: number }).code === 1) setGeoConsent('declined');
+        if (fromButton) toast({ kind: 'info', title: (err as { code?: number }).code === 1 ? 'Location is blocked for this site. You can allow it in your browser settings.' : 'Couldn’t get your exact location. You’re at an approximate spot.' });
+        // Without a precise fix, the Locate button brings me back to my start point.
+        const mine = map.current?.myPosition();
+        if (fromButton && mine) map.current?.flyTo(mine.lng, mine.lat, Math.max(map.current.getZoom(), SPAWN_ZOOM.ip));
+      } finally {
+        setLocating(false);
+      }
+    },
+    [toast],
+  );
+
   useEffect(() => {
-    if (initialView || params.get('plot') || params.get('claim')) return;
-    const start = guessStart();
-    if (start) setTimeout(() => map.current?.flyTo(start.lng, start.lat, Math.min(start.zoom, 5)), 900);
-  }, [initialView, params]);
+    if (spawnStarted.current) return;
+    spawnStarted.current = true;
+    // An explicit ?at= link is a place to be: start me there and don't move me away.
+    if (initialView) {
+      map.current?.startMeAt(initialView.lng, initialView.lat);
+      setSpawn({ source: 'link', lat: initialView.lat, lng: initialView.lng, zoom: initialView.zoom, approximate: false });
+      return;
+    }
+    const deepLink = !!(params.get('plot') || params.get('claim'));
+    const device = readDevicePos();
+    let cancelled = false;
+    void (async () => {
+      const server = await fetch('/api/v1/me/approx-location', { credentials: 'include' })
+        .then((r) => (r.ok ? (r.json() as Promise<ServerStart>) : null))
+        .catch(() => null);
+      if (cancelled) return;
+      const s = pickSpawn({ server, device });
+      // A deep link (?at=, ?plot=, ?claim=) decides the camera; I still start at my own spot, not the link's.
+      map.current?.startMeAt(s.lng, s.lat);
+      if (!deepLink && !params.get('dm')) map.current?.flyTo(s.lng, s.lat, s.zoom);
+      setSpawn(s);
+      if (!wantsPrecise(s)) return;
+      const consent = geoConsent();
+      const perm = await geoPermission();
+      if (cancelled || perm === 'denied') return;
+      if (consent === 'granted' || perm === 'granted') void goPrecise(false);
+      else if (consent !== 'declined') setAskGeo(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialView, params, goPrecise]);
 
   // Deep links: ?plot=slug, ?claim=minGx,minGy,maxGx,maxGy
   useEffect(() => {
@@ -214,6 +272,32 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
         </div>
       )}
 
+      {/* Start where you are? (asked once, in the app, before the browser's own prompt) */}
+      {askGeo && !claimMode && (
+        <div className="absolute z-30 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 top-[64px] sm:top-[156px] sm:w-[22rem] glass rounded-2xl p-3 animate-pop" role="dialog" aria-label="Start where you are?">
+          <div className="flex items-start gap-3">
+            <span className="size-9 shrink-0 rounded-xl grid place-items-center bg-[rgb(45_226_196/.12)] text-[var(--color-teal)]"><MapPin size={18} /></span>
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold">Start where you are?</div>
+              <p className="text-xs muted mt-0.5">We’ll move your avatar to your exact spot. Your location stays on your device{me.user ? ' and your last map position is saved to your account' : ''}.</p>
+              <div className="flex gap-2 mt-2">
+                <button className="btn-primary btn-sm" onClick={() => void goPrecise(true)}>Use my location</button>
+                <button className="btn-ghost btn-sm" onClick={() => { setGeoConsent('declined'); setAskGeo(false); }}>Not now</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {spawn?.approximate && !askGeo && !claimMode && (
+        <button
+          className="absolute z-20 left-3 sm:left-1/2 sm:-translate-x-1/2 top-[64px] sm:top-[156px] glass rounded-full h-8 px-3 text-xs inline-flex items-center gap-1.5"
+          onClick={() => void goPrecise(true)}
+        >
+          <MapPin size={12} /> {spawn.source === 'home' ? 'Starting at FlatMeta Home' : `Approximate location${spawn.city ? ` · ${spawn.city}` : ''}`}
+          <span className="underline">Use precise</span>
+        </button>
+      )}
+
       {/* Left controls */}
       <div className="absolute z-20 left-3 bottom-24 md:bottom-6 flex flex-col gap-2">
         <div className="glass rounded-2xl flex flex-col">
@@ -223,18 +307,10 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
         <button
           className="glass rounded-2xl icon-btn"
           aria-label={t('hud.locate')}
-          onClick={() =>
-            navigator.geolocation?.getCurrentPosition(
-              (p) => map.current?.flyTo(p.coords.longitude, p.coords.latitude, 15),
-              () => {
-                const g = guessStart();
-                if (g) map.current?.flyTo(g.lng, g.lat, g.zoom);
-              },
-              { timeout: 6000 },
-            )
-          }
+          onClick={() => void goPrecise(true)}
+          disabled={locating}
         >
-          <LocateFixed size={18} />
+          {locating ? <Spinner /> : <LocateFixed size={18} />}
         </button>
         <button className="glass rounded-2xl icon-btn" onClick={tour.start} aria-label="How FlatMeta works"><HelpCircle size={18} /></button>
       </div>

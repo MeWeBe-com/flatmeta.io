@@ -77,6 +77,10 @@ export const users = pgTable(
     streak: integer('streak').notNull().default(0),
     lastCheckin: date('last_checkin'),
     homeCountry: char('home_country', { length: 2 }),
+    // Last map position of a signed-in player (spawn point on their next visit). Guests are never stored.
+    lastLat: doublePrecision('last_lat'),
+    lastLng: doublePrecision('last_lng'),
+    lastPosAt: ts('last_pos_at'),
     homesteadUsed: boolean('homestead_used').notNull().default(false),
     aiCreditsUsed: integer('ai_credits_used').notNull().default(0),
     aiCreditsBonus: integer('ai_credits_bonus').notNull().default(0),

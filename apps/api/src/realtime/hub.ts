@@ -66,7 +66,12 @@ interface Conn {
   view: { lat: number; lng: number; wKm: number; hKm: number } | null;
   lastMove: number;
   lastSent: string;
+  /** Signed-in players' last position is saved (their next spawn point): at most every 30 s, and on close. */
+  posSavedAt: number;
+  posDirty: boolean;
 }
+
+const POS_SAVE_MS = 30_000;
 
 const GUEST_FACES = ['🙂', '😎', '🤠', '🧑‍🚀', '🦊', '🐼', '🐙', '🦉'];
 const GUEST_COLORS = ['#2DE2C4', '#8B7CFF', '#FFC94D', '#FF8FB1', '#3FA9F5', '#4ADE80'];
@@ -217,9 +222,21 @@ export function registerHub(app: App) {
     log.debug({ room: m.room.split(':')[0], id: m.id, sockets: delivered }, 'live: delivered chat message');
   }
 
+  /** Remembers where a signed-in player is. Guests are never stored server-side (only live presence, 40 s TTL). */
+  async function savePosition(c: Conn) {
+    if (!c.userId || c.lat === null || c.lng === null) return;
+    c.posDirty = false;
+    c.posSavedAt = Date.now();
+    await db.update(schema.users).set({ lastLat: c.lat, lastLng: c.lng, lastPosAt: new Date() }).where(eq(schema.users.id, c.userId)).catch((err: Error) => log.warn({ err: err.message }, 'live: saving position failed'));
+  }
+
   async function setPosition(c: Conn, lat: number, lng: number) {
     c.lat = lat;
     c.lng = lng;
+    if (c.userId) {
+      c.posDirty = true;
+      if (Date.now() - c.posSavedAt > POS_SAVE_MS) void savePosition(c);
+    }
     if (!conns.has(c.id) || !redisOpen()) return;
     const m = redis.multi();
     m.geoadd(GEO(), lng, lat, c.id);
@@ -313,6 +330,8 @@ export function registerHub(app: App) {
       view: null,
       lastMove: 0,
       lastSent: '',
+      posSavedAt: 0,
+      posDirty: false,
     };
     conns.set(id, conn);
     if (conn.userId) watchUser(conn.userId);
@@ -400,6 +419,7 @@ export function registerHub(app: App) {
     });
     socket.on('close', () => {
       conns.delete(id);
+      if (conn.posDirty) void savePosition(conn);
       if (conn.userId) unwatchUser(conn.userId);
       log.debug({ conn: id, sockets: conns.size }, 'live: socket closed');
       // Late closes during shutdown must not touch a closed client.

@@ -3,7 +3,9 @@ import type { AvatarLook, Peer } from '@/lib/types';
 
 /** Avatars are shown from the City level up (zoom 6.5), so the World level stays a clean globe. */
 export const AVATAR_MIN_ZOOM = 6.5;
-const POS_KEY = 'fm-pos';
+// v2: positions saved before the spawn fix could be random map centres, so they are ignored.
+export const POS_KEY = 'fm-pos-v2';
+const GLIDE_MS = 1400;
 const WALK_VIEWS_PER_SECOND = 0.22; // crossing the screen takes about 4.5 s at any zoom
 
 interface Entry {
@@ -52,6 +54,9 @@ export class AvatarLayer {
   private visible = false;
   private reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   private keys = new Set<string>();
+  /** Where I start, decided by the page (saved spot, precise or approximate location). Never the map centre. */
+  private start: [number, number] | null = null;
+  private glide: { from: [number, number]; to: [number, number]; t0: number; ms: number } | null = null;
 
   constructor(
     private map: MLMap,
@@ -81,18 +86,24 @@ export class AvatarLayer {
     this.visible = visible;
     for (const e of this.peers.values()) e.el.style.display = visible ? '' : 'none';
     if (this.me) this.me.el.style.display = visible ? '' : 'none';
-    if (visible && !this.me) {
-      let start: [number, number] | null = null;
-      try {
-        const saved = JSON.parse(localStorage.getItem(POS_KEY) ?? 'null') as [number, number] | null;
-        const b = this.map.getBounds();
-        if (saved && saved[0] >= b.getWest() && saved[0] <= b.getEast() && saved[1] >= b.getSouth() && saved[1] <= b.getNorth()) start = saved;
-      } catch {
-        /* storage unavailable */
-      }
-      const c = this.map.getCenter();
-      this.placeMe(start ?? [c.lng, c.lat], true);
-    }
+    // I appear only once the start point is known (the page decides it), never at a random map centre.
+    if (visible && !this.me && this.start) this.placeMe(this.start, true);
+  }
+
+  /** Sets my start point. Places me now if avatars are visible, else when the camera reaches City level. */
+  startAt(lng: number, lat: number) {
+    this.start = [lng, lat];
+    if (this.me) this.teleport(lng, lat);
+    else if (this.visible) this.placeMe(this.start, true);
+  }
+
+  /** Glides me smoothly to a new point (precise location arrived). */
+  glideTo(lng: number, lat: number, ms = GLIDE_MS) {
+    this.start = [lng, lat];
+    if (!this.me) return this.startAt(lng, lat);
+    this.walkTarget = null;
+    if (this.reduceMotion) return this.teleport(lng, lat);
+    this.glide = { from: [...this.me.cur], to: [lng, lat], t0: performance.now(), ms };
   }
 
   setPeers(list: Peer[]) {
@@ -159,6 +170,8 @@ export class AvatarLayer {
   /** Jump (teleport) to a point, e.g. after "fly to my plot". */
   teleport(lng: number, lat: number) {
     this.walkTarget = null;
+    this.glide = null;
+    this.start = [lng, lat];
     if (!this.me) return this.placeMe([lng, lat], true);
     this.me.cur = [lng, lat];
     this.me.target = [lng, lat];
@@ -199,6 +212,9 @@ export class AvatarLayer {
     this.lastEmit = now;
     const [lng, lat] = this.me.cur;
     this.cb.onMove(lat, lng);
+    // Where my avatar is, for tests and assistive tooling (not secret: it's drawn on screen anyway).
+    this.me.el.dataset.lat = lat.toFixed(5);
+    this.me.el.dataset.lng = lng.toFixed(5);
     try {
       localStorage.setItem(POS_KEY, JSON.stringify([lng, lat]));
     } catch {
@@ -217,9 +233,26 @@ export class AvatarLayer {
       if (Math.abs(e.cur[0] - e.target[0]) < 1e-7 && Math.abs(e.cur[1] - e.target[1]) < 1e-7) e.cur = e.target;
       e.marker.setLngLat(e.cur);
     }
-    if (this.me && this.visible) this.stepMe(dt);
+    if (this.me && this.glide) this.stepGlide(t);
+    else if (this.me && this.visible) this.stepMe(dt);
     this.raf = requestAnimationFrame(this.tick);
   };
+
+  private stepGlide(t: number) {
+    const me = this.me!;
+    const g = this.glide!;
+    const p = Math.min(1, (t - g.t0) / g.ms);
+    const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; // ease in-out
+    me.cur = [g.from[0] + (g.to[0] - g.from[0]) * e, g.from[1] + (g.to[1] - g.from[1]) * e];
+    me.target = me.cur;
+    me.marker.setLngLat(me.cur);
+    if (p >= 1) {
+      this.glide = null;
+      me.cur = g.to;
+      me.target = g.to;
+      this.emit(true);
+    }
+  }
 
   /** Moves my avatar: along a tap target, or with the arrow keys. */
   private stepMe(dt: number) {

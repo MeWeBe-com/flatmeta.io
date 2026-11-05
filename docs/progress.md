@@ -261,6 +261,21 @@ The web reads the same rule at build time (`NEXT_PUBLIC_PAID_CHECKOUT` from the 
 
 **Still needs the owner:** an email provider (production sign-in depends on it), the production database, the cutover itself, the v1 data decision, and the legal review.
 
+## Production bug: avatar spawned at a random location (2026-11-05)
+
+**Cause.** On a first visit the camera flew to a time-zone guess at continent zoom. The avatar was placed the moment a visitor zoomed past City level (6.5), at the map centre wherever they happened to be looking, or at a position saved on the device the same way. So in practice it landed in a random spot, and that spot was saved and reused next time.
+
+**Fix: one spawn order** (`apps/web/src/lib/spawn.ts`, `apps/api/src/lib/start-location.ts`):
+1. **Signed-in, returning:** the last saved position. The live hub saves signed-in players' positions to `users.last_lat/last_lng` (migration 0004) at most every 30 s and when the socket closes. Guests are never stored server-side; their live presence keeps its 40 s TTL.
+2. **This device:** the last position here (`localStorage`, new key `fm-pos-v2`, so old random positions are ignored).
+3. **Approximate:** `GET /v1/me/approx-location` reads Cloudflare's `cf-iplatitude`, `cf-iplongitude`, `cf-ipcity` and `cf-ipcountry` (Managed Transform "Add visitor location headers"). It stores nothing, sends `Cache-Control: private, no-store`, and logs at `warn` level so no IP or coordinates reach the logs. The map starts at City zoom (12) there.
+4. **Country centre** (`cf-ipcountry` only; zoom 7 so the avatar is visible).
+5. **FlatMeta Home plaza**, next to the HQ landmark. Never a random point. Unknown values (`XX`, Tor `T1`, 0,0, out of range) fall through.
+
+**Precise location:** after an approximate start, a small in-app card asks "Start where you are?". **Use my location** calls `navigator.geolocation` (high accuracy, 8 s timeout), glides the avatar there smoothly (1.4 s ease, or instant with reduced motion), flies the camera along, and remembers the consent. If the browser already allows location, it runs without the card. **Not now** is remembered. Until a precise fix arrives, a pill shows "Approximate location · <city>" (or "Starting at FlatMeta Home") with **Use precise**. The **Locate me** button (renamed from "Find me") uses the same path and explains a blocked permission. A `?at=` link still places the avatar at the linked spot. The privacy policy now describes this.
+
+**Tests:** 7 API tests (fallback order incl. invalid headers; the endpoint for guests, country and home; a signed-in position saved over the socket and used next time; a guest position never saved) and 3 web unit tests (spawn order). New e2e `spawn.spec.ts`, desktop and mobile, with mocked `cf-*` headers and geolocation: approximate start then a glide to the precise spot; "Not now" remembered; country centre; Home plaza; a signed-in player starting at their saved spot on a fresh device; Locate me allowed and blocked. 10/10, three runs in a row; full suite green apart from the two known local-only mock-checkout tests.
+
 ## Open questions
 
 0. **URGENT: rotate the Laravel `APP_KEY`.** `flatmetaAPI/.env.example` (all v1 branches, since commit `363faab`) contains a real key: `APP_KEY=base64:ah1EUh…`. Rotate it on every server that ever ran it. It is removed from `v2`; it stays in v1 history unless you rewrite it.

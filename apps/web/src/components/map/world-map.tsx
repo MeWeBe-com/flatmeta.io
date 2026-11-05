@@ -21,6 +21,10 @@ export interface WorldMapHandle {
   bubble: (userId: string | null, text: string) => void;
   myPosition: () => { lat: number; lng: number } | null;
   teleportMe: (lng: number, lat: number) => void;
+  /** Sets where my avatar starts (placed when avatars become visible). */
+  startMeAt: (lng: number, lat: number) => void;
+  /** Glides my avatar to a new point (e.g. precise location arrived). */
+  glideMeTo: (lng: number, lat: number) => void;
 }
 
 interface Props {
@@ -129,6 +133,8 @@ export function WorldMap(props: Props) {
     bubble: (userId, text) => avatarsRef.current?.bubble(userId, text),
     myPosition: () => avatarsRef.current?.position() ?? null,
     teleportMe: (lng, lat) => avatarsRef.current?.teleport(lng, lat),
+    startMeAt: (lng, lat) => avatarsRef.current?.startAt(lng, lat),
+    glideMeTo: (lng, lat) => avatarsRef.current?.glideTo(lng, lat),
   }));
 
   // ── data loading ──

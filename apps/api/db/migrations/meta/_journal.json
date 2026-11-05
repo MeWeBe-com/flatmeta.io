@@ -29,6 +29,13 @@
       "when": 1793780004341,
       "tag": "0003_fat_vertigo",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793890043925,
+      "tag": "0004_last_position",
+      "breakpoints": true
     }
   ]
 }
