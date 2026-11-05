@@ -101,7 +101,13 @@ test('signed-in player: starts at their last saved position on any device', asyn
 
   // Another device: same account, nothing on the device, Cloudflare says Paris. The saved spot wins.
   const second = await open(browser, info, { headers: PARIS, storage: { cookies, origins: [] } });
-  await expect.poll(async () => ((await (await second.ctx.request.get('/api/v1/me/approx-location')).json()) as { source: string }).source, { timeout: 10_000 }).toBe('saved');
+  // The first spawn (Paris) is saved at once; Barcelona is saved when the first socket closes. Wait for that.
+  await expect
+    .poll(async () => {
+      const r = (await (await second.ctx.request.get('/api/v1/me/approx-location')).json()) as { source: string; lat: number; lng: number };
+      return r.source === 'saved' && near(r, { lat: BARCELONA.latitude, lng: BARCELONA.longitude }, 0.001);
+    }, { timeout: 15_000 })
+    .toBe(true);
   await second.page.goto('/');
   expect(near(await myPos(second.page), { lat: BARCELONA.latitude, lng: BARCELONA.longitude }, 0.001)).toBe(true);
   await expect(second.page.getByRole('button', { name: /Approximate location/ })).toHaveCount(0);
