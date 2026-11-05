@@ -221,17 +221,15 @@ export class LandService {
     return !!tile && String(tile.user_id) === identity.id;
   }
 
-  /** Areas built from the loaded squares (an area at the edge of the view may be partly loaded). */
+  /** Cached areas grouped from loaded squares, rebuilt only in publish() when tiles change. */
+  private cachedAreas: LandArea[] = [];
+
+  /**
+   * Bolt ⚡: Returns cached LandArea list built during publish() to avoid
+   * re-grouping up to 15,000 tiles on every query (O(1) vs O(T)).
+   */
   areas(): LandArea[] {
-    const groups = new Map<string, LandTile[]>();
-    for (const t of this.tiles) {
-      const list = groups.get(t.order_id) || [];
-      list.push(t);
-      groups.set(t.order_id, list);
-    }
-    const out: LandArea[] = [];
-    groups.forEach((tiles, orderId) => out.push(this.buildArea(orderId, tiles)));
-    return out;
+    return this.cachedAreas;
   }
 
   area(orderId: string): LandArea | undefined {
@@ -283,16 +281,30 @@ export class LandService {
   search(query: string): LandArea[] {
     const q = String(query || '').trim().toLowerCase();
     if (!q) return [];
-    return [...this.areas(), ...this.mine]
-      .filter(
-        (a, i, all) =>
-          all.findIndex((b) => b.order_id === a.order_id) === i &&
-          (a.title.toLowerCase().includes(q) ||
-            (a.slug || '').includes(slugify(q)) ||
-            (a.three_words || '').includes(q) ||
-            (a.username || '').toLowerCase().includes(q))
-      )
-      .slice(0, 8);
+
+    // Bolt ⚡: Hoist invariant slugify calculation outside the loop
+    const slugQ = slugify(q);
+    // Bolt ⚡: Replace O(N^2) all.findIndex() deduplication with O(1) Set lookup
+    // and early-exit as soon as 8 results are collected.
+    const seen = new Set<string>();
+    const results: LandArea[] = [];
+    const candidates = [...this.areas(), ...this.mine];
+
+    for (const a of candidates) {
+      if (seen.has(a.order_id)) continue;
+      seen.add(a.order_id);
+
+      if (
+        a.title.toLowerCase().includes(q) ||
+        (a.slug || '').includes(slugQ) ||
+        (a.three_words || '').includes(q) ||
+        (a.username || '').toLowerCase().includes(q)
+      ) {
+        results.push(a);
+        if (results.length >= 8) break;
+      }
+    }
+    return results;
   }
 
   async searchRemote(query: string): Promise<LandArea[]> {
@@ -1003,8 +1015,26 @@ export class LandService {
     this.server.forEach((t, k) => !this.official.has(k) && all.push(t));
     this.drafts.forEach((t, k) => !this.official.has(k) && !this.server.has(k) && all.push(t));
     this.tiles$.next(all);
+    // Bolt ⚡: Recompute cached LandArea groups once per tile publish instead of on every query
+    this.cachedAreas = this.buildAreasFromTiles(all);
     this.myAreas$.next([...this.mine, ...this.localAreas().filter((a) => a.draft && a.is_mine)]);
     this.stats$.next(this.computeStats());
+  }
+
+  /** Groups tiles by order and constructs LandArea instances in O(N). */
+  private buildAreasFromTiles(tiles: LandTile[]): LandArea[] {
+    const groups = new Map<string, LandTile[]>();
+    for (const t of tiles) {
+      let list = groups.get(t.order_id);
+      if (!list) {
+        list = [];
+        groups.set(t.order_id, list);
+      }
+      list.push(t);
+    }
+    const out: LandArea[] = [];
+    groups.forEach((orderTiles, orderId) => out.push(this.buildArea(orderId, orderTiles)));
+    return out;
   }
 
   /** From MyPlaces (all my server land, not just what is in view) plus my drafts. */
