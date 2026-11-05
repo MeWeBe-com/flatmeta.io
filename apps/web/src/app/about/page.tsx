@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { PageShell } from '@/components/site-chrome';
 import { API_DOCS_URL, MCP_URL } from '@/lib/config';
 
-export const metadata: Metadata = { title: 'About FlatMeta', description: 'How FlatMeta works: claim plots of the real world, design them with AI, play, and get found.' };
+export const metadata: Metadata = { title: 'About FlatMeta', description: 'How FlatMeta works: claim plots of the real world, design them with AI, play, and get found.', alternates: { canonical: '/about' } };
 
 const STEPS = [
   ['Explore', 'Spin the globe. Every glowing tile is a plot: explorers, creators, local businesses and showcase brands. Zoom in to see their art.'],

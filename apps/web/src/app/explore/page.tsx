@@ -5,7 +5,7 @@ import { serverApi } from '@/lib/server-api';
 import type { Country, Plot } from '@/lib/types';
 import { ExploreClient } from './explore-client';
 
-export const metadata: Metadata = { title: 'Explore plots', description: 'Discover trending, new and most-loved plots on FlatMeta, plus showcase brands and local businesses from around the world.' };
+export const metadata: Metadata = { title: 'Explore plots', description: 'Discover trending, new and most-loved plots on FlatMeta, plus showcase brands and local businesses from around the world.', alternates: { canonical: '/explore' } };
 
 export default async function ExplorePage() {
   const [plots, countries] = await Promise.all([

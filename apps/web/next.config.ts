@@ -28,6 +28,13 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_ENV: env.APP_ENV ?? 'development',
     NEXT_PUBLIC_PRODUCTION_DOMAIN: env.PRODUCTION_DOMAIN ?? 'flatmeta.io',
     NEXT_PUBLIC_STAGING_DOMAIN: env.STAGING_DOMAIN ?? 'staging.flatmeta.io',
+    // Same rule as the API (apps/api/src/config.ts paidCheckoutFor): auto = off in production, on elsewhere.
+    NEXT_PUBLIC_PAID_CHECKOUT:
+      env.PAID_CHECKOUT_ENABLED === 'true' || ((env.PAID_CHECKOUT_ENABLED ?? 'auto') === 'auto' && (env.APP_ENV ?? (env.NODE_ENV === 'production' ? 'production' : 'development')) !== 'production') ? 'true' : 'false',
+    NEXT_PUBLIC_FREE_LAND_CELLS: env.FREE_LAND_CELLS ?? '100',
+    NEXT_PUBLIC_COMPANY_NAME: env.COMPANY_NAME || 'MeWeBe',
+    NEXT_PUBLIC_COMPANY_COUNTRY: env.COMPANY_COUNTRY || 'United Kingdom',
+    NEXT_PUBLIC_CONTACT_EMAIL: env.CONTACT_EMAIL || 'hello@flatmeta.io',
   },
   // In production the Hestia nginx proxy routes /api and /media before they reach Next; these rewrites make dev (and a bare `next start`) work the same way.
   async rewrites() {

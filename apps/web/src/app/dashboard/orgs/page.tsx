@@ -1,5 +1,7 @@
 'use client';
 
+import { ComingSoon } from '@/components/coming-soon';
+import { PAID_CHECKOUT } from '@/lib/config';
 import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -113,8 +115,9 @@ function OrgCard({ org }: { org: Org }) {
         </div>
         {admin && (
           <div className="flex gap-2">
-            {org.plan === 'free' && <button className="btn-primary btn-sm" onClick={() => void billing('business')} disabled={!!busy}><Building2 size={14} /> Business · $29/mo</button>}
-            {org.plan !== 'brand' && <button className="btn-gold btn-sm" onClick={() => void billing('brand')} disabled={!!busy}>Brand · $249/mo</button>}
+            {org.plan === 'free' && !PAID_CHECKOUT && <ComingSoon compact text="Business and Brand plans are coming soon." />}
+            {org.plan === 'free' && PAID_CHECKOUT && <button className="btn-primary btn-sm" onClick={() => void billing('business')} disabled={!!busy}><Building2 size={14} /> Business · $29/mo</button>}
+            {org.plan !== 'brand' && PAID_CHECKOUT && <button className="btn-gold btn-sm" onClick={() => void billing('brand')} disabled={!!busy}>Brand · $249/mo</button>}
             {org.plan !== 'free' && <button className="btn-ghost btn-sm" onClick={() => void billing()} disabled={!!busy}><CreditCard size={14} /> Manage billing</button>}
           </div>
         )}

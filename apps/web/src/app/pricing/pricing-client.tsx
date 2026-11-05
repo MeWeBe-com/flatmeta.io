@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { ComingSoon } from '@/components/coming-soon';
+import { FREE_LAND_CELLS, PAID_CHECKOUT } from '@/lib/config';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check } from 'lucide-react';
@@ -74,6 +76,8 @@ export function PricingClient({ data }: { data: Plans }) {
               </ul>
               {p.key === 'free' ? (
                 <Link href="/?claim" className="btn-ghost mt-6">Claim your free plot</Link>
+              ) : !PAID_CHECKOUT ? (
+                <ComingSoon compact className="mt-6" text={`${p.name} is coming soon.`} />
               ) : (
                 <button className={clsx('mt-6', highlight ? 'btn-primary' : 'btn-ghost')} disabled={busy === p.key} onClick={() => void subscribe(p.key, p.org)}>
                   {busy === p.key && <Spinner />} {p.org ? `Get ${p.name} for my organisation` : `Get ${p.name}`}
@@ -83,12 +87,17 @@ export function PricingClient({ data }: { data: Plans }) {
           );
         })}
       </div>
-      {data.mock && <p className="text-center text-xs text-[var(--color-gold)]">Payments are in test mode on this server. No real charges are made.</p>}
+      {data.mock && PAID_CHECKOUT && <p className="text-center text-xs text-[var(--color-gold)]">Payments are in test mode on this server. No real charges are made.</p>}
+      {!PAID_CHECKOUT && (
+        <div className="flex justify-center">
+          <ComingSoon text={`Plans, paid land and boosts are coming soon. Right now everyone can claim up to ${FREE_LAND_CELLS} squares of land for free, and editing, chat and clans are all open.`} />
+        </div>
+      )}
 
       <section className="grid lg:grid-cols-2 gap-8 items-start">
         <div>
           <h2 className="text-3xl font-bold">Land, by the cell</h2>
-          <p className="muted mt-2">Buy once, keep it as long as FlatMeta runs. No rent. Prices depend on where on the map you build. Your first plot (up to 2×2 outside city centres) is free.</p>
+          <p className="muted mt-2">{PAID_CHECKOUT ? 'Buy once, keep it as long as FlatMeta runs. No rent. Prices depend on where on the map you build. Your first plot (up to 2×2 outside city centres) is free.' : `Planned prices once payments open. For now your first ${FREE_LAND_CELLS} squares are free, anywhere on the map.`}</p>
           <div className="mt-6 space-y-2">
             {data.tiers.map((t) => (
               <div key={t.tier} className="surface p-4 flex items-center gap-4">

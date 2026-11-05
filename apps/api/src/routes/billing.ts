@@ -2,7 +2,7 @@ import { desc, eq } from 'drizzle-orm';
 import type Stripe from 'stripe';
 import { z } from 'zod';
 import type { App } from '../app.js';
-import { config, paymentsMock } from '../config.js';
+import { config, paidCheckout, paymentsMock } from '../config.js';
 import { db, schema } from '../db/client.js';
 import { requireUser } from '../lib/auth.js';
 import { badRequest, forbidden, notFound } from '../lib/errors.js';
@@ -36,6 +36,12 @@ export default async function billingRoutes(app: App) {
       landmarkPriceCents: LANDMARK_PRICE_CENTS,
     };
   });
+
+  app.get('/v1/features', { schema: { tags: ['billing'], summary: 'Public feature switches (paid checkout, free land allowance)' } }, async () => ({
+    paidCheckout: paidCheckout(),
+    freeLandCells: config.FREE_LAND_CELLS,
+    appEnv: config.APP_ENV,
+  }));
 
   app.post(
     '/v1/billing/checkout',

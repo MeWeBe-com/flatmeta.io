@@ -22,3 +22,6 @@ storage/
 apps/web/public/vendor/
 dump.rdb
 *.rdb
+
+# Rendered per-instance nginx files (scripts/new-instance.mjs)
+deploy/out/

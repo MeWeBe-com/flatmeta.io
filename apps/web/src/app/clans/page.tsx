@@ -5,6 +5,7 @@ import type { Clan, ClanRank } from '@/lib/types';
 import { ClansClient } from './clans-client';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/clans' },
   title: 'Clans',
   description: 'Team up with other explorers. Found a clan, climb the clan leaderboard, and chat with your team on the FlatMeta map.',
 };

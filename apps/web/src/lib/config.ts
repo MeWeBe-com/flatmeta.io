@@ -14,3 +14,13 @@ export const MAP_STYLE_URL = process.env.NEXT_PUBLIC_MAP_STYLE_URL || '';
 export const MAP_ATTRIBUTION = process.env.NEXT_PUBLIC_MAP_ATTRIBUTION || '© OpenStreetMap contributors · OpenFreeMap';
 export const PLAUSIBLE_DOMAIN = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN ?? '';
 export const GOOGLE_AUTH = process.env.NEXT_PUBLIC_GOOGLE_AUTH === 'true';
+
+/** Paid purchases (land beyond the free allowance, plans, upgrades, marketplace, Landmarks). Off at launch in production. */
+export const PAID_CHECKOUT = process.env.NEXT_PUBLIC_PAID_CHECKOUT !== 'false';
+export const FREE_LAND_CELLS = Number(process.env.NEXT_PUBLIC_FREE_LAND_CELLS ?? 100) || 100;
+export const COMING_SOON = 'Paid features are coming soon. Free land, editing, chat and clans are open now.';
+
+// Legal pages
+export const COMPANY_NAME = process.env.NEXT_PUBLIC_COMPANY_NAME || 'MeWeBe';
+export const COMPANY_COUNTRY = process.env.NEXT_PUBLIC_COMPANY_COUNTRY || 'United Kingdom';
+export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'hello@flatmeta.io';

@@ -219,6 +219,48 @@ Reported: chat (nearby, private, clan) never reached the other player, and follo
 
 **Verify on staging.** Open `https://staging.flatmeta.io/?at=41.3874,2.1686,15` in two windows (guests are fine). In window A, click empty map well to the left and right of B's avatar on the same row: A's avatar walks there and no card opens. Click B's avatar icon: B's card opens. On a phone, do the same with taps.
 
+## Go-live preparation (2026-11-05)
+
+Everything for launching v2 at https://flatmeta.io that doesn't need owner credentials. Full runbook: [docs/go-live.md](go-live.md).
+
+**1. Production mode and the payment switch.** `APP_ENV=production` already refused mock checkout and on-screen sign-in codes (covered by the env-policy tests). New: `PAID_CHECKOUT_ENABLED`, where `auto` means off in production and on elsewhere. With it off:
+- Every checkout path (`createCheckout`, subscriptions, upgrades, AI packs, marketplace buy and listing, Landmark checkout) answers HTTP 403 `coming_soon` with a friendly message.
+- The web hides each pay button behind a "coming soon" note: pricing, billing, organisation plans, plot boosts, the AI designer's out-of-credits box, marketplace buy/sell, and the claim panel's prices.
+- **Free land:** each person (or organisation) can claim up to `FREE_LAND_CELLS` = 100 squares in total, **in any tier**. Larger claims say how many free squares are left, and a recount after insert stops two parallel claims from exceeding the allowance. The small Homestead keeps working as before.
+- **Showcase claims:** work-email verification still runs. A verified claim is kept as a lead, the admins get an email, and the brand sees "Landmark checkout opens soon".
+- `GET /v1/features` reports the switch.
+
+The web reads the same rule at build time (`NEXT_PUBLIC_PAID_CHECKOUT` from the shared `.env`). 5 new API tests.
+
+**2. Legal.** `COMPANY_NAME`, `COMPANY_COUNTRY` and `CONTACT_EMAIL` (defaults MeWeBe, United Kingdom, hello@flatmeta.io) fill the terms, privacy and refund pages, so no brackets remain. The land terms describe the launch allowance while payments are off. The privacy policy gained "Cookies and analytics". A small cookie notice (one essential cookie, cookie-free Plausible) shows once when `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` is set. It informs rather than asks, because nothing else is set.
+
+**3. Showcase locations.**
+- **Automatic check:** I compared all 140 curated entries with their stated city (city table) and country (country outlines). No coordinate is wrong. The flags were artifacts: 20 coastal sites sit outside the coarse country outlines, and Mumbai's city-table centre is in the suburbs. So no seed data changed.
+- **Admin → Showcase locations:** lists every showcase plot with links to our map and OpenStreetMap, plus automatic flags: country mismatch, more than 40 km from its city, or more than 1.5 km from its curated address (pushed aside by a collision). Admins can mark plots checked or unchecked in bulk, or paste coordinates and Move a plot. A move keeps the size, re-places it in the nearest free space and moves its cells in one transaction.
+- **Production rule:** `SHOWCASE_REQUIRE_LOCATION_CHECK` (auto = on in production) keeps unchecked showcase plots off the public map, lists, search, counts, sitemap and plot pages. The rule lives in one helper, `lib/visibility.ts`.
+
+**4. SEO.**
+- Production `robots.txt` allows crawling and points to the sitemap. Elsewhere it still says `Disallow: /`, and pages now also carry `noindex`.
+- Canonical URLs on the home page (all `?at=`/`?dm=` variants point to `/`), explore, leaderboards, pricing, business, about, marketplace, clans and the legal pages, in addition to the existing plot, region, country, profile, organisation and clan canonicals.
+- A site-wide 1200×630 OG image (plot pages keep their own).
+- 404 (`not-found.tsx`) and 500 (`error.tsx`, `global-error.tsx`) pages.
+
+**5. Ops.**
+- **`scripts/new-instance.mjs <staging|production>`** writes the instance `.env` from `.env.example`: production ports 3250/3251/3253, Redis DB 7, `REDIS_PREFIX=fm-prod`, `APP_URL=https://flatmeta.io`, random `SESSION_SECRET`, same-origin WebSockets, media at `/home/USER/web/flatmeta.io/private/uploads`. It never overwrites an existing `.env`. It also renders the two Hestia nginx include files with the right ports and media path into `deploy/out/<env>/`.
+- **PM2 names** carry the environment (`flatmeta-*-production`; staging unchanged).
+- **`scripts/deploy.sh [staging|production] [branch]`** refuses a checkout whose `.env` names another environment. It refuses production unless named, from CI, a forced-command key, or without a terminal, and asks you to type `production`. The old `deploy.sh v2` form still works for CI on staging.
+- **Runbook:** `docs/go-live.md` has the owner prerequisites, instance setup, cutover (record v1's Hestia templates, install the include files, switch the proxy template), 13 smoke checks, and the rollback: switch the proxy template back, in under a minute.
+- **CI** now also builds the web app with production settings. That build found a real bug the staging build couldn't: the "coming soon" notice used a client-only helper on the server and broke `/marketplace` prerendering, so the production deploy would have failed. Fixed.
+
+**Checks.** Lint and typecheck clean; 74 API tests and 8 web unit tests pass. The full e2e suite on the staging-like stack passes, except the two mock-checkout tests that need a reachable `APP_URL` (environment-only, as before; they pass in CI). A production-mode stack (`APP_ENV=production`, `fm-prod`, Redis DB 7) showed:
+- `robots.txt` allows indexing; canonical, `og:image` and `index, follow` present;
+- legal pages without brackets;
+- `/v1/features` reports `paidCheckout: false`;
+- pricing and marketplace show only "coming soon" notes, with no pay buttons and no page errors;
+- the sitemap lists no plots while every showcase is unchecked (the gate working).
+
+**Still needs the owner:** an email provider (production sign-in depends on it), the production database, the cutover itself, the v1 data decision, and the legal review.
+
 ## Open questions
 
 0. **URGENT: rotate the Laravel `APP_KEY`.** `flatmetaAPI/.env.example` (all v1 branches, since commit `363faab`) contains a real key: `APP_KEY=base64:ah1EUh…`. Rotate it on every server that ever ran it. It is removed from `v2`; it stays in v1 history unless you rewrite it.

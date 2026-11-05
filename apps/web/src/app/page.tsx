@@ -1,6 +1,10 @@
+import type { Metadata } from 'next';
 import { API_INTERNAL_URL } from '@/lib/internal';
 import { Suspense } from 'react';
 import { WorldExperience } from '@/components/world/world-experience';
+
+// The map takes ?at=, ?plot=, ?dm= … parameters: they all describe the same page.
+export const metadata: Metadata = { alternates: { canonical: '/' } };
 
 async function getStats() {
   try {

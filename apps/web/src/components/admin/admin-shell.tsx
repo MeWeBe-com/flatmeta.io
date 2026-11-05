@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, Flag, Gavel, Map, Receipt, ScrollText, Star, Store, Tags, Users } from 'lucide-react';
+import { BarChart3, Flag, Gavel, Map, Receipt, ScrollText, Star, Store, Tags, Users, MapPin } from 'lucide-react';
 import { useSession } from '../providers';
 import { SiteHeader } from '../site-chrome';
 import { Spinner, clsx } from '../ui';
@@ -10,6 +10,7 @@ import { Spinner, clsx } from '../ui';
 const NAV = [
   { href: '/admin', label: 'Overview', icon: BarChart3 },
   { href: '/admin/showcase', label: 'Showcase', icon: Star },
+  { href: '/admin/showcase/locations', label: 'Showcase locations', icon: MapPin },
   { href: '/admin/moderation', label: 'Moderation', icon: Gavel },
   { href: '/admin/claims', label: 'Claims & takedowns', icon: Flag },
   { href: '/admin/plots', label: 'Plots', icon: Map },
@@ -31,7 +32,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <nav className="flex md:flex-col gap-1 overflow-x-auto md:sticky md:top-24 self-start" aria-label="Admin">
           <div className="hidden md:block text-[11px] uppercase tracking-widest muted font-semibold px-3 mb-2">Admin</div>
           {NAV.map((n) => {
-            const active = n.href === '/admin' ? pathname === n.href : pathname.startsWith(n.href);
+            // The longest matching link wins, so /admin/showcase/locations doesn't also light up /admin/showcase.
+            const best = NAV.filter((o) => (o.href === '/admin' ? pathname === o.href : pathname.startsWith(o.href))).sort((x, y) => y.href.length - x.href.length)[0];
+            const active = best?.href === n.href;
             return (
               <Link key={n.href} href={n.href} className={clsx('flex items-center gap-3 px-3 h-10 rounded-xl text-sm whitespace-nowrap', active ? 'bg-white/8 text-[var(--color-teal)] font-semibold' : 'muted hover:text-[var(--text)] hover:bg-white/5')}>
                 <n.icon size={16} /> {n.label}

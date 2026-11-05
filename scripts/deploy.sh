@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Deploys FlatMeta on the server. Run by the CI deploy job over SSH (the server key uses a forced command,
 # so this script takes everything it needs from the repo, .env and defaults), or by hand:
-#   bash scripts/deploy.sh [branch]        # default: v2
+#   bash scripts/deploy.sh [staging|production] [branch]    # default branch: v2
+#   bash scripts/deploy.sh [branch]                          # older form: the environment comes from .env (APP_ENV)
+# Each environment is its own checkout with its own .env. The name you pass must match that .env, and
+# production deploys only when you run it yourself in a terminal: never from CI or a forced-command SSH key.
 # Steps: update code → install → build (web into a side directory) → migrate → swap → PM2 reload →
 # health checks on $PORT (API) and $WEB_PORT (web) → roll back to the previous commit if they fail.
 # Runs as the app's own Linux user: Node 22 comes from nvm, PM2 is the user's own. No root needed.
@@ -11,6 +14,10 @@ export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 export CI=1
 cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
+ENV_ARG=""
+case "${1:-}" in staging | production | development) ENV_ARG="$1"; shift ;; esac
+YES=0
+if [ "${1:-}" = "--yes" ]; then YES=1; shift; fi
 BRANCH="${1:-${DEPLOY_BRANCH:-v2}}"
 
 # Node 22 via nvm (non-interactive SSH sessions don't load the user's profile).
@@ -29,6 +36,27 @@ eval "$(node scripts/print-env.mjs)"
 PORT="${PORT:-3201}"
 WEB_PORT="${WEB_PORT:-3200}"
 APP_ENV="${APP_ENV:-production}"
+
+# Never deploy the wrong checkout: the named environment must be the one this .env describes.
+if [ -n "$ENV_ARG" ] && [ "$ENV_ARG" != "$APP_ENV" ]; then
+  echo "✗ This checkout is APP_ENV=$APP_ENV (see $ROOT/.env), not $ENV_ARG. Run the deploy in the $ENV_ARG checkout."
+  exit 1
+fi
+# Production is deployed by a person, on purpose: CI keeps auto-deploying staging only.
+if [ "$APP_ENV" = "production" ]; then
+  if [ "$ENV_ARG" != "production" ]; then
+    echo "✗ Refusing to deploy production without naming it. Run by hand: bash scripts/deploy.sh production [branch]"
+    exit 1
+  fi
+  if [ -n "${SSH_ORIGINAL_COMMAND:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ] || ! [ -t 0 ]; then
+    echo "✗ Production deploys run only from an interactive terminal (not CI, cron or a forced-command key)."
+    exit 1
+  fi
+  if [ "$YES" != 1 ]; then
+    read -r -p "Deploy branch '$BRANCH' to PRODUCTION (${APP_URL:-?})? Type 'production' to continue: " answer
+    [ "$answer" = "production" ] || { echo "Cancelled."; exit 1; }
+  fi
+fi
 
 PREV="$(git rev-parse HEAD 2>/dev/null || echo '')"
 
@@ -68,7 +96,7 @@ healthy() {
   return 1
 }
 
-echo "→ Deploying FlatMeta ($APP_ENV) from origin/$BRANCH in $ROOT"
+echo "→ Deploying FlatMeta ($APP_ENV) from origin/$BRANCH in $ROOT (web :$WEB_PORT, api :$PORT)"
 git fetch --prune --quiet origin "$BRANCH"
 git checkout --force --quiet -B "$BRANCH" "origin/$BRANCH"
 echo "  at $(git rev-parse --short HEAD): $(git log -1 --format=%s)"

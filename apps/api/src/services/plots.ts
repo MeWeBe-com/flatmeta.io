@@ -1,5 +1,7 @@
 import { and, count, eq, gte, inArray, lte, ne, or, sql } from 'drizzle-orm';
+import { publicShowcase, publicShowcaseRaw } from '../lib/visibility.js';
 import { db, schema, type Tx } from '../db/client.js';
+import { config, paidCheckout } from '../config.js';
 import type { Plot, User } from '../db/schema.js';
 import { generateImage } from '../ai/image/index.js';
 import { pickPalette } from '../ai/image/procedural.js';
@@ -65,6 +67,21 @@ export interface QuoteResult extends Quote {
   plan: PlanKey;
   plotLimitReached: boolean;
   reasons: string[];
+  /** False while paid checkout is off (launch): only land within the free allowance can be claimed. */
+  paidCheckout: boolean;
+  /** Free-land allowance while paid checkout is off: squares per person or organisation, and how many are used. */
+  freeAllowance: { limit: number; used: number } | null;
+  /** True when this land would need a payment, and payments aren't open yet. */
+  comingSoon: boolean;
+}
+
+/** Squares the person (or organisation) already holds, active or waiting for payment. */
+export async function ownedCells(userId: string, orgId?: string | null): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`coalesce(sum(${schema.plots.cellCount}), 0)::int` })
+    .from(schema.plots)
+    .where(and(orgId ? eq(schema.plots.ownerOrgId, orgId) : and(eq(schema.plots.ownerUserId, userId), sql`${schema.plots.ownerOrgId} is null`), inArray(schema.plots.status, ['active', 'pending_payment'])));
+  return row?.n ?? 0;
 }
 
 export async function quoteFor(user: User | null, rectIn: Rect, orgId?: string | null): Promise<QuoteResult> {
@@ -72,6 +89,22 @@ export async function quoteFor(user: User | null, rectIn: Rect, orgId?: string |
   const plan = user ? await effectivePlan(user, orgId) : 'free';
   const homesteadAvailable = !orgId && (!user || !user.homesteadUsed);
   const q = quote({ rect, prices: await getPrices(), plan, homesteadAvailable });
+  // Launch without payments: everything within the free allowance is free, anything beyond waits for payments.
+  const paid = paidCheckout();
+  let freeAllowance: QuoteResult['freeAllowance'] = null;
+  let comingSoon = false;
+  if (!paid) {
+    const used = user ? await ownedCells(user.id, orgId) : 0;
+    freeAllowance = { limit: config.FREE_LAND_CELLS, used };
+    if (used + q.cells <= config.FREE_LAND_CELLS) {
+      q.free = true;
+      q.discountCents = q.subtotalCents;
+      q.totalCents = 0;
+    } else {
+      q.free = false;
+      comingSoon = true;
+    }
+  }
   const center = rectCenter(rect);
   const conflicts = await overlapping(rect);
   let owned = 0;
@@ -86,7 +119,11 @@ export async function quoteFor(user: User | null, rectIn: Rect, orgId?: string |
   const reasons: string[] = [];
   if (conflicts.length) reasons.push('Some of these cells are already taken.');
   if (q.tooLarge) reasons.push(`Plots on your plan can be at most ${q.maxSide}×${q.maxSide} cells.`);
-  if (plotLimitReached) reasons.push(`Your plan allows ${PLANS[plan].maxPlots} plots. Upgrade for more.`);
+  if (plotLimitReached) reasons.push(paid ? `Your plan allows ${PLANS[plan].maxPlots} plots. Upgrade for more.` : `You can hold ${PLANS[plan].maxPlots} plots for now. More plots come with paid plans, coming soon.`);
+  if (comingSoon && freeAllowance) {
+    const left = Math.max(0, freeAllowance.limit - freeAllowance.used);
+    reasons.push(left > 0 ? `Paid land is coming soon. You can claim ${left} more square${left === 1 ? '' : 's'} free: pick a smaller plot.` : `You have used your ${freeAllowance.limit} free squares. Paid land is coming soon.`);
+  }
   const near = nearestCity(center.lat, center.lng, 30);
   return {
     ...q,
@@ -95,10 +132,13 @@ export async function quoteFor(user: User | null, rectIn: Rect, orgId?: string |
     countryCode: resolveCountry(center.lat, center.lng),
     regionSlug: near?.city.slug ?? null,
     conflicts: conflicts.map((c) => ({ id: c.id, slug: c.slug, title: c.title })),
-    available: conflicts.length === 0 && !q.tooLarge && !plotLimitReached,
+    available: conflicts.length === 0 && !q.tooLarge && !plotLimitReached && !comingSoon,
     plan,
     plotLimitReached,
     reasons,
+    paidCheckout: paid,
+    freeAllowance,
+    comingSoon,
   };
 }
 
@@ -184,7 +224,7 @@ export async function recountCountry(code: string | null) {
       select
         count(*) filter (where status = 'active')::int as plots,
         coalesce(sum(cell_count) filter (where status = 'active'), 0)::int as cells,
-        count(*) filter (where status = 'showcase' and (showcase->>'approved')::boolean)::int as showcase
+        count(*) filter (where ${publicShowcaseRaw()})::int as showcase
       from plots where country_code = ${code}
     ) s
     where c.code = ${code}`);
@@ -278,7 +318,7 @@ export async function neighbours(plot: Plot, limit = 12, by = 5) {
         lte(P.minGy, plot.maxGy + by),
         gte(P.maxGy, plot.minGy - by),
         ne(P.id, plot.id),
-        or(eq(P.status, 'active'), sql`(${P.status} = 'showcase' and (${P.showcase}->>'approved')::boolean)`),
+        or(eq(P.status, 'active'), publicShowcase()),
       ),
     )
     .limit(limit);

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { and, count, desc, eq, gte, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import type { App } from '../app.js';
-import { config } from '../config.js';
+import { config, showcaseLocationCheck } from '../config.js';
 import { db, schema } from '../db/client.js';
 import type { ShowcaseInfo } from '../db/schema.js';
 import { requireAdmin, requireStaff } from '../lib/auth.js';
@@ -11,7 +11,9 @@ import { sendEmail, templates } from '../email/index.js';
 import { DEFAULT_TIERS } from '../lib/pricing.js';
 import { refundOrder } from '../services/billing.js';
 import { clearPriceCache, recountCountry, releasePlot } from '../services/plots.js';
-import { curatedCountries, generateShowcase, regenerateShowcaseImage } from '../showcase/generator.js';
+import { curatedCountries, generateShowcase, loadCurated, moveShowcasePlot, regenerateShowcaseImage } from '../showcase/generator.js';
+import { CITIES } from '../data/cities.js';
+import { haversineKm, resolveCountry } from '../lib/geo.js';
 import { applyPlotPatch, loadPlot, PlotPatch } from './plots.js';
 import { ownersFor, plotView, privateUser } from './views.js';
 
@@ -355,6 +357,99 @@ export default async function adminRoutes(app: App) {
       const res = await regenerateShowcaseImage(req.params.id, req.body.provider, req.body.prompt);
       await audit(admin.id, 'showcase.regenerate_image', 'plot', req.params.id, req.body);
       return { plot: { ...plotView(res.plot, null, { canEdit: true }), showcaseFull: res.plot.showcase }, pending: res.pending, provider: res.provider };
+    },
+  );
+
+  // ── Showcase locations: check that each plot sits on the right place before it goes public ──
+  app.get(
+    '/v1/admin/showcase/locations',
+    { schema: { tags: ['admin'], summary: 'Showcase plots with location checks', querystring: z.object({ country: z.string().length(2).optional(), status: z.enum(['all', 'unverified', 'verified', 'suspect']).default('all') }) } },
+    async (req) => {
+      requireStaff(req);
+      const P = schema.plots;
+      const where: SQL[] = [eq(P.kind, 'showcase')];
+      if (req.query.country) where.push(eq(P.countryCode, req.query.country.toUpperCase()));
+      const rows = await db.select().from(P).where(and(...where)).orderBy(P.countryCode, P.title).limit(2000);
+      // Where the curated file says the organisation is (plots can be pushed aside when space is taken).
+      const seeds = new Map<string, { lat: number; lng: number }>();
+      for (const code of new Set(rows.map((r) => r.countryCode).filter((c): c is string => !!c))) {
+        try {
+          for (const e of (await loadCurated(code)).entries) seeds.set(`${code}:${e.brand.toLowerCase()}`, { lat: e.lat, lng: e.lng });
+        } catch {
+          /* no curated file for this country (AI batch) */
+        }
+      }
+      const out = rows.map((p) => {
+        const sc = p.showcase;
+        const flags: string[] = [];
+        const actual = resolveCountry(p.centerLat, p.centerLng);
+        if (actual && p.countryCode && actual !== p.countryCode) flags.push(`map says ${actual}, plot says ${p.countryCode}`);
+        const city = sc?.city ? CITIES.find((c) => c.name.toLowerCase() === sc.city.toLowerCase()) : undefined;
+        const cityKm = city ? haversineKm(p.centerLat, p.centerLng, city.lat, city.lng) : null;
+        if (cityKm !== null && cityKm > 40) flags.push(`${Math.round(cityKm)} km from ${city!.name}`);
+        const seed = sc ? seeds.get(`${p.countryCode}:${sc.brand.toLowerCase()}`) : undefined;
+        const seedKm = seed ? haversineKm(p.centerLat, p.centerLng, seed.lat, seed.lng) : null;
+        if (seedKm !== null && seedKm > 1.5) flags.push(`placed ${seedKm.toFixed(1)} km from its listed address`);
+        return {
+          id: p.id,
+          slug: p.slug,
+          title: p.title,
+          brand: sc?.brand ?? p.title,
+          city: sc?.city ?? null,
+          countryCode: p.countryCode,
+          lat: p.centerLat,
+          lng: p.centerLng,
+          size: { w: p.maxGx - p.minGx + 1, h: p.maxGy - p.minGy + 1 },
+          approved: !!sc?.approved,
+          locationVerified: !!sc?.locationVerified,
+          locationCheckedAt: sc?.locationCheckedAt ?? null,
+          locationNote: sc?.locationNote ?? null,
+          seed,
+          flags,
+        };
+      });
+      const filtered = out.filter((r) => (req.query.status === 'unverified' ? !r.locationVerified : req.query.status === 'verified' ? r.locationVerified : req.query.status === 'suspect' ? r.flags.length > 0 : true));
+      return {
+        plots: filtered,
+        total: out.length,
+        verified: out.filter((r) => r.locationVerified).length,
+        suspect: out.filter((r) => r.flags.length > 0).length,
+        // In production, unverified showcase plots are hidden from the public map until checked here.
+        publicRequiresCheck: showcaseLocationCheck(),
+      };
+    },
+  );
+
+  app.post(
+    '/v1/admin/showcase/locations',
+    { schema: { tags: ['admin'], summary: 'Bulk mark showcase locations as checked (or not)', body: z.object({ ids: z.array(z.uuid()).min(1).max(500), verified: z.boolean(), note: z.string().max(200).optional() }) } },
+    async (req) => {
+      const admin = requireStaff(req);
+      const patch = { locationVerified: req.body.verified, locationCheckedAt: new Date().toISOString(), locationNote: req.body.note ?? (req.body.verified ? `checked by ${admin.username}` : `unchecked by ${admin.username}`) };
+      await db
+        .update(schema.plots)
+        .set({ showcase: sql`coalesce(${schema.plots.showcase}, '{}'::jsonb) || ${JSON.stringify(patch)}::jsonb`, updatedAt: new Date() })
+        .where(and(inArray(schema.plots.id, req.body.ids), eq(schema.plots.kind, 'showcase')));
+      const codes = await db.selectDistinct({ c: schema.plots.countryCode }).from(schema.plots).where(inArray(schema.plots.id, req.body.ids));
+      for (const { c } of codes) await recountCountry(c);
+      await audit(admin.id, req.body.verified ? 'showcase.location_verify' : 'showcase.location_unverify', 'plot', null, { count: req.body.ids.length });
+      return { ok: true, count: req.body.ids.length };
+    },
+  );
+
+  app.post(
+    '/v1/admin/showcase/:id/move',
+    { schema: { tags: ['admin'], summary: 'Nudge a showcase plot to a new point (keeps its size, marks the location checked)', params: z.object({ id: z.uuid() }), body: z.object({ lat: z.number().min(-85).max(85), lng: z.number().min(-180).max(180) }) } },
+    async (req) => {
+      const admin = requireStaff(req);
+      let moved;
+      try {
+        moved = await moveShowcasePlot(req.params.id, req.body.lat, req.body.lng, admin.username);
+      } catch (err) {
+        throw badRequest((err as Error).message);
+      }
+      await audit(admin.id, 'showcase.move', 'plot', moved.id, req.body);
+      return { plot: { id: moved.id, lat: moved.centerLat, lng: moved.centerLng, countryCode: moved.countryCode, locationVerified: true } };
     },
   );
 

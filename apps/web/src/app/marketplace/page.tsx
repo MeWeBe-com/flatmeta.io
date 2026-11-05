@@ -1,10 +1,13 @@
 import type { Metadata } from 'next';
+import { ComingSoon } from '@/components/coming-soon';
+import { PAID_CHECKOUT } from '@/lib/config';
 import { PageShell } from '@/components/site-chrome';
 import { serverApi } from '@/lib/server-api';
 import type { Country, Listing } from '@/lib/types';
 import { MarketClient } from './market-client';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/marketplace' },
   title: 'Marketplace',
   description: 'Buy land from other FlatMeta players. Plots are licences to display your content on the map, not investments.',
 };
@@ -20,6 +23,7 @@ export default async function MarketplacePage() {
         <div>
           <h1 className="text-4xl md:text-5xl font-bold">The <span className="text-gradient">marketplace</span></h1>
           <p className="muted mt-2 max-w-2xl">Plots other explorers have put up for sale. The seller keeps 90% and FlatMeta keeps a 10% fee. Land is a licence to show your content on the map: it is for building something, not an investment.</p>
+          {!PAID_CHECKOUT && <ComingSoon className="mt-4" text="Buying and selling plots opens soon. Meanwhile, claim free land on the map: everyone gets their first squares free." />}
         </div>
         <MarketClient initial={listings?.listings ?? []} initialNext={listings?.nextCursor ?? null} feeBps={listings?.feeBps ?? 1000} countries={countries?.countries ?? []} />
       </div>

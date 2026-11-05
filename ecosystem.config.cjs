@@ -1,5 +1,6 @@
-// PM2 apps: web (Next.js), API, worker. APP_ENV=staging gives "-staging" names so two
-// environments can live side by side under one user. Everything is read from the repo-root .env.
+// PM2 apps: web (Next.js), API, worker. Names carry the environment (flatmeta-web-staging,
+// flatmeta-api-production, …) so staging and production live side by side under one user.
+// Development keeps the bare names. Everything is read from the repo-root .env.
 //   pm2 startOrReload ecosystem.config.cjs --update-env
 const fs = require('node:fs');
 const path = require('node:path');
@@ -10,7 +11,7 @@ const envFile = path.join(root, '.env');
 const fileEnv = fs.existsSync(envFile) ? parseEnv(fs.readFileSync(envFile, 'utf8')) : {};
 const env = { ...fileEnv, ...process.env };
 const appEnv = env.APP_ENV || 'production';
-const suffix = appEnv === 'production' ? '' : `-${appEnv}`;
+const suffix = appEnv === 'development' ? '' : `-${appEnv}`;
 // Values already in the shell (e.g. `APP_URL=… pm2 start`) win over the file, like dotenv; unrelated shell variables are left alone.
 const overrides = Object.fromEntries(Object.entries(process.env).filter(([k]) => k in fileEnv));
 const base = { ...fileEnv, ...overrides, NODE_ENV: 'production', APP_ENV: appEnv };

@@ -50,6 +50,15 @@ jobs:
           APP_URL: https://ci.example.test
         run: npm run build
 
+      # Production renders different pages (payments off: "coming soon"; indexing on). Build them too, so a
+      # launch-only code path can't break the production deploy.
+      - name: Build the web app with production launch settings
+        env:
+          NODE_ENV: production
+          APP_ENV: production
+          APP_URL: https://flatmeta.io
+        run: cd apps/web && NEXT_DIST_DIR=.next-prodcheck npx next build && rm -rf .next-prodcheck
+
       # Smoke tests against the built app: API (compiled) + worker + web (next start), seeded database, behind
       # scripts/edge-proxy.mjs, which routes /api (WebSockets included) like the Hestia nginx config does.
       - name: Start the stack

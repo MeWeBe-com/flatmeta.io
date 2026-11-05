@@ -4,11 +4,13 @@ This is the guide for the shared server: **HestiaCP** manages the domains, TLS a
 
 What runs:
 
-| Process (PM2) | What | Port (env) |
+| Process (PM2) | What | Port (env): staging / production |
 | --- | --- | --- |
-| `flatmeta-web` | Next.js (pages, share images, PWA) | `WEB_PORT` (3200) |
-| `flatmeta-api` | Fastify: REST `/v1`, WebSocket `/v1/live`, `/docs`, `/openapi.json`, `/mcp`, Stripe webhook | `PORT` (3201) |
-| `flatmeta-worker` | BullMQ jobs (expiry, stats, payouts, cleanup, image import) | health: `WORKER_HEALTH_PORT` (3203) |
+| `flatmeta-web-<env>` | Next.js (pages, share images, PWA) | `WEB_PORT`: 3200 / 3250 |
+| `flatmeta-api-<env>` | Fastify: REST `/v1`, WebSocket `/v1/live`, `/docs`, `/openapi.json`, `/mcp`, Stripe webhook | `PORT`: 3201 / 3251 |
+| `flatmeta-worker-<env>` | BullMQ jobs (expiry, stats, payouts, cleanup, image import, email) | health `WORKER_HEALTH_PORT`: 3203 / 3253 |
+
+`<env>` is `APP_ENV` (`staging` or `production`); a development checkout uses the bare names. **Going live:** see [go-live.md](go-live.md) for the production instance, cutover, smoke checks and the one-minute rollback.
 
 Ports **3000, 3010 and 3100 are taken** on this server; every default here avoids them. All three processes bind to **`HOST`** (default `127.0.0.1`), so they are reachable only through nginx, never on the server's public IP. Keep `HOST=127.0.0.1` in `.env`. Optional: `MCP_PORT` serves `/mcp` on its own port as well (leave empty unless you need it).
 
@@ -94,13 +96,18 @@ Run it by hand any time: `cd ~/flatmeta && bash scripts/deploy.sh [branch]`.
 Staging runs the same production build (`NODE_ENV=production`) with **`APP_ENV=staging`**; if `APP_ENV` is missing with `NODE_ENV=production`, the app applies production rules (no fake checkout, no on-screen codes), so make sure staging sets `APP_ENV=staging`. On staging, without keys:
 
 - **Sign-in:** with no email provider (`RESEND_API_KEY` and `SMTP_HOST` empty), sign-in codes are shown in the sign-in dialog and written to the API log (`DEV_CODE_ECHO=auto`). Set `RESEND_API_KEY` to switch this off; production never shows codes and won't start with `DEV_CODE_ECHO=true`.
-- **Payments:** with no `STRIPE_SECRET_KEY` and `PAYMENTS_MOCK=true`, checkout goes to a fake "Pay (test)" page. Production ignores `PAYMENTS_MOCK`.
+- **Payments:** with no `STRIPE_SECRET_KEY` and `PAYMENTS_MOCK=true`, checkout goes to a fake "Pay (test)" page. Production ignores `PAYMENTS_MOCK`, and with `PAID_CHECKOUT_ENABLED=auto` it has no paid checkout at all ("coming soon") until you set it to `true`.
 - **AI:** with no Anthropic/OpenAI/Gemini keys, the designer, suggestions, search and moderation use built-in heuristics; images use the procedural generator (`AI_IMAGE_PROVIDER=procedural`), so the showcase generator works without image keys.
 
+Each environment is **its own checkout with its own `.env`** (database, Redis DB and `REDIS_PREFIX`, ports, media folder). `node scripts/new-instance.mjs <staging|production> --domain … --home …` writes that `.env` and renders the two nginx include files with the right ports into `deploy/out/<env>/`:
 
-Use a second checkout (`~/flatmeta-staging`) with its own `.env`: `APP_ENV=staging`, `APP_URL=https://<STAGING_DOMAIN>`, different `WEB_PORT`/`PORT`/`MCP_PORT`/`WORKER_HEALTH_PORT` (for example 3210/3211/3212/3213), its own database and a different Redis DB index (`redis://127.0.0.1:6379/1`). PM2 names get a `-staging` suffix. Create the second Hestia domain the same way, with the matching ports in its `nodejs-app.conf`. Staging shows a banner and serves `Disallow: /` in `robots.txt`.
+| | staging | production |
+| --- | --- | --- |
+| ports web / API / worker | 3200 / 3201 / 3203 | 3250 / 3251 / 3253 |
+| Redis | DB 6, `fm-staging` | DB 7, `fm-prod` |
+| media | `/home/USER/web/staging.flatmeta.io/private/uploads` | `/home/USER/web/flatmeta.io/private/uploads` |
 
-The CI deploy job deploys the checkout in `DEPLOY_PATH`. To deploy both environments, create the secrets as **GitHub Environments** (`staging`, `production`) or point `DEPLOY_PATH` at staging until the go-live decision.
+**Deploys:** CI deploys only the checkout in `DEPLOY_PATH` (staging) with `deploy.sh v2`. `scripts/deploy.sh` checks the environment you name against the checkout's `.env`, and **production deploys only when a person runs `bash scripts/deploy.sh production` in a terminal** (it refuses CI, cron and forced-command keys, and asks you to type `production`). Staging shows a banner and serves `Disallow: /` and `noindex`.
 
 ## Email (Resend)
 
@@ -122,7 +129,7 @@ Emails are queued in Redis and sent by **`flatmeta-worker`**: if the worker is d
 
 ## 4. Operations
 
-- **Logs:** `pm2 logs flatmeta-api` (also `-web`, `-worker`), `pm2 monit`.
+- **Logs:** `pm2 logs flatmeta-api-staging` (or `-production`; also `flatmeta-web-…`, `flatmeta-worker-…`), `pm2 monit`.
 - **Backups (cron as the app user):** `15 2 * * * cd ~/flatmeta && bash scripts/backup.sh >> ~/backup.log 2>&1` (a gzipped `pg_dump`, 14 days kept; copy off the server too, with `apps/api/storage/media`).
 - **Restore:** `gunzip -c file.sql.gz | psql "$DATABASE_URL"`.
 - **Stripe:** webhook endpoint `https://<APP_URL host>/api/v1/stripe/webhook` (events listed in the README).

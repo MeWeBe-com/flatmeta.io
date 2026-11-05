@@ -60,7 +60,7 @@ Status note: milestones M1–M12 were first built **before** the kickoff file wa
 | ✓ | Task | Owner | Status |
 |---|------|-------|--------|
 | [ ] | End-to-end Stripe test-mode run with real keys (tested so far: mock checkout and signed webhook payloads) | — | todo |
-| [ ] | Verify curated showcase coordinates in admin (written from memory; some may sit a few blocks off) | — | todo |
+| [ ] | Check every showcase location in Admin → Showcase locations (tooling done; an automatic check of all 140 curated entries found no wrong coordinates; production hides unchecked plots) | owner/admin | todo |
 | [ ] | Self-host map tiles (PMTiles) and the geocoder before heavy traffic | — | todo |
 | [ ] | Translate `messages/en.json` when a second locale is chosen | — | todo |
 | [ ] | Owner: rotate the v1 Laravel `APP_KEY` (URGENT, see progress.md) | owner | todo |
@@ -83,6 +83,19 @@ Status note: milestones M1–M12 were first built **before** the kickoff file wa
 | [ ] | Owner: Stripe test keys, products/prices and webhook for staging; live keys later | owner | todo |
 | [ ] | Owner: AI keys (Anthropic and/or OpenAI/Gemini) and the image provider choice (procedural, OpenAI, Imagen or the Google Flow file drop) | owner | todo |
 | [ ] | Owner: production cutover plan from v1 flatmeta.io, including migrating existing land and users (see progress.md open questions) | owner | todo |
-| [ ] | Owner: legal review and fill `[COMPANY NAME]`, `[COUNTRY]`, `[CONTACT EMAIL]` in the legal pages | owner | todo |
+| [ ] | Owner: legal review of terms, privacy and refunds (placeholders now come from `COMPANY_NAME`, `COMPANY_COUNTRY`, `CONTACT_EMAIL`; defaults MeWeBe, United Kingdom, hello@flatmeta.io) | owner | todo |
+
+## Go-live (2026-11-05): see docs/go-live.md
+| ✓ | Task | Owner | Status |
+|---|------|-------|--------|
+| [x] | Production mode: `APP_ENV=production` refuses mock checkout and on-screen codes; `PAID_CHECKOUT_ENABLED` (auto = off in production) blocks plans, paid land, boosts, AI packs, marketplace and Landmark checkout with "coming soon" (API 403 `coming_soon` + web notices); free land up to `FREE_LAND_CELLS` (100) per person/organisation; showcase claims become leads (admins emailed) | claude | done |
+| [x] | Legal pages filled from env (no brackets); cookie notice when Plausible is on; privacy section on cookies and analytics | claude | done |
+| [x] | Admin → Showcase locations: bulk check/uncheck, nudge (move keeping size), automatic suspect flags; unchecked showcase plots hidden publicly in production (map, lists, search, counts, sitemap, plot page) | claude | done |
+| [x] | Launch SEO: production robots/sitemap allow indexing, `noindex` elsewhere, canonical URLs on all public pages, site-wide OG image, 404/500 pages | claude | done |
+| [x] | Production instance: `scripts/new-instance.mjs` (ports 3250/3251/3253, Redis DB 7, `fm-prod`, media under `flatmeta.io/private/uploads`, nginx files rendered), PM2 `flatmeta-*-production`, `deploy.sh production` by hand only; docs/go-live.md with cutover, smoke checks, 1-minute rollback; CI builds the web app with production settings too | claude | done |
+| [ ] | Owner: email provider for production (Resend, or the server's own SMTP as a stop-gap). **Blocks sign-in**: production never shows codes on screen | owner | todo |
+| [ ] | Owner: create the `flatmeta_prod` database and user, run `new-instance.mjs` + first `deploy.sh production` + `npm run setup` (go-live.md §1) | owner | todo |
+| [ ] | Owner: cutover on Hestia (record v1 templates, install include files, switch proxy template; go-live.md §2–3) | owner | todo |
+| [ ] | Owner: decide what happens to v1 users and land (v2 starts with a fresh database; see progress.md item 22) | owner | todo |
 
 ## Phase 2: see docs/03-masterprompt-phase2.md. Not started.

@@ -1,5 +1,7 @@
 'use client';
 
+import { ComingSoon } from '../coming-soon';
+import { PAID_CHECKOUT } from '@/lib/config';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Gift, Lightbulb, MousePointer2, ZoomIn, X, Sparkles, ShoppingCart } from 'lucide-react';
@@ -149,7 +151,7 @@ export function ClaimPanel({
               </div>
               {quote && (
                 <div className="text-xs mt-0.5" style={{ color: TIER_COLOR[quote.tier] }}>
-                  {t('claim.tier', { label: TIER_LABEL[quote.tier] ?? quote.tier })} · {usd(quote.unitCents)}/cell{quote.regionSlug ? ` · near ${quote.regionSlug.replace(/-/g, ' ')}` : ''}
+                  {t('claim.tier', { label: TIER_LABEL[quote.tier] ?? quote.tier })}{PAID_CHECKOUT ? ` · ${usd(quote.unitCents)}/cell` : ''}{quote.regionSlug ? ` · near ${quote.regionSlug.replace(/-/g, ' ')}` : ''}
                 </div>
               )}
             </div>
@@ -163,8 +165,14 @@ export function ClaimPanel({
               )}
             </div>
           </div>
-          {quote?.free && <p className="text-xs rounded-xl px-3 py-2 bg-[rgb(255_201_77/.1)] text-[var(--color-gold)]">{t('claim.freeExplain')}</p>}
-          {quote && quote.reasons.length > 0 && <p className="text-xs rounded-xl px-3 py-2 bg-[rgb(255_107_107/.1)] text-[var(--color-coral)]">{quote.reasons.join(' ')}</p>}
+          {quote?.free && (
+            <p className="text-xs rounded-xl px-3 py-2 bg-[rgb(255_201_77/.1)] text-[var(--color-gold)]">
+              {quote.freeAllowance && !quote.homesteadEligible
+                ? `Free at launch: everyone gets ${quote.freeAllowance.limit} squares. After this plot you have ${Math.max(0, quote.freeAllowance.limit - quote.freeAllowance.used - quote.cells)} left.`
+                : t('claim.freeExplain')}
+            </p>
+          )}
+          {quote && quote.reasons.length > 0 && (quote.comingSoon && quote.reasons.length === 1 ? <ComingSoon compact className="w-full" text={quote.reasons[0]} /> : <p className="text-xs rounded-xl px-3 py-2 bg-[rgb(255_107_107/.1)] text-[var(--color-coral)]">{quote.reasons.join(' ')}</p>)}
           <input className="input" placeholder="Name your plot (you can change it later)" value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)} />
           {error && <p className="text-sm text-[var(--color-coral)]">{error}</p>}
           <button className={clsx('w-full btn-lg', quote?.free ? 'btn-gold' : 'btn-primary')} disabled={!quote || !quote.available || busy || loading} onClick={() => void claim()}>
@@ -189,7 +197,7 @@ export function ClaimPanel({
             <button key={i} className="w-full text-left surface p-3 hover:border-[var(--color-teal)] transition" onClick={() => onPick(s)}>
               <div className="flex items-center justify-between text-sm font-semibold">
                 <span>Near {s.near}</span>
-                <span style={{ color: TIER_COLOR[s.quote.tier] }}>{s.quote.free ? 'Free' : usd(s.quote.totalCents)}</span>
+                <span style={{ color: TIER_COLOR[s.quote.tier] }}>{s.quote.free ? 'Free' : PAID_CHECKOUT ? usd(s.quote.totalCents) : 'Coming soon'}</span>
               </div>
               <p className="text-xs muted mt-1">{s.reason}</p>
             </button>

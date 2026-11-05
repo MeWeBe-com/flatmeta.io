@@ -1,9 +1,9 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type Stripe from 'stripe';
-import { config, paymentsMock } from '../config.js';
+import { config, paidCheckout, paymentsMock } from '../config.js';
 import { db, schema } from '../db/client.js';
 import type { Order, OrderItem, User } from '../db/schema.js';
-import { HttpError, badRequest } from '../lib/errors.js';
+import { HttpError, badRequest, comingSoon } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
 import { SUBSCRIPTION_PRICES, UPGRADES, type UpgradeKind } from '../lib/pricing.js';
 import { notify, publishActivity } from '../game/activity.js';
@@ -52,7 +52,13 @@ export interface CheckoutInput {
 }
 
 /** Creates an order and a one-time Stripe Checkout Session (or the dev mock). */
+/** One gate for every way of paying. */
+export function requirePaidCheckout() {
+  if (!paidCheckout()) throw comingSoon();
+}
+
 export async function createCheckout(input: CheckoutInput): Promise<{ url: string; orderId: string }> {
+  requirePaidCheckout();
   const amountCents = input.items.reduce((s, i) => s + i.amountCents * (i.quantity ?? 1), 0);
   if (amountCents < 50) throw badRequest('Amount too small for a card payment');
   const [order] = await db
@@ -103,6 +109,7 @@ function priceIdFor(plan: PlanName, interval: Interval): string | undefined {
 }
 
 export async function createSubscriptionCheckout(user: User, plan: PlanName, interval: Interval, orgId: string | null): Promise<{ url: string }> {
+  requirePaidCheckout();
   if (plan !== 'plus' && !orgId) throw badRequest('Business and Brand plans belong to an organisation. Create one first.');
   if (plan === 'plus' && orgId) throw badRequest('Plus is a personal plan');
   const successPath = orgId ? `/dashboard/orgs?checkout=success` : `/dashboard/billing?checkout=success`;

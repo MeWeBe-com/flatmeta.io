@@ -10,7 +10,7 @@ import { notify, publishActivity } from '../game/activity.js';
 import { recordAction, unlock } from '../game/engine.js';
 import { effectivePlan } from '../lib/users.js';
 import { canEditPlot } from '../routes/views.js';
-import { createCheckout, refundOrder } from './billing.js';
+import { createCheckout, refundOrder, requirePaidCheckout } from './billing.js';
 import { getPaymentProvider } from './payments/provider.js';
 
 const DAY = 86400_000;
@@ -47,6 +47,7 @@ export async function listingBlocker(plot: Plot, priceCents?: number): Promise<s
 }
 
 export async function createListing(actor: User, plotId: string, priceCents: number): Promise<Listing> {
+  requirePaidCheckout(); // nobody could pay for it yet
   const [plot] = await db.select().from(schema.plots).where(eq(schema.plots.id, plotId));
   if (!plot) throw notFound('Plot not found');
   if (!(await canEditPlot(actor, plot)) || actor.role === 'admin' && plot.ownerUserId !== actor.id && !plot.ownerOrgId) throw forbidden('Only the owner can sell this plot.');

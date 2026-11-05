@@ -5,7 +5,7 @@ import { serverApi } from '@/lib/server-api';
 import type { Country } from '@/lib/types';
 import { LeaderboardClient } from './leaderboard-client';
 
-export const metadata: Metadata = { title: 'Leaderboards', description: 'The top explorers, landholders and most-loved plots on FlatMeta, by week, all time and by country.' };
+export const metadata: Metadata = { title: 'Leaderboards', description: 'The top explorers, landholders and most-loved plots on FlatMeta, by week, all time and by country.', alternates: { canonical: '/leaderboards' } };
 
 export default async function LeaderboardsPage() {
   const countries = await serverApi<{ countries: Country[] }>('/countries', { auth: false, revalidate: 600 }).catch(() => null);

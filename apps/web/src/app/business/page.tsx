@@ -7,6 +7,7 @@ import { serverApi } from '@/lib/server-api';
 import type { Plot } from '@/lib/types';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/business' },
   title: 'FlatMeta for business and brands',
   description: 'Be the place people and AI agents find on the map. A beautiful, verified business plot with offers, hours and leads, and showcase landmarks for brands.',
 };

@@ -1,5 +1,7 @@
 'use client';
 
+import { ComingSoon } from '../coming-soon';
+import { PAID_CHECKOUT } from '@/lib/config';
 import { useCallback, useEffect, useState } from 'react';
 import { Store, Tag, X } from 'lucide-react';
 import { ApiError, api, del, patch, post } from '@/lib/api';
@@ -92,7 +94,7 @@ export function PlotMarket({ plot, canEdit: canEditInitial }: { plot: Plot; canE
       <section className="surface p-5 space-y-3">
         <div className="flex items-center gap-2 text-sm muted"><Store size={15} /> For sale</div>
         <div className="text-3xl font-display font-bold">{usd(listing.priceCents)}</div>
-        <button className="btn-primary w-full" disabled={busy} onClick={() => void buy()}>{busy && <Spinner />} Buy this plot</button>
+        {PAID_CHECKOUT ? <button className="btn-primary w-full" disabled={busy} onClick={() => void buy()}>{busy && <Spinner />} Buy this plot</button> : <ComingSoon compact text="Buying plots from other explorers is coming soon." />}
         <p className="text-xs muted">You get the licence to use this spot on the map and everything on it. Not an investment. If the seller changes the price or sells it first, you are refunded automatically.</p>
       </section>
     );
@@ -112,8 +114,10 @@ export function PlotMarket({ plot, canEdit: canEditInitial }: { plot: Plot; canE
           </>
         ) : plot.kind === 'homestead' ? (
           <p className="text-sm muted">Your free Homestead can’t be resold. It is yours to use and design.</p>
-        ) : (
+        ) : PAID_CHECKOUT ? (
           <button className="btn-ghost w-full" onClick={() => void openSell()}><Tag size={15} /> Sell this plot</button>
+        ) : (
+          <ComingSoon compact text="Selling plots is coming soon." />
         )}
       </section>
       <Modal open={open} onClose={() => setOpen(false)} title={listing ? 'Change price' : 'Sell this plot'}>

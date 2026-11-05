@@ -1,5 +1,7 @@
 'use client';
 
+import { ComingSoon } from '@/components/coming-soon';
+import { PAID_CHECKOUT } from '@/lib/config';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { CreditCard, Sparkles } from 'lucide-react';
@@ -38,19 +40,24 @@ export default function BillingPage() {
           <div className="text-sm muted">Personal plan</div>
           <div className="text-2xl font-bold">{plus ? 'Plus ✦' : 'Free'}</div>
           <p className="text-sm muted">{plus ? '30 AI designs a month, Plus frames, 10% off land and more.' : 'Upgrade for 30 AI designs a month, exclusive frames and 10% off land.'}</p>
+          {!PAID_CHECKOUT && !plus && <ComingSoon compact text="Plus is coming soon." />}
           <div className="flex gap-2">
-            {!plus && <button className="btn-primary" disabled={!!busy} onClick={() => void go('plus', () => post('/billing/checkout', { plan: 'plus', interval: 'year' }))}>{busy === 'plus' && <Spinner />} Get Plus · $48/yr</button>}
-            <button className="btn-ghost" disabled={!!busy} onClick={() => void go('portal', () => post('/billing/portal', {}))}><CreditCard size={16} /> Manage payment methods</button>
+            {!plus && PAID_CHECKOUT && <button className="btn-primary" disabled={!!busy} onClick={() => void go('plus', () => post('/billing/checkout', { plan: 'plus', interval: 'year' }))}>{busy === 'plus' && <Spinner />} Get Plus · $48/yr</button>}
+            {(PAID_CHECKOUT || plus) && <button className="btn-ghost" disabled={!!busy} onClick={() => void go('portal', () => post('/billing/portal', {}))}><CreditCard size={16} /> Manage payment methods</button>}
           </div>
         </div>
         <div className="surface p-6 space-y-3">
           <div className="text-sm muted">AI designs</div>
           <div className="text-2xl font-bold">{me.credits?.unlimited ? 'Unlimited' : `${me.credits?.remaining ?? 0} left`}</div>
           <p className="text-sm muted">{me.credits ? `${me.credits.monthly} included each month · ${me.credits.bonus} bonus` : ''}</p>
-          <button className="btn-gold" disabled={!!busy} onClick={() => void go('credits', () => post('/billing/credits'))}>{busy === 'credits' ? <Spinner /> : <Sparkles size={16} />} Design Pack · +25 for $5</button>
+          {PAID_CHECKOUT ? (
+            <button className="btn-gold" disabled={!!busy} onClick={() => void go('credits', () => post('/billing/credits'))}>{busy === 'credits' ? <Spinner /> : <Sparkles size={16} />} Design Pack · +25 for $5</button>
+          ) : (
+            <ComingSoon compact text="Extra Design Packs are coming soon." />
+          )}
         </div>
       </div>
-      <SellerBalance />
+      {PAID_CHECKOUT && <SellerBalance />}
       <p className="text-sm muted">Business and Brand plans are managed per organisation in <Link className="underline" href="/dashboard/orgs">Organisations</Link>.</p>
       {data?.subscriptions.length ? (
         <section>

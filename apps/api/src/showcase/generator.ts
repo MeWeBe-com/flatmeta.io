@@ -8,8 +8,8 @@ import { generateImage } from '../ai/image/index.js';
 import { MOTIFS } from '../ai/image/procedural.js';
 import { generateJson } from '../ai/text/index.js';
 import { config } from '../config.js';
-import { countryName, nearestCity } from '../lib/geo.js';
-import { rectAround, type Rect } from '../lib/grid.js';
+import { countryName, nearestCity, resolveCountry } from '../lib/geo.js';
+import { cellsOf, rectAround, rectCenter, type Rect } from '../lib/grid.js';
 import { logger } from '../lib/logger.js';
 import { safeUrl } from '../lib/markdown.js';
 import { tierOfRect } from '../lib/pricing.js';
@@ -250,4 +250,42 @@ export async function regenerateShowcaseImage(plotId: string, provider?: typeof 
     .where(eq(schema.plots.id, plot.id))
     .returning();
   return { plot: updated!, pending: !!img.pending, provider: img.provider };
+}
+
+/**
+ * Moves a showcase plot so it sits on (or as near as possible to) a new point, keeping its size. Used by
+ * Admin → Showcase → Locations to nudge plots that landed a few blocks off. Marks the location as checked.
+ */
+export async function moveShowcasePlot(plotId: string, lat: number, lng: number, checkedBy: string): Promise<Plot> {
+  const [plot] = await db.select().from(schema.plots).where(eq(schema.plots.id, plotId));
+  if (!plot || plot.kind !== 'showcase') throw new Error('Showcase plot not found');
+  const w = plot.maxGx - plot.minGx + 1;
+  const h = plot.maxGy - plot.minGy + 1;
+  const rect = await placeEntry(lat, lng, w, h, plot.id);
+  if (!rect) throw new Error('No free space near that point');
+  const center = rectCenter(rect);
+  const near = nearestCity(center.lat, center.lng, 60);
+  const moved = await db.transaction(async (t) => {
+    await t.delete(schema.plotCells).where(eq(schema.plotCells.plotId, plot.id));
+    const [row] = await t
+      .update(schema.plots)
+      .set({
+        ...rect,
+        centerLat: center.lat,
+        centerLng: center.lng,
+        tier: tierOfRect(rect),
+        countryCode: resolveCountry(center.lat, center.lng) ?? plot.countryCode,
+        regionSlug: near?.city.slug ?? plot.regionSlug,
+        showcase: { ...plot.showcase!, locationVerified: true, locationCheckedAt: new Date().toISOString(), locationNote: `moved by ${checkedBy}` },
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.plots.id, plot.id))
+      .returning();
+    const cells = [...cellsOf(rect)].map((c) => ({ ...c, plotId: plot.id }));
+    for (let i = 0; i < cells.length; i += 500) await t.insert(schema.plotCells).values(cells.slice(i, i + 500));
+    return row!;
+  });
+  await recountCountry(plot.countryCode);
+  if (moved.countryCode !== plot.countryCode) await recountCountry(moved.countryCode);
+  return moved;
 }

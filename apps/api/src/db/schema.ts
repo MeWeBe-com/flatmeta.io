@@ -51,6 +51,10 @@ export type ShowcaseInfo = {
   motif: string;
   batchId?: string;
   approved: boolean;
+  /** An admin confirmed the plot sits on the right place (Admin → Showcase → Locations). Required in production. */
+  locationVerified?: boolean;
+  locationCheckedAt?: string;
+  locationNote?: string;
 };
 
 // ─── Users & auth ────────────────────────────────────────────────────────────

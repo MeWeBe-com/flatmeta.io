@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, gte, isNotNull, lte, sql } from 'drizzle-orm';
+import { publicShowcase } from '../lib/visibility.js';
 import { z } from 'zod';
 import type { App } from '../app.js';
 import { db, schema } from '../db/client.js';
@@ -75,7 +76,7 @@ export default async function regionRoutes(app: App) {
       db.select().from(P).where(and(area, eq(P.status, 'showcase'))).orderBy(desc(P.cellCount)).limit(24),
       db.select().from(P).where(and(area, eq(P.status, 'active'))).orderBy(desc(P.createdAt)).limit(12),
       db
-        .select({ plots: sql<number>`count(*) filter (where ${P.status} = 'active')::int`, cells: sql<number>`coalesce(sum(${P.cellCount}) filter (where ${P.status} = 'active'), 0)::int`, showcase: sql<number>`count(*) filter (where ${P.status} = 'showcase')::int` })
+        .select({ plots: sql<number>`count(*) filter (where ${P.status} = 'active')::int`, cells: sql<number>`coalesce(sum(${P.cellCount}) filter (where ${P.status} = 'active'), 0)::int`, showcase: sql<number>`count(*) filter (where ${publicShowcase()})::int` })
         .from(P)
         .where(area),
     ]);

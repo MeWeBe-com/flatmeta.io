@@ -1,4 +1,5 @@
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
+import { publicShowcase } from '../lib/visibility.js';
 import { z } from 'zod';
 import type { App } from '../app.js';
 import { db, schema } from '../db/client.js';
@@ -9,7 +10,7 @@ import { bboxToRect, rectBounds } from '../lib/grid.js';
 import { safeUrl, stripText } from '../lib/markdown.js';
 import { key, redis } from '../lib/redis.js';
 import { storeImage } from '../lib/storage.js';
-import { config } from '../config.js';
+import { config, showcaseLocationCheck } from '../config.js';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
@@ -20,7 +21,7 @@ import { setPlotLikes } from '../game/leaderboards.js';
 import { FRAMES } from '../game/levels.js';
 import { checkContent } from '../services/moderation.js';
 import { MAX_CUSTOM_HTML, screenCustomHtml } from '../lib/html.js';
-import { afterClaim, assertCanActForOrg, createPlot, ensureCover, neighbours, quoteFor } from '../services/plots.js';
+import { afterClaim, assertCanActForOrg, createPlot, ensureCover, neighbours, ownedCells, quoteFor } from '../services/plots.js';
 import { createCheckout } from '../services/billing.js';
 import { canEditPlot, ownersFor, plotView } from './views.js';
 
@@ -66,7 +67,7 @@ export type PlotPatchInput = z.infer<typeof PlotPatch>;
 /** Plots anyone may see. */
 export const visiblePlot = (): SQL =>
   and(
-    or(eq(schema.plots.status, 'active'), sql`(${schema.plots.status} = 'showcase' and (${schema.plots.showcase}->>'approved')::boolean)`),
+    or(eq(schema.plots.status, 'active'), publicShowcase()),
     sql`${schema.plots.moderationStatus} <> 'flagged'`,
   )!;
 
@@ -321,7 +322,8 @@ export default async function plotRoutes(app: App) {
       const plot = await loadPlot(req.params.idOrSlug);
       if (!plot || plot.status === 'released') throw notFound('Plot');
       const view = await viewFor(plot, req.user);
-      const publicOk = (plot.status === 'active' || (plot.status === 'showcase' && plot.showcase?.approved)) && plot.moderationStatus !== 'flagged';
+      const showcaseOk = plot.status === 'showcase' && !!plot.showcase?.approved && (!showcaseLocationCheck() || !!plot.showcase.locationVerified);
+      const publicOk = (plot.status === 'active' || showcaseOk) && plot.moderationStatus !== 'flagged';
       const staff = req.user?.role === 'admin' || req.user?.role === 'moderator';
       if (!publicOk && !view.canEdit && !staff) throw notFound('Plot');
       return { plot: view };
@@ -394,6 +396,19 @@ export default async function plotRoutes(app: App) {
       const q = await quoteFor(user, rect, orgId);
       if (!q.available) throw badRequest(q.reasons[0] ?? 'This land is not available', { quote: q });
       const title = stripText(req.body.title ?? (q.regionSlug ? `${user.displayName}'s corner` : `${user.displayName}'s plot`), 80);
+      if (q.free && !q.homesteadEligible) {
+        // Launch without payments: land within the free allowance is claimed straight away.
+        let plot = await createPlot({ rect: q.rect, title, kind: 'standard', status: 'active', ownerUserId: user.id, ownerOrgId: orgId ?? null, tier: q.tier, countryCode: q.countryCode, regionSlug: q.regionSlug });
+        // Two claims at once could both fit on their own: check the total again now that this one exists.
+        if ((await ownedCells(user.id, orgId)) > config.FREE_LAND_CELLS) {
+          await db.delete(schema.plots).where(eq(schema.plots.id, plot.id));
+          throw badRequest(`That would take you past your ${config.FREE_LAND_CELLS} free squares. Paid land is coming soon.`);
+        }
+        if (!user.homeCountry && q.countryCode) await db.update(schema.users).set({ homeCountry: q.countryCode }).where(eq(schema.users.id, user.id));
+        plot = await ensureCover(plot, user.id);
+        const game = await afterClaim(plot, user.id);
+        return { plot: await viewFor(plot, user), game };
+      }
       if (q.free) {
         // Mark the homestead as used first so two parallel requests can't both get one.
         const [marked] = await db

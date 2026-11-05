@@ -1,5 +1,7 @@
 'use client';
 
+import { ComingSoon } from '@/components/coming-soon';
+import { PAID_CHECKOUT } from '@/lib/config';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
@@ -232,12 +234,12 @@ function Editor() {
                   <h3 className="text-lg font-bold">{b.title} <span className="muted font-normal text-sm">· {usd(b.price)}</span></h3>
                   <p className="text-sm muted">{b.body}</p>
                   {(b.kind === 'spotlight' ? plot.spotlight : plot.beacon) && <p className="text-xs text-[var(--color-teal)]">Active until {new Date((b.kind === 'spotlight' ? plot.spotlightUntil : plot.beaconUntil) as string).toLocaleString()}</p>}
-                  <button className="btn-gold w-full" disabled={plot.status !== 'active'} onClick={async () => {
+                  {!PAID_CHECKOUT ? <ComingSoon compact text={`${b.title} is coming soon.`} /> : <button className="btn-gold w-full" disabled={plot.status !== 'active'} onClick={async () => {
                     try {
                       const r = await post<{ checkoutUrl: string }>(`/plots/${plot.id}/upgrade`, { kind: b.kind });
                       window.location.href = r.checkoutUrl;
                     } catch (e) { toast({ kind: 'error', title: e instanceof ApiError ? e.message : 'Unavailable' }); }
-                  }}>Buy {b.title}</button>
+                  }}>Buy {b.title}</button>}
                 </div>
               ))}
             </div>
@@ -326,9 +328,9 @@ function Designer({ plot, onApplied, credits, unlimited }: { plot: Plot; onAppli
       <div><label className="label">Website (optional, used for the button)</label><input className="input" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://" /></div>
       {credits <= 0 && !unlimited ? (
         <div className="rounded-xl p-3 bg-[rgb(255_201_77/.1)] text-sm flex items-center gap-3">
-          <span className="flex-1">You’re out of AI designs this month.</span>
-          <button className="btn-gold btn-sm" onClick={async () => { const r = await post<{ checkoutUrl: string }>('/billing/credits'); window.location.href = r.checkoutUrl; }}>Get 25 more · $5</button>
-          <Link href="/pricing" className="btn-ghost btn-sm">Go Plus</Link>
+          <span className="flex-1">You’re out of AI designs this month.{!PAID_CHECKOUT && ' More arrive at the start of next month; Design Packs are coming soon.'}</span>
+          {PAID_CHECKOUT && <button className="btn-gold btn-sm" onClick={async () => { const r = await post<{ checkoutUrl: string }>('/billing/credits'); window.location.href = r.checkoutUrl; }}>Get 25 more · $5</button>}
+          {PAID_CHECKOUT && <Link href="/pricing" className="btn-ghost btn-sm">Go Plus</Link>}
         </div>
       ) : (
         <button className="btn-primary btn-lg" disabled={busy || brief.trim().length < 3} onClick={() => void run()}>{busy ? <Spinner /> : <Wand2 size={18} />} {busy ? 'Designing…' : 'Generate 3 designs'}</button>

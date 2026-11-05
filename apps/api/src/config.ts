@@ -81,6 +81,17 @@ const schema = z.object({
     .string()
     .optional()
     .transform((v) => v !== 'false' && v !== '0'),
+  // Paid purchases (land beyond the free allowance, plans, upgrades, AI packs, marketplace, Landmark claims).
+  // auto = off in production (launch without payments), on elsewhere. Off: every checkout answers "coming soon".
+  PAID_CHECKOUT_ENABLED: z.enum(['auto', 'true', 'false']).default('auto'),
+  // While paid checkout is off, each person (or organisation) can claim this many squares free in total.
+  FREE_LAND_CELLS: z.coerce.number().int().min(1).max(10_000).default(100),
+  // Showcase plots need an admin-checked location before they appear publicly. auto = only in production.
+  SHOWCASE_REQUIRE_LOCATION_CHECK: z.enum(['auto', 'true', 'false']).default('auto'),
+  // Legal pages and emails.
+  COMPANY_NAME: z.string().default('MeWeBe'),
+  COMPANY_COUNTRY: z.string().default('United Kingdom'),
+  CONTACT_EMAIL: z.string().default('hello@flatmeta.io'),
 
   AI_TEXT_PROVIDER: z.enum(['anthropic', 'openai', 'gemini', 'heuristic', '']).optional(),
   ANTHROPIC_API_KEY: optional,
@@ -153,6 +164,14 @@ type Policy = Pick<Config, 'APP_ENV' | 'SMTP_HOST' | 'STRIPE_SECRET_KEY' | 'PAYM
  */
 export const allowPaymentsMock = (c: Policy) => !c.STRIPE_SECRET_KEY && c.PAYMENTS_MOCK && c.APP_ENV !== 'production';
 export const paymentsMock = () => allowPaymentsMock(config);
+
+/** Whether anything can be bought. `auto` means: not in production (go-live runs without payments first). */
+export const paidCheckoutFor = (c: Pick<Config, 'APP_ENV' | 'PAID_CHECKOUT_ENABLED'>) =>
+  c.PAID_CHECKOUT_ENABLED === 'true' || (c.PAID_CHECKOUT_ENABLED === 'auto' && c.APP_ENV !== 'production');
+export const paidCheckout = () => paidCheckoutFor(config);
+
+/** Whether unverified showcase locations stay off the public map (and lists, search, sitemaps). */
+export const showcaseLocationCheck = () => config.SHOWCASE_REQUIRE_LOCATION_CHECK === 'true' || (config.SHOWCASE_REQUIRE_LOCATION_CHECK === 'auto' && config.APP_ENV === 'production');
 
 /** Which email provider is active: Resend if keyed, else SMTP, else log-only. */
 export const emailProviderFor = (c: Pick<Config, 'RESEND_API_KEY' | 'SMTP_HOST'>): 'resend' | 'smtp' | 'log' => (c.RESEND_API_KEY ? 'resend' : c.SMTP_HOST ? 'smtp' : 'log');

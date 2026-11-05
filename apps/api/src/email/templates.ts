@@ -16,6 +16,7 @@ export type EmailType =
   | 'landmark_ready'
   | 'takedown_result'
   | 'admin_claim_review'
+  | 'admin_claim_lead'
   | 'admin_takedown'
   | 'notice';
 
@@ -147,6 +148,13 @@ export const templates = {
       title: 'A showcase claim needs manual review',
       paragraphs: [`${email} says they represent ${orgName} and wants to claim "${plotTitle}". Their email domain doesn't match the organisation's website.`],
       button: { label: 'Review claims', path: '/admin/claims' },
+    }),
+
+  adminClaimLead: (orgName: string, email: string, plotTitle: string) =>
+    render('admin_claim_lead', `[Admin] Verified Landmark lead: ${orgName}`, {
+      title: 'A brand verified its showcase claim',
+      paragraphs: [`${email} verified their work email for ${orgName} and wants "${plotTitle}". Paid checkout is off, so the claim is waiting as a lead: contact them, or enable payments and they can complete it from the claim page.`],
+      button: { label: 'Open claims', path: '/admin/claims' },
     }),
 
   adminTakedown: (name: string, email: string, plotTitle: string, message: string) =>

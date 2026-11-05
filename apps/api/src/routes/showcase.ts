@@ -4,6 +4,7 @@ import { emailAdmins, quietly, templates } from '../email/index.js';
 import type { App } from '../app.js';
 import { db, schema } from '../db/client.js';
 import { requireUser } from '../lib/auth.js';
+import { paidCheckout } from '../config.js';
 import { badRequest, notFound } from '../lib/errors.js';
 import { stripText } from '../lib/markdown.js';
 import { consumeCode, issueCode } from './auth.js';
@@ -61,6 +62,12 @@ export default async function showcaseRoutes(app: App) {
         const plot = await loadPlot(request.plotId);
         const orgId = await verifiedOrgFor(user, request.orgName, plot!.showcase!.website);
         await db.update(schema.claimRequests).set({ status: 'verified', orgId, updatedAt: new Date() }).where(eq(schema.claimRequests.id, request.id));
+      }
+      if (!paidCheckout()) {
+        // Launch without payments: a verified claim is a lead. The team follows up; the claim page can finish it later.
+        const plot = await loadPlot(request.plotId);
+        await quietly(emailAdmins(templates.adminClaimLead(request.orgName, request.email, plot?.title ?? 'a showcase plot')));
+        return { status: 'verified', comingSoon: true, message: 'Verified. Landmark checkout opens soon: we’ve saved your claim and will email you as soon as you can complete it.' };
       }
       const checkout = await landmarkCheckout(user, request.id);
       return { checkoutUrl: checkout.url, orderId: checkout.orderId };

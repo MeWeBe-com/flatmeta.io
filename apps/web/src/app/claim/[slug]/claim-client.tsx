@@ -1,5 +1,7 @@
 'use client';
 
+import { ComingSoon } from '@/components/coming-soon';
+import { PAID_CHECKOUT } from '@/lib/config';
 import { useState } from 'react';
 import Link from 'next/link';
 import { BadgeCheck, Mail, ShieldAlert, Building2, Trash2 } from 'lucide-react';
@@ -49,8 +51,12 @@ export function ClaimWizard({ plot, takedown, requestId: initialRequest, landmar
     setBusy(true);
     setError(null);
     try {
-      const r = await post<{ checkoutUrl: string }>('/showcase/claim/verify', { requestId, code: value });
-      window.location.href = r.checkoutUrl;
+      const r = await post<{ checkoutUrl?: string; message?: string }>('/showcase/claim/verify', { requestId, code: value });
+      if (r.checkoutUrl) return void (window.location.href = r.checkoutUrl);
+      // Payments not open yet: the verified claim is saved and the team follows up.
+      setMessage(r.message ?? 'Verified. We’ll email you when you can complete the claim.');
+      setStep('review');
+      setBusy(false);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Verification failed');
       setBusy(false);
@@ -92,7 +98,11 @@ export function ClaimWizard({ plot, takedown, requestId: initialRequest, landmar
             <h2 className="text-2xl font-bold">Make this landmark official</h2>
             <ol className="text-sm muted space-y-1 list-decimal pl-5">
               <li>Verify that you work at {brand} with an email at <b className="text-[var(--text)]">@{domain}</b>.</li>
-              <li>Pay the one-time Landmark price ({usd(landmarkCents)}, includes 3 months of the Brand plan).</li>
+              {PAID_CHECKOUT ? (
+                <li>Pay the one-time Landmark price ({usd(landmarkCents)}, includes 3 months of the Brand plan).</li>
+              ) : (
+                <li>We save your verified claim and contact you. Landmark checkout opens soon.</li>
+              )}
               <li>The plot moves to your verified organisation: edit it, invite your team, add more plots.</li>
             </ol>
             <div>
@@ -120,16 +130,20 @@ export function ClaimWizard({ plot, takedown, requestId: initialRequest, landmar
             <input className="input text-center font-display text-3xl tracking-[0.5em] h-16" inputMode="numeric" maxLength={6} value={code} onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 6); setCode(v); if (v.length === 6) void verify(v); }} aria-label="Verification code" />
             {devCode && <button className="text-xs text-[var(--color-gold)] underline" onClick={() => { setCode(devCode); void verify(devCode); }}>Dev mode: your code is {devCode}</button>}
             {error && <p className="text-sm text-[var(--color-coral)]">{error}</p>}
-            <button className="btn-gold btn-lg" disabled={busy || code.length !== 6} onClick={() => void verify()}>{busy && <Spinner />} Verify and continue to payment</button>
+            <button className="btn-gold btn-lg" disabled={busy || code.length !== 6} onClick={() => void verify()}>{busy && <Spinner />} {PAID_CHECKOUT ? 'Verify and continue to payment' : 'Verify my claim'}</button>
           </div>
         )}
 
         {mode === 'claim' && step === 'review' && (
           <div className="space-y-4">
             <h2 className="text-2xl font-bold">We’re on it</h2>
-            <p className="muted">{message ?? 'Your claim is being reviewed.'} We’ll email you as soon as it’s approved. Then come back here to complete the claim.</p>
+            <p className="muted">{message ?? 'Your claim is being reviewed.'} {PAID_CHECKOUT ? ' We’ll email you as soon as it’s approved. Then come back here to complete the claim.' : ''}</p>
             {error && <p className="text-sm text-[var(--color-coral)]">{error}</p>}
-            <button className="btn-ghost" onClick={() => void checkoutApproved()} disabled={busy}>{busy && <Spinner />} I’ve been approved: continue</button>
+            {PAID_CHECKOUT ? (
+              <button className="btn-ghost" onClick={() => void checkoutApproved()} disabled={busy}>{busy && <Spinner />} I’ve been approved: continue</button>
+            ) : (
+              <ComingSoon compact text="Landmark checkout is coming soon. Your claim is saved; nothing else to do for now." />
+            )}
           </div>
         )}
 

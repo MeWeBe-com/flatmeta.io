@@ -195,6 +195,9 @@ export interface Quote {
   plan: string;
   plotLimitReached: boolean;
   reasons: string[];
+  paidCheckout?: boolean;
+  freeAllowance?: { limit: number; used: number } | null;
+  comingSoon?: boolean;
 }
 
 export interface Activity {

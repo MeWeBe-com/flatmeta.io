@@ -1,4 +1,5 @@
 import { desc, eq, sql } from 'drizzle-orm';
+import { publicShowcase } from '../lib/visibility.js';
 import { z } from 'zod';
 import type { App } from '../app.js';
 import { db, schema } from '../db/client.js';
@@ -14,7 +15,7 @@ export default async function liveRoutes(app: App) {
       db
         .select({
           active: sql<number>`count(*) filter (where ${P.status} = 'active')::int`,
-          showcase: sql<number>`count(*) filter (where ${P.status} = 'showcase' and coalesce((${P.showcase}->>'approved')::boolean,false))::int`,
+          showcase: sql<number>`count(*) filter (where ${publicShowcase()})::int`,
           cells: sql<number>`coalesce(sum(${P.cellCount}) filter (where ${P.status} = 'active'), 0)::int`,
         })
         .from(P),

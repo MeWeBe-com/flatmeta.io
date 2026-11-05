@@ -9,7 +9,7 @@ function probe(env: Record<string, string>) {
   const code = `
     const c = await import('./src/config.ts');
     const img = c.config.AI_IMAGE_PROVIDER;
-    console.log(JSON.stringify({ mock: c.paymentsMock(), echo: c.devCodeEcho(), text: c.textProvider(), moderation: c.moderationProvider(), image: img }));
+    console.log(JSON.stringify({ mock: c.paymentsMock(), echo: c.devCodeEcho(), paid: c.paidCheckout(), company: c.config.COMPANY_NAME, text: c.textProvider(), moderation: c.moderationProvider(), image: img }));
   `;
   const base = { PATH: process.env.PATH ?? '', HOME: process.env.HOME ?? '', SESSION_SECRET: 'x'.repeat(40), APP_URL: 'https://staging.flatmeta.io' };
   try {
@@ -38,6 +38,14 @@ describe('staging vs production policy (real config loading)', () => {
     const r = probe({ NODE_ENV: 'production', APP_ENV: 'production', APP_URL: 'https://flatmeta.io', DEV_CODE_ECHO: 'true' });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/DEV_CODE_ECHO=true is not allowed/);
+  });
+
+  it('paid checkout is off by default in production, on elsewhere, and can be switched explicitly', () => {
+    const prod = { NODE_ENV: 'production', APP_ENV: 'production', APP_URL: 'https://flatmeta.io' };
+    expect(probe(prod)).toMatchObject({ ok: true, paid: false, mock: false, echo: false, company: 'MeWeBe' });
+    expect(probe({ ...prod, PAID_CHECKOUT_ENABLED: 'true' })).toMatchObject({ ok: true, paid: true, mock: false });
+    expect(probe({ NODE_ENV: 'production', APP_ENV: 'staging' })).toMatchObject({ ok: true, paid: true });
+    expect(probe({ NODE_ENV: 'production', APP_ENV: 'staging', PAID_CHECKOUT_ENABLED: 'false' })).toMatchObject({ ok: true, paid: false });
   });
 
   it('a production build that does not set APP_ENV gets production rules', () => {
