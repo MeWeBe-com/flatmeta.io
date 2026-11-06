@@ -39,9 +39,15 @@ describe('grid', () => {
 
   it('builds bounds and deterministic 3-word addresses', () => {
     expect(boundsOf([{ gx: 3, gy: 9 }, { gx: 1, gy: 4 }])).toEqual({ minGx: 1, minGy: 4, maxGx: 3, maxGy: 9 });
+    expect(boundsOf([{ gx: 5, gy: -2 }])).toEqual({ minGx: 5, minGy: -2, maxGx: 5, maxGy: -2 });
     expect(boundsOf([])).toBeNull();
     expect(gridToThreeWords(10, 20)).toBe(gridToThreeWords(10, 20));
     expect(gridToThreeWords(10, 20)).toMatch(/^[a-z]+\.[a-z]+\.[a-z]+$/);
+  });
+
+  it('boundsOf efficiently handles large point lists without call stack limits', () => {
+    const points = Array.from({ length: 150000 }, (_, i) => ({ gx: i - 50000, gy: 100000 - i }));
+    expect(boundsOf(points)).toEqual({ minGx: -50000, minGy: -49999, maxGx: 99999, maxGy: 100000 });
   });
 
   it('turns any text into a safe /u/ slug', () => {
