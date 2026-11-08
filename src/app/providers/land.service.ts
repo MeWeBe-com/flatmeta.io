@@ -169,6 +169,11 @@ export class LandService {
   private resync$ = new Subject<void>();
   private identityId = '';
 
+  /** Cached areas list and lookup map to avoid O(N) grouping over thousands of tiles. */
+  private cachedTilesRef: LandTile[] | null = null;
+  private cachedAreasList: LandArea[] | null = null;
+  private cachedAreasMap: Map<string, LandArea> | null = null;
+
   /** Tiles to draw: loaded server land + this guest's drafts + the official plaza. */
   readonly tiles$ = new BehaviorSubject<LandTile[]>([]);
   readonly stats$ = new BehaviorSubject<PortfolioStats>(this.computeStats());
@@ -221,22 +226,46 @@ export class LandService {
     return !!tile && String(tile.user_id) === identity.id;
   }
 
-  /** Areas built from the loaded squares (an area at the edge of the view may be partly loaded). */
+  /**
+   * Areas built from the loaded squares (an area at the edge of the view may be partly loaded).
+   * Memoized on `this.tiles`: re-groups only when the tiles array changes reference.
+   * Avoids re-iterating and calculating centroids for up to 15,000 tiles on every area query.
+   */
   areas(): LandArea[] {
+    const currentTiles = this.tiles;
+    if (this.cachedTilesRef === currentTiles && this.cachedAreasList) {
+      return this.cachedAreasList;
+    }
     const groups = new Map<string, LandTile[]>();
-    for (const t of this.tiles) {
-      const list = groups.get(t.order_id) || [];
-      list.push(t);
-      groups.set(t.order_id, list);
+    for (const t of currentTiles) {
+      const list = groups.get(t.order_id);
+      if (list) {
+        list.push(t);
+      } else {
+        groups.set(t.order_id, [t]);
+      }
     }
     const out: LandArea[] = [];
-    groups.forEach((tiles, orderId) => out.push(this.buildArea(orderId, tiles)));
+    const map = new Map<string, LandArea>();
+    groups.forEach((tiles, orderId) => {
+      const area = this.buildArea(orderId, tiles);
+      out.push(area);
+      map.set(orderId, area);
+    });
+    this.cachedTilesRef = currentTiles;
+    this.cachedAreasList = out;
+    this.cachedAreasMap = map;
     return out;
   }
 
+  /**
+   * Fast O(1) area lookup by order id. Uses the indexed areas map, falling back
+   * to my owned areas (from MyPlaces) if not currently loaded in the viewport grid.
+   */
   area(orderId: string): LandArea | undefined {
     const id = String(orderId);
-    return this.areas().find((a) => a.order_id === id) || this.mine.find((a) => a.order_id === id);
+    this.areas(); // Ensure cachedAreasMap is up to date for current tiles
+    return this.cachedAreasMap?.get(id) || this.mine.find((a) => a.order_id === id);
   }
 
   myAreas(): LandArea[] {
