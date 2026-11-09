@@ -39,7 +39,11 @@ describe('grid', () => {
 
   it('builds bounds and deterministic 3-word addresses', () => {
     expect(boundsOf([{ gx: 3, gy: 9 }, { gx: 1, gy: 4 }])).toEqual({ minGx: 1, minGy: 4, maxGx: 3, maxGy: 9 });
+    expect(boundsOf([{ gx: 5, gy: 5 }])).toEqual({ minGx: 5, minGy: 5, maxGx: 5, maxGy: 5 });
     expect(boundsOf([])).toBeNull();
+    // Test large point set without call stack overflow
+    const largeSet = Array.from({ length: 150000 }, (_, i) => ({ gx: i, gy: 150000 - i }));
+    expect(boundsOf(largeSet)).toEqual({ minGx: 0, minGy: 1, maxGx: 149999, maxGy: 150000 });
     expect(gridToThreeWords(10, 20)).toBe(gridToThreeWords(10, 20));
     expect(gridToThreeWords(10, 20)).toMatch(/^[a-z]+\.[a-z]+\.[a-z]+$/);
   });
