@@ -186,7 +186,11 @@ describe('notifications fan-out', () => {
     expect(list.map((n) => n.kind)).toEqual(expect.arrayContaining(['follow', 'connection_request', 'dm']));
     expect(list.filter((n) => n.kind === 'dm')).toHaveLength(1);
     expect(list.find((n) => n.kind === 'dm')!.payload.count).toBe(2);
-    expect(json(await app.inject({ url: '/v1/me', headers: ben.headers })).unreadNotifications).toBe(3);
+    // Follow, connection request and the collapsed DM. (Game notifications such as a completed daily quest can
+    // come on top, depending on the day's quests, so only the social ones are counted exactly.)
+    const unreadSocial = list.filter((n: { kind: string; readAt?: string | null }) => !n.readAt && ['follow', 'connection_request', 'dm'].includes(n.kind));
+    expect(unreadSocial).toHaveLength(3);
+    expect(json(await app.inject({ url: '/v1/me', headers: ben.headers })).unreadNotifications).toBeGreaterThanOrEqual(3);
 
     // Closing the sockets releases the user channels.
     a.close();
