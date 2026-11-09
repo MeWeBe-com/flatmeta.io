@@ -1,5 +1,5 @@
 import type { Order } from '../../db/schema.js';
-import { config, paymentsMock } from '../../config.js';
+import { config, paymentsMock, stripeTestKeyOnProduction } from '../../config.js';
 import { HttpError } from '../../lib/errors.js';
 
 /**
@@ -82,6 +82,8 @@ const stripeProvider: PaymentProvider = {
 };
 
 export function getPaymentProvider(): PaymentProvider {
+  // Never move "money" with a test key on production (payouts would report success without paying anyone).
+  if (stripeTestKeyOnProduction()) throw new HttpError(503, 'stripe_test_key', 'Payments are temporarily unavailable.');
   if (config.STRIPE_SECRET_KEY) return stripeProvider;
   if (paymentsMock()) return mockProvider;
   throw new HttpError(503, 'payments_unavailable', 'Payments are not configured yet');

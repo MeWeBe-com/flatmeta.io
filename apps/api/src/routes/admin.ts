@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { and, count, desc, eq, gte, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import type { App } from '../app.js';
-import { config, showcaseLocationCheck } from '../config.js';
+import { config, paidCheckout, paymentsMock, showcaseLocationCheck, stripeMode, stripeProblems, stripeTestKeyOnProduction } from '../config.js';
 import { db, schema } from '../db/client.js';
 import type { ShowcaseInfo } from '../db/schema.js';
 import { requireAdmin, requireStaff } from '../lib/auth.js';
@@ -63,6 +63,37 @@ export default async function adminRoutes(app: App) {
       queues: { moderation: flags?.n ?? 0, claims: claims?.n ?? 0, takedowns: takedowns?.n ?? 0 },
       series: { signups, revenue: revenueDaily },
       env: { appEnv: config.APP_ENV, paymentsMock: !config.STRIPE_SECRET_KEY },
+    };
+  });
+
+  // Payments setup at a glance (no secrets): key mode, webhook secret present, where each price comes from.
+  app.get('/v1/admin/payments-status', { schema: { tags: ['admin'], summary: 'Stripe setup check (key mode, webhook, prices, problems)' } }, async (req) => {
+    requireStaff(req);
+    const { lookupKeyFor, priceIdFor, resolvePrice } = await import('../services/billing.js');
+    const mode = stripeMode();
+    const problems = stripeProblems();
+    const prices: Record<string, 'env' | 'lookup' | 'missing' | 'unchecked'> = {};
+    for (const plan of ['plus', 'business', 'brand'] as const)
+      for (const interval of ['month', 'year'] as const) {
+        const k = `${plan}_${interval}`;
+        if (priceIdFor(plan, interval)) prices[k] = 'env';
+        else if (mode === 'none') prices[k] = 'unchecked';
+        else prices[k] = (await resolvePrice(plan, interval).catch(() => undefined)) ? 'lookup' : 'missing';
+      }
+    const missing = Object.entries(prices).filter(([, v]) => v === 'missing').map(([k]) => k);
+    if (missing.length) problems.push(`No Stripe price for ${missing.join(', ')}: run scripts/stripe-sync.ts or set STRIPE_PRICE_* (lookup keys ${lookupKeyFor('plus', 'month').replace('plus_month', '<plan>_<interval>')}).`);
+    return {
+      appEnv: config.APP_ENV,
+      mode,
+      paidCheckout: paidCheckout(),
+      mock: paymentsMock(),
+      webhookSecret: !!config.STRIPE_WEBHOOK_SECRET,
+      automaticTax: config.STRIPE_AUTOMATIC_TAX,
+      currency: config.CURRENCY,
+      webhookUrl: `${config.API_URL}/v1/stripe/webhook`,
+      prices,
+      problems,
+      checkoutBlocked: stripeTestKeyOnProduction(),
     };
   });
 

@@ -132,7 +132,7 @@ Emails are queued in Redis and sent by **`flatmeta-worker`**: if the worker is d
 - **Logs:** `pm2 logs flatmeta-api-staging` (or `-production`; also `flatmeta-web-…`, `flatmeta-worker-…`), `pm2 monit`.
 - **Backups (cron as the app user):** `15 2 * * * cd ~/flatmeta && bash scripts/backup.sh >> ~/backup.log 2>&1` (a gzipped `pg_dump`, 14 days kept; copy off the server too, with `apps/api/storage/media`).
 - **Restore:** `gunzip -c file.sql.gz | psql "$DATABASE_URL"`.
-- **Stripe:** webhook endpoint `https://<APP_URL host>/api/v1/stripe/webhook` (events listed in the README).
+- **Stripe:** webhook endpoint `https://<APP_URL host>/api/v1/stripe/webhook`; events, dashboard setup and the live checklist in [stripe-live.md](stripe-live.md).
 - **Health:** API `/api/healthz` (through the proxy) or `127.0.0.1:$PORT/healthz`; worker `127.0.0.1:$WORKER_HEALTH_PORT/healthz`.
 - **Live hub (chat and notifications):** `https://<APP_URL host>/api/v1/live/health` returns `ok`, `prefix` (your `REDIS_PREFIX`), open `sockets` (`signedIn` and `guests`), `userChannels` (signed-in users whose `<prefix>:notify:<userId>` channel this API process is subscribed to), `apiProcessesListening` and `pubsubRoundTripMs` (a publish → receive round trip through Redis). `ok: false` with HTTP 503 means pub/sub isn't reaching the API. Counts only, no ids.
 - **Debug logs for the live hub:** set `LOG_LEVEL=debug` in `.env`, then `pm2 reload flatmeta-api flatmeta-worker --update-env` and `pm2 logs flatmeta-api | grep 'live:'`. You'll see `socket opened`, `subscribed user channel`, `published notification` (with `receivers`: 0 means no API process had that user's socket), `delivered notification` and `delivered chat message` (with `sockets`). Set it back to `info` afterwards.

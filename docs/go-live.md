@@ -132,5 +132,5 @@ In the panel: *Web → flatmeta.io → Edit → Proxy template → (the old valu
 
 - **Deploys:** staging deploys on every push to `v2`. Production: `ssh` in, `cd ~/web/flatmeta.io/private/flatmeta && bash scripts/deploy.sh production` (asks for confirmation, health-checks 3251/3250, rolls the code back if they fail).
 - **Backups:** add `15 2 * * * cd ~/web/flatmeta.io/private/flatmeta && bash scripts/backup.sh >> ~/backup-prod.log 2>&1` and copy `private/uploads` off the server.
-- **Turning payments on later:** set the Stripe keys, prices and webhook (`https://flatmeta.io/api/v1/stripe/webhook`), test on staging end to end, then set `PAID_CHECKOUT_ENABLED=true` in the production `.env` and deploy (the web build reads it too).
+- **Turning payments on later:** follow [stripe-live.md](stripe-live.md): live key and webhook, `npm run stripe:sync -- --apply --live`, check that the admin banner is gone, then `PAID_CHECKOUT_ENABLED=true` and deploy (the web build reads it too) and run the live smoke test.
 - **Search engines:** submit `https://flatmeta.io/sitemap.xml` in Google Search Console and Bing Webmaster Tools.

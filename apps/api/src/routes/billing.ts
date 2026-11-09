@@ -149,8 +149,15 @@ export default async function billingRoutes(app: App) {
         req.log.warn({ err: (err as Error).message }, 'Invalid Stripe signature');
         return reply.status(400).send({ error: { code: 'bad_signature', message: 'Invalid signature' } });
       }
-      const res = await handleStripeEvent(event);
-      return { received: true, ...res };
+      try {
+        const res = await handleStripeEvent(event);
+        return { received: true, ...res };
+      } catch (err) {
+        // Forget the event so Stripe's retry is processed instead of being skipped as a duplicate.
+        await db.delete(schema.stripeEvents).where(eq(schema.stripeEvents.id, event.id)).catch(() => undefined);
+        req.log.error({ err: (err as Error).message, type: event.type, id: event.id }, 'Stripe webhook handling failed; Stripe will retry');
+        return reply.status(500).send({ error: { code: 'webhook_failed', message: 'Processing failed, please retry' } });
+      }
     });
   });
 }

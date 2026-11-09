@@ -73,6 +73,9 @@ const schema = z.object({
   STRIPE_PRICE_BRAND_MONTH: optional,
   STRIPE_PRICE_BRAND_YEAR: optional,
   STRIPE_AUTOMATIC_TAX: bool,
+  // Price IDs above win. Without them, prices are found by lookup key (created by scripts/stripe-sync.ts):
+  // <prefix>_<plan>_<interval>, e.g. flatmeta_plus_month.
+  STRIPE_LOOKUP_PREFIX: z.string().regex(/^[a-z0-9_]+$/).default('flatmeta'),
   CURRENCY: z.string().default('usd'),
   // Show sign-in codes on screen (and in the log) instead of emailing them. auto = only when no SMTP is set
   // and APP_ENV is not production. Never allowed in production.
@@ -150,6 +153,7 @@ function load(): Config {
     }
     if (c.SESSION_SECRET === 'dev-only-insecure-secret') throw new Error('SESSION_SECRET must be set in production');
   }
+  for (const p of stripeProblems(c)) console.warn(`[config] STRIPE: ${p}`);
   return c;
 }
 
@@ -164,6 +168,26 @@ type Policy = Pick<Config, 'APP_ENV' | 'SMTP_HOST' | 'STRIPE_SECRET_KEY' | 'PAYM
  */
 export const allowPaymentsMock = (c: Policy) => !c.STRIPE_SECRET_KEY && c.PAYMENTS_MOCK && c.APP_ENV !== 'production';
 export const paymentsMock = () => allowPaymentsMock(config);
+
+/** Live or test mode, from the secret key's prefix (sk_/rk_ live or test). Never logs the key. */
+// Function declarations (hoisted): load() above calls them before this point in the file.
+export function stripeModeFor(key: string | undefined): 'live' | 'test' | 'none' {
+  return !key ? 'none' : /^(sk|rk)_live_/.test(key) ? 'live' : 'test';
+}
+export const stripeMode = () => stripeModeFor(config.STRIPE_SECRET_KEY);
+
+/** Problems with the Stripe setup for this environment (shown to admins; a test key on production blocks checkout). */
+export function stripeProblems(c: Pick<Config, 'APP_ENV' | 'STRIPE_SECRET_KEY' | 'STRIPE_WEBHOOK_SECRET'> = config): string[] {
+  const out: string[] = [];
+  const mode = stripeModeFor(c.STRIPE_SECRET_KEY);
+  if (c.APP_ENV === 'production' && mode === 'test') out.push('A Stripe TEST key is set on production: checkout is refused until STRIPE_SECRET_KEY is a live key (sk_live_… or rk_live_…).');
+  if (c.APP_ENV !== 'production' && mode === 'live') out.push(`A Stripe LIVE key is set on ${c.APP_ENV}: real cards would be charged here.`);
+  if (mode !== 'none' && !c.STRIPE_WEBHOOK_SECRET) out.push('STRIPE_WEBHOOK_SECRET is missing: payments would succeed in Stripe but never be delivered here.');
+  if (c.STRIPE_WEBHOOK_SECRET && !c.STRIPE_WEBHOOK_SECRET.startsWith('whsec_')) out.push('STRIPE_WEBHOOK_SECRET does not look like a webhook signing secret (whsec_…).');
+  return out;
+}
+/** Checkout must never run on production with a test key (orders would "succeed" without real money). */
+export const stripeTestKeyOnProduction = () => config.APP_ENV === 'production' && stripeMode() === 'test';
 
 /** Whether anything can be bought. `auto` means: not in production (go-live runs without payments first). */
 export const paidCheckoutFor = (c: Pick<Config, 'APP_ENV' | 'PAID_CHECKOUT_ENABLED'>) =>

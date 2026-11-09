@@ -80,7 +80,8 @@ Status note: milestones M1–M12 were first built **before** the kickoff file wa
 | [ ] | Owner: if `useSession() used outside <Providers>` shows up in `pm2 logs flatmeta-web-staging`, send the stack: it names the component | owner | todo |
 | [ ] | Owner: verify chat and notifications on staging with two accounts (steps in docs/progress.md, 2026-11-04 entry) | owner | todo |
 | [ ] | Owner: Resend account, verify `flatmeta.io` in Resend (SPF/DKIM/DMARC records in Cloudflare), set `RESEND_API_KEY`, `MAIL_FROM`, `RESEND_WEBHOOK_SECRET` on staging (see docs/deploy-hestia.md → Email) | owner | todo |
-| [ ] | Owner: Stripe test keys, products/prices and webhook for staging; live keys later | owner | todo |
+| [x] | Stripe live-readiness audit: test key on production refused (checkout, portal, payouts) with an admin banner; prices from env or lookup keys created by `npm run stripe:sync` (no hardcoded IDs); plan read from the price (portal changes); `invoice.payment_failed` fixed for the current API (`invoice.parent`) + email; failed webhook handling retried by Stripe instead of skipped; duplicate DM notifications race fixed; docs/stripe-live.md | claude | done (2026-11-09) |
+| [ ] | Owner: Stripe test keys + webhook on staging, rehearse docs/stripe-live.md in test mode; then live keys, `stripe:sync --apply --live`, live webhook, `PAID_CHECKOUT_ENABLED=true`, live smoke test | owner | todo |
 | [ ] | Owner: AI keys (Anthropic and/or OpenAI/Gemini) and the image provider choice (procedural, OpenAI, Imagen or the Google Flow file drop) | owner | todo |
 | [ ] | Owner: production cutover plan from v1 flatmeta.io, including migrating existing land and users (see progress.md open questions) | owner | todo |
 | [ ] | Owner: legal review of terms, privacy and refunds (placeholders now come from `COMPANY_NAME`, `COMPANY_COUNTRY`, `CONTACT_EMAIL`; defaults MeWeBe, United Kingdom, hello@flatmeta.io) | owner | todo |

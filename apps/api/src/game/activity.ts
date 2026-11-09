@@ -49,15 +49,21 @@ export async function notify(userId: string, kind: string, payload: Record<strin
   let row: typeof N.$inferSelect | undefined;
   const by = opts.collapseBy;
   if (by && payload[by] !== undefined) {
-    const [prev] = await db
-      .select()
-      .from(N)
-      .where(and(eq(N.userId, userId), eq(N.kind, kind), isNull(N.readAt), sql`${N.payload}->>${by} = ${String(payload[by])}`))
-      .limit(1);
-    if (prev) {
-      const count = (typeof prev.payload.count === 'number' ? prev.payload.count : 1) + 1;
-      [row] = await db.update(N).set({ payload: { ...payload, count }, createdAt: new Date() }).where(eq(N.id, prev.id)).returning();
-    }
+    const value = String(payload[by]);
+    // Two messages at once must not both miss the unread entry and insert twice: lock this (user, kind, value).
+    row = await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`notify:${userId}:${kind}:${value}`}))`);
+      const [prev] = await tx
+        .select()
+        .from(N)
+        .where(and(eq(N.userId, userId), eq(N.kind, kind), isNull(N.readAt), sql`${N.payload}->>${by} = ${value}`))
+        .limit(1);
+      if (prev) {
+        const count = (typeof prev.payload.count === 'number' ? prev.payload.count : 1) + 1;
+        return (await tx.update(N).set({ payload: { ...payload, count }, createdAt: new Date() }).where(eq(N.id, prev.id)).returning())[0];
+      }
+      return (await tx.insert(N).values({ userId, kind, payload }).returning())[0];
+    });
   }
   if (!row) [row] = await db.insert(N).values({ userId, kind, payload }).returning();
   await publishToUser(userId, { id: row?.id, kind, payload: row?.payload ?? payload, createdAt: row?.createdAt ?? new Date() });

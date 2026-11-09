@@ -6,6 +6,7 @@
   "engines": { "node": ">=22" },
   "workspaces": ["packages/*", "apps/*"],
   "scripts": {
+    "stripe:sync": "npm run stripe:sync -w flatmeta-api --",
     "postinstall": "npm run build -w @flatmeta/shared",
     "build:shared": "npm run build -w @flatmeta/shared",
     "dev:api": "npm run build:shared && npm run dev -w flatmeta-api",

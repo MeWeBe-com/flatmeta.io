@@ -11,6 +11,7 @@ export type EmailType =
   | 'listing_refund'
   | 'payout_sent'
   | 'payout_failed'
+  | 'payment_failed'
   | 'claim_approved'
   | 'claim_rejected'
   | 'landmark_ready'
@@ -101,6 +102,13 @@ export const templates = {
     render('listing_refund', `Refund: ${money(amountCents)}`, {
       title: 'Your purchase was refunded',
       paragraphs: [reason, `We refunded the full ${money(amountCents)} to your payment method. It usually appears within 5 to 10 days.`],
+    }),
+
+  paymentFailed: (plan: string, portalPath: string) =>
+    render('payment_failed', `Payment failed for your ${plan} plan`, {
+      title: 'We couldn’t take your payment',
+      paragraphs: [`The latest payment for your FlatMeta ${plan} plan didn’t go through. Stripe will retry automatically over the next few days; your plan stays active meanwhile.`, 'Update your card to avoid losing your plan features.'],
+      button: { label: 'Update payment method', path: portalPath },
     }),
 
   payoutSent: (amountCents: number) =>

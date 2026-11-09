@@ -276,6 +276,45 @@ The web reads the same rule at build time (`NEXT_PUBLIC_PAID_CHECKOUT` from the 
 
 **Tests:** 7 API tests (fallback order incl. invalid headers; the endpoint for guests, country and home; a signed-in position saved over the socket and used next time; a guest position never saved) and 3 web unit tests (spawn order). New e2e `spawn.spec.ts`, desktop and mobile, with mocked `cf-*` headers and geolocation: approximate start then a glide to the precise spot; "Not now" remembered; country centre; Home plaza; a signed-in player starting at their saved spot on a fresh device; Locate me allowed and blocked. 10/10, three runs in a row; full suite green apart from the two known local-only mock-checkout tests.
 
+## Stripe live-readiness audit (2026-11-09)
+
+No keys or secrets were changed. Checklist and dashboard steps: [docs/stripe-live.md](stripe-live.md).
+
+**Env vars the app reads:**
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`;
+- `STRIPE_PRICE_{PLUS,BUSINESS,BRAND}_{MONTH,YEAR}` (optional now);
+- `STRIPE_LOOKUP_PREFIX` (new, default `flatmeta`), `STRIPE_AUTOMATIC_TAX`, `CURRENCY`;
+- `PAID_CHECKOUT_ENABLED`, `PAYMENTS_MOCK`;
+- the marketplace and payout limits.
+
+There is no publishable key: checkout is a redirect to Stripe Checkout. `.env.example` now lists and explains all of them.
+
+**Webhook:** `https://<host>/api/v1/stripe/webhook`. Events:
+- `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.expired`;
+- `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`;
+- `invoice.payment_failed`, `charge.refunded`.
+
+**Found and fixed:**
+1. **No guard against a test key on production.** Checkout, the portal and marketplace payouts are now refused (503 `stripe_test_key`), the API logs it at start-up, and every admin page shows a red banner. The details are at `GET /v1/admin/payments-status`: key mode, webhook secret present, where each price comes from, problems. It never returns secrets. Admins are also warned about a live key on staging and a missing or invalid webhook secret.
+2. **Failed payments were never reported.** The SDK pins API `2026-10-28`, where an invoice's subscription moved to `invoice.parent.subscription_details`; the handler only read `invoice.subscription`. It now reads both, notifies in-app, and sends one "update your card" email per invoice.
+3. **Plan changes made in the customer portal or dashboard were ignored.** The plan was read from metadata written at checkout. It is now read from the subscription's price (env price IDs or lookup keys), with the metadata as a fallback.
+4. **Webhook events could be lost.** If handling an event threw, its ID was already recorded, so Stripe's retry was skipped as a duplicate. Now the ID is forgotten and the handler answers 500, so the retry is processed.
+5. **Prices:** none were hardcoded. Subscription prices now resolve from `STRIPE_PRICE_*` or by lookup key. The new `npm run stripe:sync` creates the products (`flatmeta_<plan>`) and prices (lookup key `flatmeta_<plan>_<interval>`) from `SUBSCRIPTION_PRICES`. It is a dry run by default; `--apply` creates, a live key also needs `--live`, and `--update-prices` moves the lookup key to a new amount while existing subscribers keep theirs.
+6. **Found while testing, unrelated to Stripe:** two DMs sent at once could each create their own unread notification instead of collapsing into one. Fixed with a per-recipient advisory lock.
+
+**Tests:** 11 new tests in `stripe-live.test.ts`, with a fake Stripe client and real signatures:
+- key-mode checks and `stripe-sync` planning;
+- subscription checkout using the lookup-key price, new customer;
+- the portal, and one-time checkout binding;
+- bad and tampered signatures rejected;
+- subscription create, then a portal interval change, then cancel (back to Free);
+- an organisation switched from Business to Brand in the portal;
+- failed payment under the current and the old payload shape;
+- a failed handling answered with 500, then the retry processed;
+- a test key on production blocking checkout, portal and payouts, with the admin status showing it and no secrets.
+
+92 API and 11 web unit tests pass.
+
 ## Open questions
 
 0. **URGENT: rotate the Laravel `APP_KEY`.** `flatmetaAPI/.env.example` (all v1 branches, since commit `363faab`) contains a real key: `APP_KEY=base64:ah1EUh…`. Rotate it on every server that ever ran it. It is removed from `v2`; it stays in v1 history unless you rewrite it.

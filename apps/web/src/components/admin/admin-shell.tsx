@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BarChart3, Flag, Gavel, Map, Receipt, ScrollText, Star, Store, Tags, Users, MapPin } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { api } from '@/lib/api';
 import { useSession } from '../providers';
 import { SiteHeader } from '../site-chrome';
 import { Spinner, clsx } from '../ui';
@@ -20,6 +22,24 @@ const NAV = [
   { href: '/admin/pricing', label: 'Pricing', icon: Tags },
   { href: '/admin/audit', label: 'Audit log', icon: ScrollText },
 ];
+
+/** Red banner on every admin page while the Stripe setup is wrong (e.g. a test key on production). */
+function PaymentsWarning() {
+  const [s, setS] = useState<{ problems: string[]; mode: string; appEnv: string; checkoutBlocked: boolean } | null>(null);
+  useEffect(() => {
+    api<{ problems: string[]; mode: string; appEnv: string; checkoutBlocked: boolean }>('/admin/payments-status').then(setS).catch(() => undefined);
+  }, []);
+  if (!s?.problems.length) return null;
+  return (
+    <div role="alert" className="mb-5 rounded-2xl border border-[var(--color-coral)] bg-[rgb(255_107_107/.12)] p-4 text-sm">
+      <div className="font-bold text-[var(--color-coral)]">
+        Payments setup needs attention ({s.appEnv}, Stripe {s.mode} mode){s.checkoutBlocked ? ': checkout is blocked' : ''}
+      </div>
+      <ul className="mt-1 list-disc pl-5 space-y-0.5">{s.problems.map((p) => <li key={p}>{p}</li>)}</ul>
+      <p className="mt-2 muted text-xs">See docs/stripe-live.md.</p>
+    </div>
+  );
+}
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const { me, loading, openSignIn } = useSession();
@@ -47,7 +67,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <div className="surface p-10 text-center"><button className="btn-primary" onClick={() => openSignIn()}>Sign in</button></div>
           ) : !staff ? (
             <div className="surface p-10 text-center">Staff only.</div>
-          ) : children}
+          ) : (
+            <>
+              <PaymentsWarning />
+              {children}
+            </>
+          )}
         </main>
       </div>
     </>

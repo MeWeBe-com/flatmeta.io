@@ -1,16 +1,22 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type Stripe from 'stripe';
-import { config, paidCheckout, paymentsMock } from '../config.js';
+import { config, paidCheckout, paymentsMock, stripeTestKeyOnProduction } from '../config.js';
 import { db, schema } from '../db/client.js';
 import type { Order, OrderItem, User } from '../db/schema.js';
 import { HttpError, badRequest, comingSoon } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
+import { emailUser, quietly, templates } from '../email/index.js';
 import { SUBSCRIPTION_PRICES, UPGRADES, type UpgradeKind } from '../lib/pricing.js';
 import { notify, publishActivity } from '../game/activity.js';
 import { recordAction, unlock } from '../game/engine.js';
 import { activatePlot, afterClaim, createPlot, ensureCover, releasePlot } from './plots.js';
 
 let stripeClient: Stripe | null = null;
+/** Tests only: replace the Stripe client with a fake (pass null to go back to the real one). */
+export function setStripeClientForTests(c: Partial<Stripe> | null) {
+  if (config.NODE_ENV !== 'test') throw new Error('setStripeClientForTests is for tests only');
+  stripeClient = c as Stripe | null;
+}
 export async function stripe(): Promise<Stripe> {
   if (!config.STRIPE_SECRET_KEY) throw new HttpError(503, 'payments_unavailable', 'Payments are not configured yet');
   if (!stripeClient) {
@@ -51,12 +57,21 @@ export interface CheckoutInput {
   cancelPath: string;
 }
 
-/** Creates an order and a one-time Stripe Checkout Session (or the dev mock). */
 /** One gate for every way of paying. */
 export function requirePaidCheckout() {
   if (!paidCheckout()) throw comingSoon();
+  requireLiveKeyOnProduction();
 }
 
+/** A test key on production would take "payments" that never charge anyone: refuse instead. */
+export function requireLiveKeyOnProduction() {
+  if (stripeTestKeyOnProduction()) {
+    logger.error('Checkout refused: a Stripe test key is configured on production');
+    throw new HttpError(503, 'stripe_test_key', 'Payments are temporarily unavailable. Please try again later.');
+  }
+}
+
+/** Creates an order and a one-time Stripe Checkout Session (or the dev mock). */
 export async function createCheckout(input: CheckoutInput): Promise<{ url: string; orderId: string }> {
   requirePaidCheckout();
   const amountCents = input.items.reduce((s, i) => s + i.amountCents * (i.quantity ?? 1), 0);
@@ -94,9 +109,15 @@ export async function createCheckout(input: CheckoutInput): Promise<{ url: strin
 }
 
 export type PlanName = 'plus' | 'business' | 'brand';
+const PLANS: PlanName[] = ['plus', 'business', 'brand'];
+const INTERVALS: Interval[] = ['month', 'year'];
+
+/** The lookup key scripts/stripe-sync.ts gives each subscription price, e.g. flatmeta_plus_month. */
+export const lookupKeyFor = (plan: PlanName, interval: Interval) => `${config.STRIPE_LOOKUP_PREFIX}_${plan}_${interval}`;
 export type Interval = 'month' | 'year';
 
-function priceIdFor(plan: PlanName, interval: Interval): string | undefined {
+/** Price ID from env (STRIPE_PRICE_<PLAN>_<INTERVAL>), if set. */
+export function priceIdFor(plan: PlanName, interval: Interval): string | undefined {
   const map: Record<string, string | undefined> = {
     'plus:month': config.STRIPE_PRICE_PLUS_MONTH,
     'plus:year': config.STRIPE_PRICE_PLUS_YEAR,
@@ -108,6 +129,31 @@ function priceIdFor(plan: PlanName, interval: Interval): string | undefined {
   return map[`${plan}:${interval}`];
 }
 
+const lookupCache = new Map<string, { id: string | null; at: number }>();
+/** The price to sell: env first, else the active price with our lookup key (cached 10 minutes). */
+export async function resolvePrice(plan: PlanName, interval: Interval): Promise<string | undefined> {
+  const fromEnv = priceIdFor(plan, interval);
+  if (fromEnv) return fromEnv;
+  const key = lookupKeyFor(plan, interval);
+  const hit = lookupCache.get(key);
+  if (hit && Date.now() - hit.at < 10 * 60_000) return hit.id ?? undefined;
+  const res = await (await stripe()).prices.list({ lookup_keys: [key], active: true, limit: 1 });
+  const id = res.data[0]?.id ?? null;
+  lookupCache.set(key, { id, at: Date.now() });
+  return id ?? undefined;
+}
+
+/**
+ * Which plan a Stripe price stands for: our env price IDs, else its lookup key. Plan changes made in the
+ * customer portal switch the price but keep the subscription's metadata, so the price is the truth.
+ */
+export function planFromPrice(price: { id?: string; lookup_key?: string | null } | null | undefined): { plan: PlanName; interval: Interval } | null {
+  if (!price) return null;
+  for (const plan of PLANS) for (const interval of INTERVALS) if (price.id && priceIdFor(plan, interval) === price.id) return { plan, interval };
+  const m = price.lookup_key?.match(new RegExp(`^${config.STRIPE_LOOKUP_PREFIX}_(plus|business|brand)_(month|year)$`));
+  return m ? { plan: m[1] as PlanName, interval: m[2] as Interval } : null;
+}
+
 export async function createSubscriptionCheckout(user: User, plan: PlanName, interval: Interval, orgId: string | null): Promise<{ url: string }> {
   requirePaidCheckout();
   if (plan !== 'plus' && !orgId) throw badRequest('Business and Brand plans belong to an organisation. Create one first.');
@@ -117,7 +163,7 @@ export async function createSubscriptionCheckout(user: User, plan: PlanName, int
     const id = `mocksub_${plan}_${interval}_${orgId ?? user.id}`;
     return { url: web(`/checkout/mock?subscription=${encodeURIComponent(id)}&next=${encodeURIComponent(successPath)}&cancel=${encodeURIComponent('/pricing')}`) };
   }
-  const price = priceIdFor(plan, interval);
+  const price = await resolvePrice(plan, interval);
   if (!price) throw new HttpError(503, 'plan_unavailable', `The ${plan} plan is not configured yet (missing Stripe price).`);
   const meta = { plan, interval, userId: user.id, orgId: orgId ?? '' };
   const s = await stripe();
@@ -137,6 +183,7 @@ export async function createSubscriptionCheckout(user: User, plan: PlanName, int
 
 export async function portalUrl(user: User, orgId: string | null): Promise<string> {
   if (paymentsMock()) return web(orgId ? '/dashboard/orgs?portal=mock' : '/dashboard/billing?portal=mock');
+  requireLiveKeyOnProduction();
   const customer = await customerFor(user, orgId);
   const s = await stripe();
   const session = await s.billingPortal.sessions.create({ customer: customer!, return_url: web(orgId ? '/dashboard/orgs' : '/dashboard/billing') });
@@ -315,10 +362,12 @@ export function subscriptionFromStripe(sub: Stripe.Subscription) {
   const m = sub.metadata ?? {};
   const item = sub.items?.data?.[0] as (Stripe.SubscriptionItem & { current_period_end?: number }) | undefined;
   const periodEnd = item?.current_period_end ?? (sub as unknown as { current_period_end?: number }).current_period_end;
+  // The price is the truth (portal upgrades/downgrades change it, not the metadata); metadata is the fallback.
+  const fromPrice = planFromPrice(item?.price);
   return {
     stripeSubscriptionId: sub.id,
-    plan: (m.plan as PlanName) ?? 'plus',
-    interval: (m.interval as Interval) ?? 'month',
+    plan: fromPrice?.plan ?? (m.plan as PlanName) ?? 'plus',
+    interval: fromPrice?.interval ?? (m.interval as Interval) ?? 'month',
     status: sub.status,
     userId: m.userId || null,
     orgId: m.orgId || null,
@@ -357,11 +406,18 @@ export async function handleStripeEvent(event: Stripe.Event) {
       await upsertSubscription(subscriptionFromStripe(event.data.object as Stripe.Subscription));
       break;
     case 'invoice.payment_failed': {
-      const inv = event.data.object as Stripe.Invoice & { subscription?: string };
-      const subId = typeof inv.subscription === 'string' ? inv.subscription : null;
+      // Since API version 2025-03-31 the subscription sits under invoice.parent.subscription_details.
+      const inv = event.data.object as Stripe.Invoice & { subscription?: string | { id: string } | null };
+      const parentSub = (inv as { parent?: { subscription_details?: { subscription?: string | { id: string } | null } | null } | null }).parent?.subscription_details?.subscription;
+      const ref = parentSub ?? inv.subscription ?? null;
+      const subId = typeof ref === 'string' ? ref : (ref?.id ?? null);
       if (subId) {
         const [sub] = await db.select().from(schema.subscriptions).where(eq(schema.subscriptions.stripeSubscriptionId, subId));
-        if (sub?.userId) await notify(sub.userId, 'payment_failed', { plan: sub.plan });
+        if (sub?.userId) {
+          await notify(sub.userId, 'payment_failed', { plan: sub.plan, attempt: inv.attempt_count ?? 1 });
+          // One email per invoice, however often Stripe retries.
+          await quietly(emailUser(sub.userId, templates.paymentFailed(sub.plan, sub.orgId ? '/dashboard/orgs' : '/dashboard/billing'), { idempotencyKey: `payment-failed-${inv.id}` }));
+        } else logger.warn({ subscription: subId }, 'invoice.payment_failed for an unknown subscription');
       }
       break;
     }
