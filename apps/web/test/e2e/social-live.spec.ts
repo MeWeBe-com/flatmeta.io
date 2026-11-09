@@ -164,7 +164,7 @@ test('a private chat opened from a profile page reaches the other player live', 
   // B opens A's profile and presses Message: the map opens with the private chat to A.
   await b.page.goto(`/u/${a.username}`);
   await b.page.getByRole('link', { name: 'Message' }).click();
-  await expect(b.page).toHaveURL(new RegExp(`dm=${a.username}`));
+  await expect(b.page).toHaveURL(new RegExp(`dm=${a.username}`), { timeout: 30_000 }); // loading the map can be slow under load
   const chatB = b.page.getByRole('region', { name: 'Chat' });
   await expect(chatB.getByText(`@${a.username}`)).toBeVisible({ timeout: 30_000 });
   const text = `From your profile ${stamp()}`;

@@ -122,9 +122,12 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
     const device = readDevicePos();
     let cancelled = false;
     void (async () => {
-      const server = await fetch('/api/v1/me/approx-location', { credentials: 'include' })
-        .then((r) => (r.ok ? (r.json() as Promise<ServerStart>) : null))
-        .catch(() => null);
+      const ask = () =>
+        fetch('/api/v1/me/approx-location', { credentials: 'include' })
+          .then((r) => (r.ok ? (r.json() as Promise<ServerStart>) : null))
+          .catch(() => null);
+      // One retry: a hiccup (or a rate limit) must not drop a returning player to the Home plaza.
+      const server = (await ask()) ?? (await new Promise<void>((r) => setTimeout(r, 1200)).then(ask));
       if (cancelled) return;
       const s = pickSpawn({ server, device });
       // A deep link (?at=, ?plot=, ?claim=) decides the camera; I still start at my own spot, not the link's.

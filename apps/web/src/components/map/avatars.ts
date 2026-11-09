@@ -196,7 +196,14 @@ export class AvatarLayer {
     el.style.display = this.visible ? '' : 'none';
     const marker = new Marker({ element: el, anchor: 'bottom' }).setLngLat(pos).addTo(this.map);
     this.me = { marker, el, bubble, cur: pos, target: pos };
+    this.markPos(el, pos); // also when the marker is rebuilt (new name or look) without moving
     if (announce) this.emit(true);
+  }
+
+  /** Where my avatar is, for tests and assistive tooling (not secret: it's drawn on screen anyway). */
+  private markPos(el: HTMLElement, [lng, lat]: [number, number]) {
+    el.dataset.lat = lat.toFixed(5);
+    el.dataset.lng = lng.toFixed(5);
   }
 
   private removeMe() {
@@ -212,9 +219,7 @@ export class AvatarLayer {
     this.lastEmit = now;
     const [lng, lat] = this.me.cur;
     this.cb.onMove(lat, lng);
-    // Where my avatar is, for tests and assistive tooling (not secret: it's drawn on screen anyway).
-    this.me.el.dataset.lat = lat.toFixed(5);
-    this.me.el.dataset.lng = lng.toFixed(5);
+    this.markPos(this.me.el, this.me.cur);
     try {
       localStorage.setItem(POS_KEY, JSON.stringify([lng, lat]));
     } catch {

@@ -109,7 +109,7 @@ test('signed-in player: starts at their last saved position on any device', asyn
     }, { timeout: 15_000 })
     .toBe(true);
   await second.page.goto('/');
-  expect(near(await myPos(second.page), { lat: BARCELONA.latitude, lng: BARCELONA.longitude }, 0.001)).toBe(true);
+  await expect.poll(async () => myPos(second.page), { timeout: 15_000 }).toMatchObject({ lat: expect.closeTo(BARCELONA.latitude, 3), lng: expect.closeTo(BARCELONA.longitude, 3) });
   await expect(second.page.getByRole('button', { name: /Approximate location/ })).toHaveCount(0);
   expect(second.errors).toEqual([]);
   await second.ctx.close();
