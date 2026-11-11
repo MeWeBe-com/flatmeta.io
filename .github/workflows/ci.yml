@@ -48,6 +48,8 @@ jobs:
       - name: Build
         env:
           APP_URL: https://ci.example.test
+          # The e2e stack's API runs in development mode with mock payments: build the web app to match.
+          PAID_CHECKOUT_ENABLED: 'true'
         run: npm run build
 
       # Production renders different pages (payments off: "coming soon"; indexing on). Build them too, so a

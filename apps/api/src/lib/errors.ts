@@ -17,7 +17,8 @@ export const unauthorized = (message = 'Sign in to continue') => new HttpError(4
 export const forbidden = (message = 'You do not have access to this') => new HttpError(403, 'forbidden', message);
 export const notFound = (what = 'Resource') => new HttpError(404, 'not_found', `${what} not found`);
 export const conflict = (message: string, details?: unknown) => new HttpError(409, 'conflict', message, details);
-export const paymentRequired = (message: string) => new HttpError(402, 'payment_required', message);
+/** 402 with the plan that unlocks it (G13): the web app turns this into an in-context upgrade. */
+export const paymentRequired = (message: string, upsell: 'plus' | 'business' | 'credits' = 'plus') => new HttpError(402, 'payment_required', message, { upsell });
 export const tooMany = (message = 'Too many requests, slow down a little') => new HttpError(429, 'rate_limited', message);
 
 export const comingSoon = (what = COMING_SOON) => new HttpError(403, 'coming_soon', what);

@@ -165,11 +165,11 @@ export async function applyPlotPatch(plot: Plot, patch: PlotPatchInput, actor: {
     set.gallery = urls;
   }
   if (patch.business !== undefined) {
-    if (patch.business && !plot.ownerOrgId && actor.role !== 'admin') throw paymentRequired('Business details are for organisation plots on the Business or Brand plan');
+    if (patch.business && !plot.ownerOrgId && actor.role !== 'admin') throw paymentRequired('Business details are for organisation plots on the Business or Brand plan', 'business');
     if (patch.business && plot.ownerOrgId) {
       const [org] = await db.select({ plan: schema.organizations.plan }).from(schema.organizations).where(eq(schema.organizations.id, plot.ownerOrgId));
       if (actor.role !== 'admin' && !['business', 'brand', 'enterprise'].includes(org?.plan ?? 'free')) {
-        throw paymentRequired('Business details need the Business or Brand plan');
+        throw paymentRequired('Business details need the Business or Brand plan', 'business');
       }
     }
     set.business = patch.business

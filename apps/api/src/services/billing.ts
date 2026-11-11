@@ -154,18 +154,21 @@ export function planFromPrice(price: { id?: string; lookup_key?: string | null }
   return m ? { plan: m[1] as PlanName, interval: m[2] as Interval } : null;
 }
 
-export async function createSubscriptionCheckout(user: User, plan: PlanName, interval: Interval, orgId: string | null): Promise<{ url: string }> {
+export async function createSubscriptionCheckout(user: User, plan: PlanName, interval: Interval, orgId: string | null, opts: { returnPath?: string; source?: string } = {}): Promise<{ url: string }> {
   requirePaidCheckout();
   if (plan !== 'plus' && !orgId) throw badRequest('Business and Brand plans belong to an organisation. Create one first.');
   if (plan === 'plus' && orgId) throw badRequest('Plus is a personal plan');
-  const successPath = orgId ? `/dashboard/orgs?checkout=success` : `/dashboard/billing?checkout=success`;
+  // G13: an upgrade started from a paywall returns to where the person was, with the feature unlocked.
+  const back = opts.returnPath && isSafeReturnPath(opts.returnPath) ? opts.returnPath : null;
+  const successPath = back ? `${back}${back.includes('?') ? '&' : '?'}upgraded=${plan}` : orgId ? `/dashboard/orgs?checkout=success` : `/dashboard/billing?checkout=success`;
+  const cancelPath = back ?? '/pricing?checkout=cancelled';
   if (paymentsMock()) {
     const id = `mocksub_${plan}_${interval}_${orgId ?? user.id}`;
-    return { url: web(`/checkout/mock?subscription=${encodeURIComponent(id)}&next=${encodeURIComponent(successPath)}&cancel=${encodeURIComponent('/pricing')}`) };
+    return { url: web(`/checkout/mock?subscription=${encodeURIComponent(id)}&next=${encodeURIComponent(successPath)}&cancel=${encodeURIComponent(cancelPath)}`) };
   }
   const price = await resolvePrice(plan, interval);
   if (!price) throw new HttpError(503, 'plan_unavailable', `The ${plan} plan is not configured yet (missing Stripe price).`);
-  const meta = { plan, interval, userId: user.id, orgId: orgId ?? '' };
+  const meta = { plan, interval, userId: user.id, orgId: orgId ?? '', source: opts.source ?? 'pricing' };
   const s = await stripe();
   const session = await s.checkout.sessions.create({
     mode: 'subscription',
@@ -176,10 +179,13 @@ export async function createSubscriptionCheckout(user: User, plan: PlanName, int
     allow_promotion_codes: true,
     automatic_tax: { enabled: config.STRIPE_AUTOMATIC_TAX },
     success_url: web(successPath),
-    cancel_url: web('/pricing?checkout=cancelled'),
+    cancel_url: web(cancelPath),
   });
   return { url: session.url! };
 }
+
+/** A path on our own site (no scheme, no host, no protocol-relative //, no backslashes). */
+export const isSafeReturnPath = (p: string) => /^\/(?![/\\])[A-Za-z0-9\-._~/?=&%+@]*$/.test(p) && p.length <= 200;
 
 export async function portalUrl(user: User, orgId: string | null): Promise<string> {
   if (paymentsMock()) return web(orgId ? '/dashboard/orgs?portal=mock' : '/dashboard/billing?portal=mock');

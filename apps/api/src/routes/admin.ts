@@ -8,7 +8,8 @@ import type { ShowcaseInfo } from '../db/schema.js';
 import { requireAdmin, requireStaff } from '../lib/auth.js';
 import { badRequest, notFound } from '../lib/errors.js';
 import { sendEmail, templates } from '../email/index.js';
-import { DEFAULT_TIERS } from '../lib/pricing.js';
+import { DEFAULT_TIERS, SUBSCRIPTION_PRICES } from '../lib/pricing.js';
+import { key, redis } from '../lib/redis.js';
 import { refundOrder } from '../services/billing.js';
 import { clearPriceCache, recountCountry, releasePlot } from '../services/plots.js';
 import { curatedCountries, generateShowcase, moveShowcasePlot, regenerateShowcaseImage } from '../showcase/generator.js';
@@ -23,6 +24,78 @@ async function audit(actorId: string, action: string, targetType: string | null,
 const page = z.object({ limit: z.coerce.number().int().min(1).max(200).default(50), cursor: z.coerce.number().int().min(0).default(0) });
 
 export default async function adminRoutes(app: App) {
+  // G13: the numbers that matter, per day: signups, claims, paid conversions and revenue (plus paywall views).
+  app.get(
+    '/v1/admin/metrics',
+    { config: { rateLimit: { max: 30, timeWindow: '1 minute' } }, schema: { tags: ['admin'], summary: 'Daily growth and revenue metrics', querystring: z.object({ days: z.coerce.number().int().min(7).max(90).default(30) }) } },
+    async (req) => {
+      requireStaff(req);
+      const days = req.query.days;
+      const since = new Date(Date.now() - (days - 1) * 86400_000);
+      since.setUTCHours(0, 0, 0, 0);
+      const day = (col: unknown) => sql<string>`to_char(date_trunc('day', ${col} at time zone 'UTC'), 'YYYY-MM-DD')`;
+      const [signups, claims, orders, subs, firstPay, active] = await Promise.all([
+        db.select({ d: day(schema.users.createdAt), n: sql<number>`count(*)::int` }).from(schema.users).where(gte(schema.users.createdAt, since)).groupBy(sql`1`),
+        db
+          .select({ d: day(schema.plots.createdAt), n: sql<number>`count(*)::int` })
+          .from(schema.plots)
+          .where(and(gte(schema.plots.createdAt, since), inArray(schema.plots.kind, ['standard', 'homestead', 'landmark']), inArray(schema.plots.status, ['active', 'pending_payment'])))
+          .groupBy(sql`1`),
+        db
+          .select({ d: day(schema.orders.paidAt), n: sql<number>`count(*)::int`, cents: sql<number>`coalesce(sum(${schema.orders.amountCents}), 0)::int` })
+          .from(schema.orders)
+          .where(and(eq(schema.orders.status, 'paid'), gte(schema.orders.paidAt, since)))
+          .groupBy(sql`1`),
+        db.select({ d: day(schema.subscriptions.createdAt), plan: schema.subscriptions.plan, interval: schema.subscriptions.interval }).from(schema.subscriptions).where(gte(schema.subscriptions.createdAt, since)),
+        // A paid conversion: the first day someone (or their organisation) paid anything.
+        db.execute(sql`select to_char(date_trunc('day', first_at at time zone 'UTC'), 'YYYY-MM-DD') as d, count(*)::int as n from (
+            select coalesce(user_id::text, org_id::text) as who, min(at) as first_at from (
+              select user_id, org_id, paid_at as at from orders where status = 'paid' and paid_at is not null
+              union all select user_id, org_id, created_at as at from subscriptions
+            ) x group by 1
+          ) f where first_at >= ${since} group by 1`),
+        db.select({ plan: schema.subscriptions.plan, interval: schema.subscriptions.interval, n: sql<number>`count(*)::int` }).from(schema.subscriptions).where(inArray(schema.subscriptions.status, ['active', 'trialing', 'past_due'])).groupBy(schema.subscriptions.plan, schema.subscriptions.interval),
+      ]);
+      const price = (plan: string, interval: string) => SUBSCRIPTION_PRICES[plan as keyof typeof SUBSCRIPTION_PRICES]?.[interval as 'month' | 'year'] ?? 0;
+      const series: { date: string; signups: number; claims: number; conversions: number; revenueCents: number; paywallViews: number }[] = [];
+      const paywall = await Promise.all(
+        Array.from({ length: days }, (_, i) => new Date(since.getTime() + i * 86400_000).toISOString().slice(0, 10)).map(async (d) => {
+          const h = await redis.hgetall(key('metrics', 'paywall', d)).catch(() => ({}) as Record<string, string>);
+          return [d, Number(h.plus ?? 0) + Number(h.business ?? 0) + Number(h.credits ?? 0)] as const;
+        }),
+      );
+      const pw = new Map(paywall);
+      const by = <T extends { d: string }>(rows: T[]) => new Map(rows.map((r) => [r.d, r]));
+      const S = by(signups);
+      const C = by(claims);
+      const O = by(orders);
+      const F = by((firstPay as unknown as { rows: { d: string; n: number }[] }).rows ?? (firstPay as unknown as { d: string; n: number }[]));
+      const subRevenue = new Map<string, number>();
+      for (const s of subs) subRevenue.set(s.d, (subRevenue.get(s.d) ?? 0) + price(s.plan, s.interval));
+      for (let i = 0; i < days; i++) {
+        const date = new Date(since.getTime() + i * 86400_000).toISOString().slice(0, 10);
+        series.push({
+          date,
+          signups: S.get(date)?.n ?? 0,
+          claims: C.get(date)?.n ?? 0,
+          conversions: F.get(date)?.n ?? 0,
+          revenueCents: (O.get(date)?.cents ?? 0) + (subRevenue.get(date) ?? 0),
+          paywallViews: pw.get(date) ?? 0,
+        });
+      }
+      const mrrCents = active.reduce((sum, a) => sum + a.n * (a.interval === 'year' ? Math.round(price(a.plan, 'year') / 12) : price(a.plan, 'month')), 0);
+      const total = (k: 'signups' | 'claims' | 'conversions' | 'revenueCents' | 'paywallViews') => series.reduce((s, r) => s + r[k], 0);
+      return {
+        days,
+        series,
+        totals: { signups: total('signups'), claims: total('claims'), conversions: total('conversions'), revenueCents: total('revenueCents'), paywallViews: total('paywallViews') },
+        mrrCents,
+        activeSubscriptions: active,
+        note: 'Revenue = one-time payments on the day they were paid + the first period of subscriptions started that day. Renewals are in Stripe.',
+      };
+    },
+  );
+
   app.get('/v1/admin/stats', { schema: { tags: ['admin'], summary: 'Dashboard numbers' } }, async (req) => {
     requireStaff(req);
     const since30 = new Date(Date.now() - 30 * 86400_000);

@@ -1,3 +1,5 @@
+import { key, redis } from '../lib/redis.js';
+import { isSafeReturnPath } from '../services/billing.js';
 import { desc, eq } from 'drizzle-orm';
 import type Stripe from 'stripe';
 import { z } from 'zod';
@@ -45,14 +47,26 @@ export default async function billingRoutes(app: App) {
 
   app.post(
     '/v1/billing/checkout',
-    { schema: { tags: ['billing'], summary: 'Start a subscription checkout', body: z.object({ plan: z.enum(['plus', 'business', 'brand']), interval: z.enum(['month', 'year']).default('month'), orgId: z.uuid().optional() }) } },
+    { schema: { tags: ['billing'], summary: 'Start a subscription checkout', body: z.object({ plan: z.enum(['plus', 'business', 'brand']), interval: z.enum(['month', 'year']).default('month'), orgId: z.uuid().optional(), returnPath: z.string().max(200).optional(), source: z.enum(['pricing', 'paywall', 'billing']).optional() }) } },
     async (req) => {
       const user = requireUser(req);
       if (req.body.orgId) {
         const role = await orgRole(user.id, req.body.orgId);
         if (role !== 'owner' && role !== 'admin') throw forbidden('Only organisation owners and admins can manage billing');
       }
-      return createSubscriptionCheckout(user, req.body.plan, req.body.interval, req.body.orgId ?? null);
+      if (req.body.returnPath && !isSafeReturnPath(req.body.returnPath)) throw badRequest('Invalid return path');
+      if (req.body.source === 'paywall') void redis.hincrby(key('metrics', 'paywall', new Date().toISOString().slice(0, 10)), 'checkouts', 1).catch(() => undefined);
+      return createSubscriptionCheckout(user, req.body.plan, req.body.interval, req.body.orgId ?? null, { returnPath: req.body.returnPath, source: req.body.source });
+    },
+  );
+
+  // G13 funnel: how often people meet a paywall (counted per day, no personal data).
+  app.post(
+    '/v1/billing/paywall-seen',
+    { config: { rateLimit: { max: 30, timeWindow: '1 minute' } }, schema: { tags: ['billing'], summary: 'Count a paywall view (anonymous, per day)', body: z.object({ upsell: z.enum(['plus', 'business', 'credits']) }) } },
+    async (req) => {
+      await redis.hincrby(key('metrics', 'paywall', new Date().toISOString().slice(0, 10)), req.body.upsell, 1).catch(() => undefined);
+      return { ok: true };
     },
   );
 

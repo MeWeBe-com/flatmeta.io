@@ -31,7 +31,7 @@ export default async function aiRoutes(app: App) {
       const plot = await loadPlot(req.body.plotId);
       if (!plot) throw notFound('Plot');
       if (!(await canEditPlot(user, plot))) throw forbidden();
-      if (!(await consumeAiCredit(user))) throw paymentRequired('You are out of AI designs this month. Get a Design Pack or upgrade to Plus.');
+      if (!(await consumeAiCredit(user))) throw paymentRequired('You are out of AI designs this month. Get a Design Pack or upgrade to Plus.', 'credits');
       const [job] = await db.insert(schema.aiJobs).values({ userId: user.id, kind: 'design', status: 'running', input: { ...req.body }, provider: textProvider() }).returning();
       const jobId = job!.id;
       // Runs in-process; the client polls GET /v1/ai/jobs/:id.

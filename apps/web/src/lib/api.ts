@@ -18,6 +18,10 @@ export async function api<T = unknown>(path: string, init: RequestInit & { json?
   const data = text ? JSON.parse(text) : null;
   if (!res.ok) {
     const err = data?.error ?? {};
+    // G13: a paid feature answers 402 with the plan that unlocks it; the upgrade dialog (overlays.tsx) picks it up.
+    if (res.status === 402 && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('fm:paywall', { detail: { message: err.message, upsell: err.details?.upsell ?? 'plus' } }));
+    }
     throw new ApiError(res.status, err.code ?? 'error', err.message ?? `Request failed (${res.status})`, err.details);
   }
   return data as T;

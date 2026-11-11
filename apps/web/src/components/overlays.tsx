@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Mail, Sparkles, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 import { ApiError, post } from '@/lib/api';
 import { RARITY_COLOR } from '@/lib/format';
-import { GOOGLE_AUTH } from '@/lib/config';
+import { GOOGLE_AUTH, PAID_CHECKOUT } from '@/lib/config';
 import { t } from '@/lib/i18n';
 import type { GameResult, Me } from '@/lib/types';
 import { useGame, useSession } from './providers';
@@ -202,6 +202,84 @@ export function GlobalOverlays() {
       <Toasts />
       <LevelUp />
       <SignInDialog />
+      <UpgradeDialog />
     </>
+  );
+}
+
+/**
+ * G13: the upgrade at the moment of need. Any 402 from the API opens this with the plan that unlocks the feature;
+ * checkout returns to the same page with the feature unlocked. While payments are off it says "coming soon".
+ */
+function UpgradeDialog() {
+  const { me, openSignIn } = useSession();
+  const { toast } = useGame();
+  const [hit, setHit] = useState<{ message: string; upsell: 'plus' | 'business' | 'credits' } | null>(null);
+  const [period, setPeriod] = useState<'year' | 'month'>('year');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<{ message: string; upsell: 'plus' | 'business' | 'credits' }>).detail;
+      setHit(d);
+      void post('/billing/paywall-seen', { upsell: d.upsell }).catch(() => undefined);
+    };
+    window.addEventListener('fm:paywall', on);
+    return () => window.removeEventListener('fm:paywall', on);
+  }, []);
+  // Back from checkout: say what changed, and refresh the session so the new plan applies at once.
+  const { refresh } = useSession();
+  useEffect(() => {
+    const p = new URLSearchParams(location.search).get('upgraded');
+    if (p === 'plus' || p === 'business' || p === 'brand') {
+      void refresh();
+      toast({ kind: 'success', title: `Welcome to ${p[0]!.toUpperCase()}${p.slice(1)}! Your new features are unlocked.` });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  if (!hit) return null;
+  const close = () => setHit(null);
+  const back = `${location.pathname}${location.search}`.replace(/[?&]upgraded=[a-z]+/, '');
+  const goPlus = async () => {
+    if (!me.user) return openSignIn('Sign in to upgrade.');
+    setBusy(true);
+    try {
+      const r = await post<{ url: string }>('/billing/checkout', { plan: 'plus', interval: period, returnPath: back.slice(0, 200), source: 'paywall' });
+      window.location.href = r.url;
+    } catch (e) {
+      toast({ kind: 'error', title: e instanceof ApiError ? e.message : 'Could not start checkout' });
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal open onClose={close} title={hit.upsell === 'business' ? 'A Business plan feature' : hit.upsell === 'credits' ? 'Out of AI designs' : 'Unlock this with Plus'}>
+      <div className="space-y-4" aria-label="Upgrade">
+        <p className="text-sm muted">{hit.message}</p>
+        {!PAID_CHECKOUT ? (
+          <p className="surface p-3 text-sm">Paid plans are coming soon. We’ll let you know as soon as you can upgrade.</p>
+        ) : hit.upsell === 'plus' ? (
+          <>
+            <ul className="text-sm space-y-1">
+              <li>✓ Custom HTML and JavaScript on your plots</li>
+              <li>✓ 10 plots, 30 AI designs a month, premium frames</li>
+              <li>✓ 10% off land</li>
+            </ul>
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Billing period">
+              {(['year', 'month'] as const).map((i) => (
+                <button key={i} type="button" role="radio" aria-checked={period === i} onClick={() => setPeriod(i)} className={clsx('surface p-3 text-left', period === i && 'ring-2 ring-[var(--color-teal)]')}>
+                  <div className="font-semibold">{i === 'year' ? '$48 a year' : '$5 a month'}</div>
+                  <div className="text-xs muted">{i === 'year' ? '$4/month · save 20%' : 'cancel any time'}</div>
+                </button>
+              ))}
+            </div>
+            <button className="btn-primary w-full" disabled={busy} onClick={() => void goPlus()}>{busy ? <Spinner /> : <Sparkles size={16} />} Upgrade to Plus</button>
+          </>
+        ) : (
+          <Link href={hit.upsell === 'credits' ? '/dashboard/billing' : '/pricing'} className="btn-primary w-full" onClick={close}>
+            {hit.upsell === 'credits' ? 'Get a Design Pack ($5) or Plus' : 'See the Business plan'}
+          </Link>
+        )}
+        <button type="button" className="text-xs muted underline w-full" onClick={close}>Not now</button>
+      </div>
+    </Modal>
   );
 }

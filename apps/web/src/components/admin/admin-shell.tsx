@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, Flag, Gavel, Map, Receipt, ScrollText, Star, Store, Tags, Users, MapPin, Code2 } from 'lucide-react';
+import { BarChart3, Flag, Gavel, Map, Receipt, ScrollText, Star, Store, Tags, Users, MapPin, Code2, LineChart } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useSession } from '../providers';
@@ -11,6 +11,7 @@ import { Spinner, clsx } from '../ui';
 
 const NAV = [
   { href: '/admin', label: 'Overview', icon: BarChart3 },
+  { href: '/admin/metrics', label: 'Metrics', icon: LineChart },
   { href: '/admin/showcase', label: 'Showcase', icon: Star },
   { href: '/admin/showcase/locations', label: 'Showcase locations', icon: MapPin },
   { href: '/admin/moderation', label: 'Moderation', icon: Gavel },
