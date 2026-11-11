@@ -83,8 +83,17 @@ jobs:
             sleep 2
           done
           echo "stack did not start"; tail -n 50 api.log web.log edge.log; exit 1
-      # The runner's apt mirror sometimes fails to resolve for a minute: retry the browser install twice before giving up.
-      - run: for i in 1 2 3; do npx playwright install --with-deps chromium && exit 0; echo "install failed (attempt $i), retrying"; sleep 30; done; exit 1
+      # Chromium comes from Playwright's CDN. The system libraries are normally already on ubuntu-latest, so apt (whose
+      # mirror on the runners is sometimes unreachable for a long time) runs only when Chromium can't start without it.
+      - name: Install Chromium for Playwright
+        timeout-minutes: 20
+        run: |
+          npx playwright install chromium
+          if node -e "require('@playwright/test').chromium.launch().then((b) => b.close()).catch(() => process.exit(1))"; then
+            echo "Chromium starts: no system packages needed"
+          else
+            for i in 1 2 3; do timeout 300 npx playwright install-deps chromium && exit 0; echo "install-deps failed (attempt $i), retrying"; sleep 20; done; exit 1
+          fi
       - name: End-to-end smoke tests
         run: npm run test:e2e
         env:
