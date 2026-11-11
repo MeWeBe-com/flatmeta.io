@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { Clock, ExternalLink, Mail, MapPin, Phone, Tag, CalendarCheck } from 'lucide-react';
 import { PageShell } from '@/components/site-chrome';
 import { PlotActions } from '@/components/plot/plot-actions';
+import { Markdown } from '@/components/markdown';
 import { OpenHouses } from '@/components/plot/open-houses';
 import { PlotMarket } from '@/components/plot/plot-market';
 import { ReportCustomHtml } from '@/components/plot/report-custom-html';
@@ -124,9 +125,9 @@ export default async function PlotPage({ params }: Params) {
 
         <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
           <div className="space-y-8 min-w-0">
-            {p.descriptionHtml && (
+            {p.descriptionMd && (
               <section className="surface p-6">
-                <div className="prose-plot" dangerouslySetInnerHTML={{ __html: p.descriptionHtml }} />
+                <Markdown source={p.descriptionMd} className="prose-plot" />
                 {p.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-4">
                     {p.tags.map((tg) => (

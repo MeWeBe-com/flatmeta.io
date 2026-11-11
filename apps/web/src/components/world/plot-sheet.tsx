@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Markdown } from '../markdown';
 import { OpenHouses } from '../plot/open-houses';
 import { useEffect, useState } from 'react';
 import { ExternalLink, Hand, Heart, Share2, X, MapPin, Sparkles, Pencil, Eye } from 'lucide-react';
@@ -180,7 +181,7 @@ export function PlotSheet({ plotId, onClose, onFocus }: { plotId: string; onClos
               )}
             </div>
 
-            {plot.descriptionHtml && <div className="prose-plot text-sm line-clamp-6" dangerouslySetInnerHTML={{ __html: plot.descriptionHtml }} />}
+            {plot.descriptionMd && <Markdown source={plot.descriptionMd} className="prose-plot text-sm line-clamp-6" />}
             <p className="text-[11px] muted">
               {t('plot.address')}: <span className="font-mono">{plot.threeWords}</span>
             </p>
