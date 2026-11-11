@@ -100,4 +100,29 @@ Status note: milestones M1–M12 were first built **before** the kickoff file wa
 | [ ] | Owner: cutover on Hestia (record v1 templates, install include files, switch proxy template; go-live.md §2–3) | owner | todo |
 | [ ] | Owner: decide what happens to v1 users and land (v2 starts with a fresh database; see progress.md item 22) | owner | todo |
 
+## Release: growth + gamification (boss brief, 11 Nov 2026)
+Live at https://www.flatmeta.io (branch `v2`; CI deploys on green). One commit per task ID. `[!]` = blocked, with the reason.
+
+**P0: today**
+- [ ] **G1** Growth analysis → `docs/growth-analysis-2026-11.md` (AI market, funnel and leaks, top 10 changes ranked; G15+ quick wins)
+- [ ] **G2** Security headers on the web app: nonce-based CSP (Next.js + map tiles), `frame-ancestors 'none'`, X-Frame-Options DENY, HSTS 1 year + subdomains, nosniff, Referrer-Policy; e2e header check; map, Stripe checkout and WebSockets still work
+- [ ] **G3** Empty map, part 1: admin bulk "verify all showcase locations that passed the automatic check" + CLI (no auto-publish in production; command in the report); map shows the nearest showcase/landmark plots around the visitor's start
+- [ ] **G4** SEO and canonical host: robots.txt and sitemaps on www.flatmeta.io; `sitemap-plots.xml` (sitemap index) with every public plot; per-plot OpenGraph/Twitter images and titles; JSON-LD (Place / Organization); canonical URLs
+- [ ] **G5** Share links: owner handles → `/@handle` and `/@handle/{plot-slug}`; copy link, native share, WhatsApp/X/Facebook/LinkedIn on the plot page and dashboard; "Visit" deep link flies the map there and spawns the avatar next to it; reserve handles matching showcase companies
+- [ ] **G6** Visitor counter: unique visits per plot (no IP storage), "visitors today / this week" on the plot page and owner dashboard
+
+**P1: today if time allows**
+- [ ] **G7** Personalise land: image uploads (type/size checks, EXIF stripped, resized, media dir), cover, colours, title, description, links, small gallery; edit rate limits
+- [ ] **G8** Custom HTML/JS in plots, secure: sandboxed iframe (`allow-scripts` only) on a separate origin (usercontent.flatmeta.io) with its own strict CSP and `connect-src` allowlist; 200 KB limit; versioned saves; report + moderation queue; admin kill-switch per plot and global; automated scan + manual review of the first publish; Hestia subdomain steps
+- [ ] **G9** Walk mode upgrade: WASD/arrows + on-screen joystick, smooth movement across plots, avatar styles, emotes, nearby players live, proximity chat bubbles, block/report, profanity filter, rate limits, signed-in chat only, smooth on mobile
+- [ ] **G10** Plot events and hangouts: "open house" times with visitor notifications; "people here now" count on the map
+- [ ] **G11** Growth loop: share prompt after a free claim; referral (both get a bonus cell when the invitee claims); weekly owner email (visits, neighbours, messages) via Resend, with unsubscribe
+- [ ] **G12** Company land automation: daily worker job sourcing large companies with public HQ coordinates from Wikidata (source + licence stored); top 50 × 10 more countries, then N per day; generic industry artwork (no logos), welcome scene, showroom layout, "Claim this land"; "Reserved for {Company}, not affiliated with FlatMeta"; claim by email domain or DNS TXT → Brand checkout; takedown within 48 h; hidden until the location check passes; `/brands` directory and per-company pages in the sitemap
+- [ ] **G13** Pricing and profit: review plans against G1; implement the top paid upsell with Stripe; admin metrics page (signups, claims, paid conversions, revenue per day)
+- [ ] **G14** AI-native: plots, search and claim through the API/MCP for AI agents; `llms.txt`; "Ask FlatMeta" search on the map (AI with a no-AI fallback)
+
+**P2: then**
+- [ ] **G15+** Extra quick wins from G1
+- [ ] **G-final** `RELEASE-REPORT.md`: what is live (URLs), what is left and why, test results, production smoke test, manual steps (showcase verify command, usercontent subdomain on Hestia, env vars)
+
 ## Phase 2: see docs/03-masterprompt-phase2.md. Not started.
