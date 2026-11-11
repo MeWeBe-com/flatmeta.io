@@ -9,6 +9,7 @@ import type { GameResult, Plot } from '@/lib/types';
 import { useGame, useSession } from '../providers';
 import { Modal, Spinner, clsx } from '../ui';
 import { SharePanel, plotShareUrl } from '../share-panel';
+import { VisitorStats } from './visitor-stats';
 
 export function PlotActions({ plot: initial }: { plot: Plot }) {
   const [plot, setPlot] = useState(initial);
@@ -89,6 +90,7 @@ export function PlotActions({ plot: initial }: { plot: Plot }) {
         {/* Visit: the map flies here and your avatar appears next to the plot (G5). */}
         <Link href={`/?visit=${plot.slug}`} className="btn-ghost col-span-2"><MapIcon size={16} /> Visit on the map</Link>
       </div>
+      <VisitorStats plotId={plot.id} delayMs={800} />
       <SharePanel url={plotShareUrl(plot)} text={`${plot.showcase?.brand ?? plot.title} on FlatMeta`} plotId={plot.id} />
       {canEdit && (
         <div className="grid grid-cols-2 gap-2">

@@ -12,6 +12,7 @@ import type { BusinessInfo, GameResult, Link as PlotLink, Plot, Progress } from 
 import { useGame, useSession } from '@/components/providers';
 import { Spinner, clsx } from '@/components/ui';
 import { SharePanel, plotShareUrl } from '@/components/share-panel';
+import { VisitorStats } from '@/components/plot/visitor-stats';
 
 type Tab = 'design' | 'content' | 'links' | 'look' | 'business' | 'boost';
 interface Variation { title: string; tagline: string; descriptionMd: string; category: string; tags: string[]; theme: { primary: string; accent: string }; image?: { url: string; thumbUrl: string; pending: boolean } }
@@ -111,6 +112,7 @@ function Editor() {
             {plot.status === 'pending_payment' && <span className="text-[var(--color-coral)]"> · awaiting payment</span>}
             {plot.moderationStatus !== 'ok' && <span className="text-[var(--color-coral)]"> · {plot.moderationStatus === 'pending' ? 'in review' : 'held by moderation'}</span>}
           </p>
+          <VisitorStats plotId={plot.id} />
         </div>
         <Link href={`/p/${plot.slug}`} className="btn-ghost"><Eye size={16} /> View</Link>
         {plot.published ? (

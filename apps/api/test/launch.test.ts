@@ -189,3 +189,31 @@ describe('handles and share links (G5)', () => {
     expect((await app.inject({ url: `/v1/handles/free_${tag}/available` })).statusCode).toBe(401);
   });
 });
+
+describe('unique visitors (G6)', () => {
+  it('counts each visitor once a day, not owners or bots, and never stores an IP', async () => {
+    const owner = await login();
+    const plot = json(await app.inject({ method: 'POST', url: '/v1/plots/claim', headers: owner.headers, payload: { rect: freeRect() } })).plot;
+    const visit = (ip: string, ua: string, headers: Record<string, string> = {}) =>
+      app.inject({ method: 'POST', url: `/v1/plots/${plot.id}/visit`, remoteAddress: ip, headers: { 'user-agent': ua, ...headers } });
+    const UA = 'Mozilla/5.0 (X11; Linux x86_64) Chrome/140 Safari/537.36';
+    await visit('203.0.113.7', UA);
+    await visit('203.0.113.7', UA); // same visitor again
+    await visit('198.51.100.9', UA); // someone else
+    await visit('192.0.2.1', 'Googlebot/2.1 (+http://www.google.com/bot.html)'); // a bot
+    await visit('192.0.2.2', UA, owner.headers); // the owner
+    const v = json(await app.inject({ url: `/v1/plots/${plot.id}/visitors` }));
+    expect(v.today).toBe(2);
+    expect(v.week).toBe(2);
+    expect(v.total).toBe(2);
+
+    const { redis } = await import('../src/lib/redis.js');
+    const keys = await redis.keys('*');
+    expect(keys.join(' ')).not.toMatch(/203\.0\.113\.7|198\.51\.100\.9/);
+    for (const k of keys.filter((x) => x.includes(':uv:') || x.includes(':visit:'))) {
+      const type = await redis.type(k);
+      if (type === 'string') expect(String(await redis.get(k))).not.toMatch(/203\.0\.113\.7|198\.51\.100\.9/);
+    }
+    expect((await app.inject({ url: '/v1/plots/not-a-uuid/visitors' })).statusCode).toBe(400);
+  });
+});

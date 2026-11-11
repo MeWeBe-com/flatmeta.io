@@ -28,6 +28,19 @@ test('@handle links, share panel and Visit', async ({ browser }) => {
   await expect(page).toHaveURL(new RegExp(`/p/${plot.slug}$`));
   expect((await req.get(`/@${handle}/not-my-plot-${tag}`)).status()).toBe(404);
 
+  // Visitor counter (G6): the owner's own visits don't count.
+  await expect(page.getByLabel('Visitors')).toContainText('0 visitors today · 0 this week');
+  // A guest's visit is counted once, however often they reload.
+  const guest = await browser.newContext();
+  const gp = await guest.newPage();
+  await gp.goto(`/p/${plot.slug}`);
+  await expect(gp.getByLabel('Visitors')).toContainText('1 visitor today · 1 this week');
+  await gp.reload();
+  await expect(gp.getByLabel('Visitors')).toContainText('1 visitor today');
+  await guest.close();
+  await page.reload();
+  await expect(page.getByLabel('Visitors')).toContainText('1 visitor today · 1 this week');
+
   // Share panel: the friendly link, copy, and the networks.
   const link = page.getByLabel('Link to share');
   await expect(link).toHaveValue(new RegExp(`/@${handle}/${plot.slug}$`));

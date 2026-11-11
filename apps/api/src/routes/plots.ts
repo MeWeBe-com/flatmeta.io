@@ -8,6 +8,7 @@ import { requireUser } from '../lib/auth.js';
 import { badRequest, forbidden, notFound, paymentRequired } from '../lib/errors.js';
 import { bboxToRect, rectBounds } from '../lib/grid.js';
 import { haversineKm } from '../lib/geo.js';
+import { countUniqueVisit, isBot, uniqueVisitors, visitorHash } from '../lib/visitors.js';
 import { safeUrl, stripText } from '../lib/markdown.js';
 import { key, redis } from '../lib/redis.js';
 import { storeImage } from '../lib/storage.js';
@@ -574,9 +575,12 @@ export default async function plotRoutes(app: App) {
   app.post('/v1/plots/:id/visit', { schema: { tags: ['social'], summary: 'Record a visit to a plot page', params: z.object({ id: z.uuid() }) } }, async (req) => {
     const plot = await loadPlot(req.params.id);
     if (!plot) throw notFound('Plot');
+    // Owners looking at their own plot, and bots, aren't visitors. No IP is stored: see lib/visitors.ts (G6).
+    const own = !!req.user && (plot.ownerUserId === req.user.id);
+    if (isBot(req.headers['user-agent'])) return { ok: true, game: null };
     const day = dayKey();
-    const visitor = req.user?.id ?? req.ip;
-    const fresh = await redis.set(key('visit', plot.id, visitor, day), '1', 'EX', 86400, 'NX');
+    const visitor = await visitorHash(req, day);
+    const fresh = own ? false : await countUniqueVisit(plot.id, visitor);
     if (fresh) {
       await db.update(schema.plots).set({ visitsCount: sql`${schema.plots.visitsCount} + 1` }).where(eq(schema.plots.id, plot.id));
       await db
@@ -585,9 +589,8 @@ export default async function plotRoutes(app: App) {
         .onConflictDoUpdate({ target: [schema.plotVisitDays.plotId, schema.plotVisitDays.day], set: { visits: sql`${schema.plotVisitDays.visits} + 1` } });
     }
     if (!req.user || !fresh) return { ok: true, game: null };
-    const userId = req.user.id;
-    const own = plot.ownerUserId === userId;
-    const results: GameResult[] = [await recordAction(userId, 'visit_plot', { ref: plot.id, noXp: own })];
+    const userId = req.user.id; // never the owner here: their own visits aren't counted above
+    const results: GameResult[] = [await recordAction(userId, 'visit_plot', { ref: plot.id })];
     if (plot.kind === 'showcase') results.push(await recordAction(userId, 'visit_showcase', { ref: plot.id, noXp: true }));
     if (plot.countryCode) {
       const newCountry = await db.insert(schema.userCountryVisits).values({ userId, countryCode: plot.countryCode }).onConflictDoNothing().returning();
@@ -595,6 +598,17 @@ export default async function plotRoutes(app: App) {
     }
     return { ok: true, game: mergeResults(...results) };
   });
+
+  // Unique visitors today / this week (G6): public, counts only.
+  app.get(
+    '/v1/plots/:id/visitors',
+    { config: { rateLimit: { max: 120, timeWindow: '1 minute' } }, schema: { tags: ['social'], summary: 'Unique visitors today and this week', params: z.object({ id: z.uuid() }) } },
+    async (req) => {
+      const plot = await loadPlot(req.params.id);
+      if (!plot || plot.status === 'released') throw notFound('Plot');
+      return { ...(await uniqueVisitors(plot.id)), total: plot.visitsCount };
+    },
+  );
 
   app.post('/v1/plots/:id/wave', { schema: { tags: ['social'], summary: 'Wave at a plot (once a day)', params: z.object({ id: z.uuid() }) } }, async (req) => {
     const user = requireUser(req);
