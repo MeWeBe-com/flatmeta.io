@@ -247,7 +247,11 @@ export const plots = pgTable(
     title: text('title').notNull(),
     tagline: text('tagline'),
     descriptionMd: text('description_md'),
-    customHtml: text('custom_html'), // rendered only inside a sandboxed iframe (Plus and above)
+    customHtml: text('custom_html'), // the owner's latest saved version (draft); rendered only inside a sandboxed iframe on the usercontent origin
+    customHtmlLive: text('custom_html_live'), // the version visitors see: passed the automatic scan and (first publish) a manual review
+    customHtmlStatus: text('custom_html_status').notNull().default('none'), // none | review | live | rejected
+    customHtmlVersion: integer('custom_html_version').notNull().default(0),
+    customHtmlDisabled: boolean('custom_html_disabled').notNull().default(false), // admin kill-switch for this plot
     coverImageUrl: text('cover_image_url'),
     thumbUrl: text('thumb_url'),
     gallery: jsonb('gallery').$type<string[]>().notNull().default([]),
@@ -567,6 +571,35 @@ export const moderationFlags = pgTable(
   },
   (t) => [index('moderation_flags_status_idx').on(t.status, t.createdAt)],
 );
+
+/** Every saved version of a plot's custom HTML (G8): restore, review and audit. */
+export const customHtmlVersions = pgTable(
+  'custom_html_versions',
+  {
+    id: id(),
+    plotId: uuid('plot_id')
+      .notNull()
+      .references(() => plots.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    html: text('html').notNull(),
+    bytes: integer('bytes').notNull(),
+    status: text('status').notNull(), // review | approved | rejected | superseded
+    notes: jsonb('notes').$type<string[]>().notNull().default([]), // why it needs review, or why it was rejected
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    reviewedBy: uuid('reviewed_by').references(() => users.id, { onDelete: 'set null' }),
+    reviewedAt: ts('reviewed_at'),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('custom_html_versions_plot_version_idx').on(t.plotId, t.version), index('custom_html_versions_status_idx').on(t.status, t.createdAt)],
+);
+
+/** Small runtime switches admins flip without a deploy (e.g. the global custom HTML kill-switch). */
+export const appSettings = pgTable('app_settings', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').$type<unknown>().notNull(),
+  updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
+  updatedAt: updatedAt(),
+});
 
 export const claimRequests = pgTable('claim_requests', {
   id: id(),

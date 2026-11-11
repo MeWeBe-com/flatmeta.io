@@ -37,6 +37,8 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_COMPANY_NAME: env.COMPANY_NAME || 'MeWeBe',
     NEXT_PUBLIC_COMPANY_COUNTRY: env.COMPANY_COUNTRY || 'United Kingdom',
     NEXT_PUBLIC_CONTACT_EMAIL: env.CONTACT_EMAIL || 'hello@flatmeta.io',
+    // Separate origin for owner custom HTML (G8). Empty in dev/tests: served from /api on the same origin.
+    NEXT_PUBLIC_USERCONTENT_URL: env.USERCONTENT_URL ?? '',
   },
   // In production the Hestia nginx proxy routes /api and /media before they reach Next; these rewrites make dev (and a bare `next start`) work the same way.
   async rewrites() {

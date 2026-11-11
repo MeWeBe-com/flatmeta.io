@@ -1,3 +1,4 @@
+import { customHtmlGloballyDisabledCached, plotSandboxUrl } from '../services/custom-html.js';
 import { and, eq, inArray } from 'drizzle-orm';
 import { db, schema } from '../db/client.js';
 import type { Organization, Plot, User } from '../db/schema.js';
@@ -61,6 +62,7 @@ export function plotView(p: Plot, owner: OwnerView | null, extra: { likedByMe?: 
   const rect = { minGx: p.minGx, minGy: p.minGy, maxGx: p.maxGx, maxGy: p.maxGy };
   const now = Date.now();
   const sc = p.showcase;
+  const liveHtml = !!p.customHtmlLive && !p.customHtmlDisabled && !customHtmlGloballyDisabledCached();
   return {
     id: p.id,
     slug: p.slug,
@@ -80,8 +82,11 @@ export function plotView(p: Plot, owner: OwnerView | null, extra: { likedByMe?: 
     tagline: p.tagline,
     descriptionMd: p.descriptionMd,
     descriptionHtml: renderMarkdown(p.descriptionMd),
-    hasCustomHtml: !!p.customHtml,
-    ...(extra.canEdit && p.customHtml ? { customHtml: p.customHtml } : {}),
+    hasCustomHtml: liveHtml,
+    ...(liveHtml ? { customHtmlUrl: plotSandboxUrl(p.id, p.customHtmlVersion) } : {}),
+    ...(extra.canEdit
+      ? { customHtml: p.customHtml ?? null, customHtmlStatus: p.customHtmlStatus, customHtmlVersion: p.customHtmlVersion, customHtmlDisabled: p.customHtmlDisabled || customHtmlGloballyDisabledCached() }
+      : {}),
     coverImageUrl: p.coverImageUrl,
     thumbUrl: p.thumbUrl,
     gallery: p.gallery,

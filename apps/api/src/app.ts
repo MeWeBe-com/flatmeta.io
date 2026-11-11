@@ -1,3 +1,4 @@
+import { registerUsercontentGuard } from './lib/usercontent.js';
 import Fastify, { type FastifyError } from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
@@ -79,6 +80,7 @@ export async function buildApp() {
     transform: jsonSchemaTransform,
   });
   await app.register(swaggerUi, { routePrefix: '/docs', uiConfig: { docExpansion: 'list', deepLinking: true } });
+  registerUsercontentGuard(app); // before auth: the usercontent host never sees cookies
 
   await app.register(authPlugin);
 

@@ -23,6 +23,7 @@ import { mergeResults, recordAction, type GameResult } from '../game/engine.js';
 import { setPlotLikes } from '../game/leaderboards.js';
 import { FRAMES } from '../game/levels.js';
 import { checkContent } from '../services/moderation.js';
+import { recordCustomHtmlVersion, reportCustomHtml, type SavedHtml } from '../services/custom-html.js';
 import { MAX_CUSTOM_HTML, screenCustomHtml } from '../lib/html.js';
 import { afterClaim, assertCanActForOrg, createPlot, ensureCover, neighbours, ownedCells, quoteFor } from '../services/plots.js';
 import { createCheckout } from '../services/billing.js';
@@ -104,8 +105,9 @@ async function mediaOwnedUrl(mediaId: string, userId: string, isAdmin: boolean) 
 }
 
 /** Applies an owner's edit (shared by REST, MCP and the AI designer). */
-export async function applyPlotPatch(plot: Plot, patch: PlotPatchInput, actor: { id: string; role: string; level: number; plan: string }): Promise<{ plot: Plot; game: GameResult | null }> {
+export async function applyPlotPatch(plot: Plot, patch: PlotPatchInput, actor: { id: string; role: string; level: number; plan: string }): Promise<{ plot: Plot; game: GameResult | null; customHtml?: SavedHtml }> {
   const set: Partial<typeof schema.plots.$inferInsert> = { lastEditedAt: new Date(), updatedAt: new Date() };
+  let htmlNotes: string[] | null = null; // set when this patch saves a new custom HTML version
   if (patch.title !== undefined) set.title = stripText(patch.title, 80);
   if (patch.tagline !== undefined) set.tagline = patch.tagline ? stripText(patch.tagline, 140) : null;
   if (patch.descriptionMd !== undefined) set.descriptionMd = patch.descriptionMd;
@@ -121,9 +123,13 @@ export async function applyPlotPatch(plot: Plot, patch: PlotPatchInput, actor: {
       if (!screen.ok) throw badRequest(`Your HTML ${screen.reasons.join(', ')}.`);
       const mod = await checkContent('plot', plot.id, screen.html.replace(/<[^>]+>/g, ' '));
       if (mod.status === 'flagged') throw badRequest('Our moderator flagged the text in your HTML. Please edit it and try again.');
-      set.customHtml = screen.html;
-    } else {
+      if (screen.html !== plot.customHtml || plot.customHtmlStatus === 'none') {
+        set.customHtml = screen.html;
+        htmlNotes = mod.status === 'pending' ? ['The automatic moderator wants a human to look at the text'] : [];
+      }
+    } else if (plot.customHtml || plot.customHtmlLive) {
       set.customHtml = null;
+      htmlNotes = [];
     }
   }
   if (patch.links !== undefined) {
@@ -178,9 +184,14 @@ export async function applyPlotPatch(plot: Plot, patch: PlotPatchInput, actor: {
     const mod = await checkContent('plot', plot.id, text);
     set.moderationStatus = mod.status;
   }
-  const [updated] = await db.update(schema.plots).set(set).where(eq(schema.plots.id, plot.id)).returning();
+  let [updated] = await db.update(schema.plots).set(set).where(eq(schema.plots.id, plot.id)).returning();
+  let customHtml: SavedHtml | undefined;
+  if (htmlNotes) {
+    customHtml = await recordCustomHtmlVersion(updated!, set.customHtml ?? null, actor, htmlNotes);
+    [updated] = await db.select().from(schema.plots).where(eq(schema.plots.id, plot.id));
+  }
   const game = actor.id ? await recordAction(actor.id, 'edit_plot', { ref: plot.id, noXp: true }) : null;
-  return { plot: updated!, game };
+  return { plot: updated!, game, ...(customHtml ? { customHtml } : {}) };
 }
 
 export async function publishPlot(plot: Plot, actorId: string): Promise<{ plot: Plot; game: GameResult | null; blocked?: string }> {
@@ -500,7 +511,7 @@ export default async function plotRoutes(app: App) {
       if (!plot) throw notFound('Plot');
       if (!(await canEditPlot(user, plot))) throw forbidden('You can only edit your own plots');
       const res = await applyPlotPatch(plot, req.body, user);
-      return { plot: await viewFor(res.plot, user), game: res.game };
+      return { plot: await viewFor(res.plot, user), game: res.game, customHtml: res.customHtml ?? null };
     },
   );
 
@@ -693,10 +704,14 @@ export default async function plotRoutes(app: App) {
 
   app.post(
     '/v1/plots/:id/report',
-    { config: { rateLimit: { max: 10, timeWindow: '1 hour' } }, schema: { tags: ['social'], summary: 'Report a plot', params: z.object({ id: z.uuid() }), body: z.object({ reason: z.string().min(3).max(500) }) } },
+    { config: { rateLimit: { max: 10, timeWindow: '1 hour' } }, schema: { tags: ['social'], summary: 'Report a plot (or only its custom HTML)', params: z.object({ id: z.uuid() }), body: z.object({ reason: z.string().min(3).max(500), about: z.enum(['plot', 'custom_html']).default('plot') }) } },
     async (req) => {
       const plot = await loadPlot(req.params.id);
       if (!plot) throw notFound('Plot');
+      if (req.body.about === 'custom_html') {
+        const { paused } = await reportCustomHtml(plot, stripText(req.body.reason, 500), req.user?.id ?? null);
+        return { ok: true, paused };
+      }
       await db.insert(schema.moderationFlags).values({ targetType: 'plot', targetId: plot.id, source: 'report', reason: stripText(req.body.reason, 500), reporterId: req.user?.id ?? null });
       return { ok: true };
     },

@@ -13,6 +13,7 @@ import { useGame, useSession } from '@/components/providers';
 import { Spinner, clsx } from '@/components/ui';
 import { SharePanel, plotShareUrl } from '@/components/share-panel';
 import { VisitorStats } from '@/components/plot/visitor-stats';
+import { sandboxSrc } from '@/lib/sandbox';
 
 type Tab = 'design' | 'content' | 'links' | 'look' | 'business' | 'boost';
 interface Variation { title: string; tagline: string; descriptionMd: string; category: string; tags: string[]; theme: { primary: string; accent: string }; image?: { url: string; thumbUrl: string; pending: boolean } }
@@ -68,10 +69,11 @@ function Editor() {
   const save = async (fields: Record<string, unknown>, msg = 'Saved') => {
     setSaving(true);
     try {
-      const r = await patch<{ plot: Plot; game: GameResult | null }>(`/plots/${plot.id}`, fields);
+      const r = await patch<{ plot: Plot; game: GameResult | null; customHtml?: { status: string; version: number } | null }>(`/plots/${plot.id}`, fields);
       hydrate(r.plot);
       handleGame(r.game);
-      toast({ kind: 'success', title: msg });
+      if (r.customHtml?.status === 'review') toast({ kind: 'info', title: 'Saved. Your custom HTML goes live after a quick review (first publish only).' });
+      else toast({ kind: 'success', title: msg });
     } catch (e) {
       toast({ kind: 'error', title: e instanceof ApiError ? e.message : 'Could not save' });
     } finally {
@@ -152,8 +154,9 @@ function Editor() {
               </div>
               <details className="surface p-4" open={!!draft.customHtml}>
                 <summary className="cursor-pointer font-semibold">Custom HTML <span className="chip chip-violet ml-2">Plus</span></summary>
-                <p className="text-sm muted mt-2">Add your own HTML, CSS and a little JavaScript. It is shown in a sandbox on your plot page: no cookies, forms, popups or redirects; up to 50 KB. Embeds are limited to YouTube, Vimeo, Spotify and Google Maps.</p>
-                <textarea className="input font-mono text-[13px] mt-3" rows={9} maxLength={50000} value={draft.customHtml} onChange={(e) => setDraft({ ...draft, customHtml: e.target.value })} placeholder={'<h2>Welcome!</h2>\n<p>Opening hours, a playlist, a tiny game…</p>'} aria-label="Custom HTML" />
+                <p className="text-sm muted mt-2">Add your own HTML, CSS and JavaScript. It runs in a sandbox on a separate site (usercontent), never on FlatMeta itself: no cookies, logins, forms, popups or redirects; up to 200 KB. Scripts may load from cdnjs, jsDelivr and unpkg; embeds from YouTube, Vimeo, Spotify and Google Maps. Your first publish is checked by a person, then changes go live at once.</p>
+                <CustomHtmlStatus plot={plot} onRestored={hydrate} />
+                <textarea className="input font-mono text-[13px] mt-3" rows={9} maxLength={200000} value={draft.customHtml} onChange={(e) => setDraft({ ...draft, customHtml: e.target.value })} placeholder={'<h2>Welcome!</h2>\n<p>Opening hours, a playlist, a tiny game…</p>'} aria-label="Custom HTML" />
                 {draft.customHtml && <CustomHtmlPreview html={draft.customHtml} />}
                 {me.user?.plan === 'free' && !me.orgs?.some((o) => o.plan !== 'free') && <p className="text-xs mt-2 text-[var(--color-gold)]">Custom HTML needs <a className="underline" href="/pricing">Plus or a business plan</a>.</p>}
               </details>
@@ -458,19 +461,81 @@ export default function PlotEditorPage() {
   );
 }
 
-/** Previews unsaved custom HTML through the API's sandbox endpoint (own origin policy), never with srcdoc. */
+/**
+ * Previews unsaved custom HTML (G8): the API screens it and stores it under a short-lived token, and the frame loads it
+ * from the usercontent origin. Never srcdoc, never our own origin, no cookies needed.
+ */
 function CustomHtmlPreview({ html }: { html: string }) {
-  const form = useRef<HTMLFormElement>(null);
+  const [src, setSrc] = useState<string | null>(null);
+  const [reasons, setReasons] = useState<string[]>([]);
   useEffect(() => {
-    const t = setTimeout(() => form.current?.submit(), 500);
-    return () => clearTimeout(t);
+    let live = true;
+    const t = setTimeout(() => {
+      post<{ ok: boolean; reasons: string[]; url: string }>('/sandbox/preview', { html })
+        .then((r) => {
+          if (!live) return;
+          setSrc(sandboxSrc(r.url));
+          setReasons(r.reasons);
+        })
+        .catch(() => undefined);
+    }, 500);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
   }, [html]);
   return (
     <>
-      <form ref={form} method="post" action="/api/v1/sandbox/preview" target="fm-html-preview" className="hidden">
-        <input type="hidden" name="html" value={html} readOnly />
-      </form>
-      <iframe name="fm-html-preview" title="Preview" sandbox="allow-scripts" referrerPolicy="no-referrer" className="w-full h-56 rounded-xl mt-3 border border-[var(--line)] bg-[#0b1020]" />
+      {reasons.length > 0 && <p role="alert" className="text-xs mt-2 text-[var(--color-coral)]">Can’t be published: {reasons.join(', ')}.</p>}
+      <iframe title="Preview" src={src ?? 'about:blank'} sandbox="allow-scripts" referrerPolicy="no-referrer" className="w-full h-56 rounded-xl mt-3 border border-[var(--line)] bg-[#0b1020]" />
     </>
+  );
+}
+
+const HTML_STATUS: Record<string, { label: string; cls: string }> = {
+  review: { label: 'Waiting for review', cls: 'chip-gold' },
+  live: { label: 'Live', cls: 'chip-teal' },
+  rejected: { label: 'Not approved', cls: 'chip-coral' },
+};
+
+/** Where the custom HTML stands, and the saved versions with Restore (G8). */
+function CustomHtmlStatus({ plot, onRestored }: { plot: Plot; onRestored: (p: Plot) => void }) {
+  const { toast } = useGame();
+  const [versions, setVersions] = useState<{ version: number; bytes: number; status: string; createdAt: string; notes: string[] }[] | null>(null);
+  const status = plot.customHtmlStatus ?? 'none';
+  if (status === 'none' && !plot.customHtmlVersion) return null;
+  const s = HTML_STATUS[status];
+  const load = () => api<{ versions: NonNullable<typeof versions> }>(`/plots/${plot.id}/custom-html/versions`).then((r) => setVersions(r.versions)).catch(() => setVersions([]));
+  const restore = async (v: number) => {
+    try {
+      const r = await post<{ plot: Plot; customHtml: { status: string; version: number } | null }>(`/plots/${plot.id}/custom-html/versions/${v}/restore`);
+      onRestored(r.plot);
+      toast({ kind: 'success', title: r.customHtml?.status === 'review' ? `Version ${v} restored, waiting for review` : `Version ${v} restored` });
+      void load();
+    } catch (e) {
+      toast({ kind: 'error', title: e instanceof ApiError ? e.message : 'Could not restore' });
+    }
+  };
+  return (
+    <div className="mt-3 text-sm" aria-label="Custom HTML status">
+      <div className="flex flex-wrap items-center gap-2">
+        {s && <span className={clsx('chip', s.cls)}>{s.label}</span>}
+        {plot.customHtmlDisabled && <span className="chip chip-coral">Switched off by a moderator</span>}
+        <span className="muted text-xs">Version {plot.customHtmlVersion}</span>
+        <button type="button" className="text-xs underline muted" onClick={() => void load()}>Versions</button>
+      </div>
+      {versions && (
+        <ul className="mt-2 space-y-1 max-h-40 overflow-auto">
+          {versions.length === 0 && <li className="muted text-xs">No saved versions yet.</li>}
+          {versions.map((v) => (
+            <li key={v.version} className="flex items-center gap-2 text-xs">
+              <span className="font-mono">v{v.version}</span>
+              <span className="muted">{new Date(v.createdAt).toLocaleString()} · {(v.bytes / 1000).toFixed(1)} KB · {v.status}</span>
+              {v.version !== plot.customHtmlVersion && <button type="button" className="underline ml-auto" onClick={() => void restore(v.version)}>Restore</button>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

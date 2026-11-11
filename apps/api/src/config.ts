@@ -25,6 +25,9 @@ const schema = z.object({
   APP_URL: z.string().default('http://localhost:3200'),
   // Public base of the API (docs, MCP, webhooks). Defaults to APP_URL + /api (the proxy strips the prefix).
   API_URL: z.string().default(''),
+  // Separate origin that serves owner custom HTML (G8), e.g. https://usercontent.flatmeta.io. Empty: served from /api
+  // on the site's own origin (dev and tests only; production should always set it).
+  USERCONTENT_URL: z.string().default(''),
   PRODUCTION_DOMAIN: z.string().default('flatmeta.io'),
   STAGING_DOMAIN: z.string().default('staging.flatmeta.io'),
 

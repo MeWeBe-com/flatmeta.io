@@ -57,7 +57,13 @@ export interface Plot {
   moderationStatus: string;
   owner: Owner | null;
   hasCustomHtml?: boolean;
-  customHtml?: string;
+  /** Approved version on the usercontent origin (G8). */
+  customHtmlUrl?: string;
+  /** Editors only: the latest saved draft and where it stands. */
+  customHtml?: string | null;
+  customHtmlStatus?: 'none' | 'review' | 'live' | 'rejected';
+  customHtmlVersion?: number;
+  customHtmlDisabled?: boolean;
   listing?: { id: string; priceCents: number; currency: string; version: number } | null;
   likesCount: number;
   visitsCount: number;

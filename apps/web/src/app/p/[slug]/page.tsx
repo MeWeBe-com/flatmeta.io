@@ -5,6 +5,8 @@ import { Clock, ExternalLink, Mail, MapPin, Phone, Tag, CalendarCheck } from 'lu
 import { PageShell } from '@/components/site-chrome';
 import { PlotActions } from '@/components/plot/plot-actions';
 import { PlotMarket } from '@/components/plot/plot-market';
+import { ReportCustomHtml } from '@/components/plot/report-custom-html';
+import { sandboxSrc } from '@/lib/sandbox';
 import { Guestbook } from '@/components/plot/guestbook';
 import { MiniMapLazy } from '@/components/plot/mini-map-lazy';
 import { KindChip, PlotCard } from '@/components/ui';
@@ -127,11 +129,15 @@ export default async function PlotPage({ params }: Params) {
               </section>
             )}
 
-            {p.hasCustomHtml && (
+            {p.hasCustomHtml && p.customHtmlUrl && (
               <section className="surface overflow-hidden" aria-label="Custom content from the plot owner">
-                {/* Owner HTML is its own document (never srcdoc): sandboxed, opaque origin, its own CSP, no forms, popups or top navigation. */}
-                <iframe title={`Custom content for ${p.title}`} src={`/api/v1/plots/${p.id}/sandbox`} sandbox="allow-scripts" referrerPolicy="no-referrer" loading="lazy" className="w-full h-[480px] bg-transparent" />
-                <p className="text-[11px] muted px-4 py-2 border-t border-[var(--line)]">Custom content made by the plot owner. Report problems with the Report button.</p>
+                {/* Owner HTML is its own document on the separate usercontent origin (never srcdoc): sandboxed, opaque origin,
+                    its own CSP, no forms, popups or top navigation. */}
+                <iframe title={`Custom content for ${p.title}`} src={sandboxSrc(p.customHtmlUrl)} sandbox="allow-scripts" referrerPolicy="no-referrer" loading="lazy" className="w-full h-[480px] bg-transparent" />
+                <div className="flex items-center justify-between gap-3 px-4 py-2 border-t border-[var(--line)]">
+                  <p className="text-[11px] muted">Custom content made by the plot owner, not by FlatMeta.</p>
+                  <ReportCustomHtml plotId={p.id} />
+                </div>
               </section>
             )}
 

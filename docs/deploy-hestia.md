@@ -109,6 +109,37 @@ Each environment is **its own checkout with its own `.env`** (database, Redis DB
 
 **Deploys:** CI deploys only the checkout in `DEPLOY_PATH` (staging) with `deploy.sh v2`. `scripts/deploy.sh` checks the environment you name against the checkout's `.env`, and **production deploys only when a person runs `bash scripts/deploy.sh production` in a terminal** (it refuses CI, cron and forced-command keys, and asks you to type `production`). Staging shows a banner and serves `Disallow: /` and `noindex`.
 
+## Usercontent origin (custom HTML)
+
+Owner custom HTML never runs on `flatmeta.io`. The API serves it as sandboxed documents (`CSP: sandbox allow-scripts`, opaque origin, its own strict CSP) on a **separate subdomain**, and the site's own host refuses those URLs once `USERCONTENT_URL` is set. Set it up once per instance (production shown; staging uses `usercontent-staging.flatmeta.io` and API port 3201).
+
+1. **DNS (Cloudflare):** add `usercontent` as a proxied `A` record to the server's IP, like `www`.
+2. **Hestia (as root):** create the web domain with SSL and the NodeJS proxy template, then install the include. Replace `USER` with the Hestia user:
+   ```bash
+   v-add-web-domain USER usercontent.flatmeta.io
+   v-add-letsencrypt-domain USER usercontent.flatmeta.io
+   v-change-web-domain-proxy-tpl USER usercontent.flatmeta.io NodeJS
+   install -m 644 ~USER/web/flatmeta.io/private/flatmeta/deploy/hestia/usercontent.conf /home/USER/conf/web/usercontent.flatmeta.io/nodejs/nodejs-app.conf
+   printf '' > /home/USER/conf/web/usercontent.flatmeta.io/nodejs/nodejs-app-fallback.conf
+   nginx -t && systemctl reload nginx
+   ```
+   (Find the include paths with `grep -rn "nodejs-app" /usr/local/hestia/data/templates/web/nginx/` if they differ.) The include proxies only `GET /v1/plots/<id>/sandbox` and `GET /v1/sandbox/preview/<token>` to the API, strips cookies, and answers 404 for everything else.
+3. **`.env`** (the API and the web build both read it):
+   ```bash
+   USERCONTENT_URL=https://usercontent.flatmeta.io
+   # optional: APIs owner code may call with fetch/WebSocket (comma-separated hostnames); empty = none
+   USERCONTENT_CONNECT_HOSTS=
+   ```
+   Keep `COOKIE_DOMAIN` **empty** (host-only cookies), so the session cookie is never sent to the subdomain.
+4. `bash scripts/deploy.sh production`, then check:
+   ```bash
+   curl -sI https://usercontent.flatmeta.io/v1/plots/<plot-id-with-live-html>/sandbox | grep -i content-security-policy   # starts with "sandbox allow-scripts;"
+   curl -s -o /dev/null -w '%{http_code}\n' https://usercontent.flatmeta.io/v1/me                                    # 404
+   curl -s -o /dev/null -w '%{http_code}\n' https://www.flatmeta.io/api/v1/plots/<id>/sandbox                         # 404 (never on the site's origin)
+   ```
+
+Until `USERCONTENT_URL` is set the documents are served from `/api` on the site's own origin, still sandboxed with an opaque origin. That is fine for development; production should always have the subdomain. Admins review first publishes and use the kill-switches at **Admin → Custom HTML**.
+
 ## Email (Resend)
 
 FlatMeta sends email through [Resend](https://resend.com). Set it up once per sending domain (use `flatmeta.io` for both staging and production, or a subdomain such as `mail.flatmeta.io` to keep reputations apart):
