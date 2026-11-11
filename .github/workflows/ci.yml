@@ -68,6 +68,8 @@ jobs:
           REDIS_URL: redis://localhost:6379/14
           SESSION_SECRET: ci-only-secret
           API_INTERNAL_URL: http://127.0.0.1:3201
+          # The e2e suite signs in dozens of players from one IP; production keeps the default (10/min).
+          AUTH_RATE_LIMIT_PER_MINUTE: '200'
         run: |
           NODE_ENV=development npm run db:migrate
           NODE_ENV=development npm run db:seed

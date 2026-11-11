@@ -1,0 +1,1433 @@
+{
+ "head": {
+  "vars": [
+   "item",
+   "name",
+   "website",
+   "hqName",
+   "hqCoord",
+   "addrCoord",
+   "industryName",
+   "sitelinks"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q185339"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "air transport"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Montr\u00e9al\u2013Trudeau International Airport"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://www.aircanada.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "69"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Air Canada"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.7408 45.4706)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q185339"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "air transport"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Montr\u00e9al\u2013Trudeau International Airport"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://www.aircanada.com/de/de/aco/home.html"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "69"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Air Canada"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.7408 45.4706)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q185339"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "air transport"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Montreal"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://www.aircanada.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "69"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Air Canada"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.5868411 45.5033426)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q185339"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "air transport"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Montreal"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://www.aircanada.com/de/de/aco/home.html"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "69"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Air Canada"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.5868411 45.5033426)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q459477"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "logistics"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Memphis"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://www.fedex.com/"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "48"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "FedEx"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-90.051944444 35.146111111)"
+    },
+    "addrCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-89.8591 35.1058)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q459477"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "transport industry"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Memphis"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://www.fedex.com/"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "48"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "FedEx"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-90.051944444 35.146111111)"
+    },
+    "addrCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-89.8591 35.1058)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q502121"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Internet of Things"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Waterloo"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://blackberry.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "44"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "BlackBerry"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-80.516666666 43.466666666)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q502121"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "information technology"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Waterloo"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://blackberry.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "44"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "BlackBerry"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-80.516666666 43.466666666)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q333498"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "rail industry"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Dorval"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://www.bombardier.com/"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "41"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Bombardier"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.75 45.45)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q333498"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "aerospace industry"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Dorval"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://www.bombardier.com/"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "41"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Bombardier"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.75 45.45)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q420822"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "retail"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "San Francisco"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://www.gapinc.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "40"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Gap Inc."
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-122.419444444 37.775)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q420822"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "fast fashion"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "San Francisco"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://www.gapinc.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "40"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Gap Inc."
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-122.419444444 37.775)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q175106"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "fast food"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Oakville"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://www.timhortons.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "36"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Tim Hortons"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-79.683333333 43.45)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q806693"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "financial services"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Bank of Montreal Head Office, Montreal"
+    },
+    "website": {
+     "type": "uri",
+     "value": "http://www.bmo.com/"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "33"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Bank of Montreal"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.5579 45.5049)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q806693"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "financial services"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "First Canadian Place"
+    },
+    "website": {
+     "type": "uri",
+     "value": "http://www.bmo.com/"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "33"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Bank of Montreal"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-79.3817 43.6486)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q7501150"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "e-commerce"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Ottawa"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://www.shopify.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "33"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Shopify"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-75.695 45.424722222)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q806693"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "economics of banking"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Bank of Montreal Head Office, Montreal"
+    },
+    "website": {
+     "type": "uri",
+     "value": "http://www.bmo.com/"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "33"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Bank of Montreal"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.5579 45.5049)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q806693"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "economics of banking"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "First Canadian Place"
+    },
+    "website": {
+     "type": "uri",
+     "value": "http://www.bmo.com/"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "33"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Bank of Montreal"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-79.3817 43.6486)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q7501150"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "online marketplace"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Ottawa"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://www.shopify.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "33"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Shopify"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-75.695 45.424722222)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q806693"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "financial sector"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Bank of Montreal Head Office, Montreal"
+    },
+    "website": {
+     "type": "uri",
+     "value": "http://www.bmo.com/"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "33"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Bank of Montreal"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.5579 45.5049)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q806693"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "financial sector"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "First Canadian Place"
+    },
+    "website": {
+     "type": "uri",
+     "value": "http://www.bmo.com/"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "33"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Bank of Montreal"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-79.3817 43.6486)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1141267"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "media industry"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Toronto"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://thomsonreuters.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "33"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Thomson Reuters"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-79.386666666 43.670277777)"
+    },
+    "addrCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-79.380555555 43.650277777)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q735261"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "financial services"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Royal Bank Plaza"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://rbc.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "31"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Royal Bank of Canada"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-79.3801 43.6465)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q735261"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "financial services"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Tour de la Banque Royale"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://rbc.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "31"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Royal Bank of Canada"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.5594 45.5019)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q735261"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "financial services"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Place Ville Marie"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://rbc.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "31"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Royal Bank of Canada"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.5684 45.5015)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q735261"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "financial services"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Toronto"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://rbc.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "31"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Royal Bank of Canada"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-79.386666666 43.670277777)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q735261"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "economics of banking"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Royal Bank Plaza"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://rbc.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "31"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Royal Bank of Canada"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-79.3801 43.6465)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q735261"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "economics of banking"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Tour de la Banque Royale"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://rbc.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "31"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Royal Bank of Canada"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.5594 45.5019)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q735261"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "economics of banking"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Place Ville Marie"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://rbc.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "31"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Royal Bank of Canada"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.5684 45.5015)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q735261"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "economics of banking"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Toronto"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://rbc.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "31"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Royal Bank of Canada"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-79.386666666 43.670277777)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q735261"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "financial sector"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Royal Bank Plaza"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://rbc.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "31"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Royal Bank of Canada"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-79.3801 43.6465)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q735261"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "financial sector"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Tour de la Banque Royale"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://rbc.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "31"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Royal Bank of Canada"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.5594 45.5019)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q735261"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "financial sector"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Place Ville Marie"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://rbc.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "31"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Royal Bank of Canada"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.5684 45.5015)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q735261"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "financial sector"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Toronto"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://rbc.com"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "31"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Royal Bank of Canada"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-79.386666666 43.670277777)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q624798"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "rail freight transport"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Downtown Montreal"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://www.cn.ca/"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "30"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Canadian National Railway"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.5540998 45.5088282)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1194832"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "financial services"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Toronto-Dominion Centre"
+    },
+    "website": {
+     "type": "uri",
+     "value": "http://www.td.com/"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "29"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Toronto-Dominion Bank"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-79.3808 43.6479)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1194832"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "financial services"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Toronto"
+    },
+    "website": {
+     "type": "uri",
+     "value": "http://www.td.com/"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "29"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Toronto-Dominion Bank"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-79.386666666 43.670277777)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1194832"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "financial sector"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Toronto-Dominion Centre"
+    },
+    "website": {
+     "type": "uri",
+     "value": "http://www.td.com/"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "29"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Toronto-Dominion Bank"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-79.3808 43.6479)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1194832"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "financial sector"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Toronto"
+    },
+    "website": {
+     "type": "uri",
+     "value": "http://www.td.com/"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "29"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Toronto-Dominion Bank"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-79.386666666 43.670277777)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q451476"
+    },
+    "industryName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "financial services"
+    },
+    "hqName": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Scotia Plaza"
+    },
+    "website": {
+     "type": "uri",
+     "value": "https://www.scotiabank.com/"
+    },
+    "sitelinks": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "27"
+    },
+    "name": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Scotiabank"
+    },
+    "hqCoord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-79.3794 43.6492)"
+    }
+   }
+  ]
+ }
+}

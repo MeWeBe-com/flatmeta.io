@@ -7,10 +7,12 @@ export interface SitemapFeed {
   regions: string[];
   users: { username: string; updatedAt: string }[];
   orgs: { slug: string; updatedAt: string }[];
+  /** G12: countries with reserved company land (/brands/<cc>). */
+  brandCountries?: string[];
 }
 
 export const PLOTS_PER_SITEMAP = 40_000;
-export const STATIC_PAGES = ['', '/explore', '/leaderboards', '/marketplace', '/clans', '/pricing', '/business', '/about', '/legal/terms', '/legal/privacy', '/legal/refunds'];
+export const STATIC_PAGES = ['', '/explore', '/leaderboards', '/marketplace', '/clans', '/pricing', '/business', '/brands', '/about', '/legal/terms', '/legal/privacy', '/legal/refunds'];
 
 /** The API's list of public URLs (plots visible on the map, countries, cities, owners, organisations). */
 export async function sitemapFeed(): Promise<SitemapFeed | null> {

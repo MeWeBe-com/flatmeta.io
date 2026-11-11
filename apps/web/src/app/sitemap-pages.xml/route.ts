@@ -7,6 +7,7 @@ export async function GET() {
   for (const c of feed?.countries ?? []) urls.push({ loc: abs(`/c/${c.toLowerCase()}`), freq: 'daily', prio: 0.7 });
   for (const r of feed?.regions ?? []) urls.push({ loc: abs(`/r/${r}`), freq: 'daily', prio: 0.7 });
   for (const u of feed?.users ?? []) urls.push({ loc: abs(`/u/${u.username}`), lastmod: u.updatedAt, freq: 'weekly', prio: 0.4 });
+  for (const c of feed?.brandCountries ?? []) urls.push({ loc: abs(`/brands/${c.toLowerCase()}`), freq: 'daily', prio: 0.6 });
   for (const o of feed?.orgs ?? []) urls.push({ loc: abs(`/o/${o.slug}`), lastmod: o.updatedAt, freq: 'weekly', prio: 0.5 });
   const body = urls
     .map((u) => `  <url><loc>${xmlEscape(u.loc)}</loc>${u.lastmod ? `<lastmod>${new Date(u.lastmod).toISOString()}</lastmod>` : ''}<changefreq>${u.freq}</changefreq><priority>${u.prio}</priority></url>`)

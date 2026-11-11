@@ -68,7 +68,7 @@ export async function consumeCode(email: string, code: string, purpose: 'login' 
 }
 
 export default async function authRoutes(app: App) {
-  const strict = { rateLimit: { max: 10, timeWindow: '1 minute' } };
+  const strict = { rateLimit: { max: config.AUTH_RATE_LIMIT_PER_MINUTE, timeWindow: '1 minute' } };
 
   app.post(
     '/v1/auth/request-code',

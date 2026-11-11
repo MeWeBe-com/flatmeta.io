@@ -173,6 +173,7 @@ export function SiteFooter() {
           <Link href="/leaderboards" className="muted hover:text-[var(--text)]">{t('nav.leaderboards')}</Link>
           <Link href="/business" className="muted hover:text-[var(--text)]">{t('nav.business')}</Link>
           <Link href="/pricing" className="muted hover:text-[var(--text)]">{t('nav.pricing')}</Link>
+          <Link href="/brands" className="muted hover:text-[var(--text)]">Companies</Link>
         </div>
         <div className="grid gap-2">
           <Link href="/about" className="muted hover:text-[var(--text)]">{t('footer.about')}</Link>

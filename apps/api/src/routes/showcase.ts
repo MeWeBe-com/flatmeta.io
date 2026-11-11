@@ -9,7 +9,8 @@ import { badRequest, notFound } from '../lib/errors.js';
 import { stripText } from '../lib/markdown.js';
 import { consumeCode, issueCode } from './auth.js';
 import { loadPlot } from './plots.js';
-import { emailMatchesWebsite, landmarkCheckout, verifiedOrgFor } from '../services/showcase-claim.js';
+import { emailMatchesWebsite, landmarkCheckout, registrableDomain, verifiedOrgFor } from '../services/showcase-claim.js';
+import { dnsRecordFor, domainHasToken, newDnsToken } from '../services/dns-verify.js';
 
 export default async function showcaseRoutes(app: App) {
   app.post(
@@ -74,6 +75,54 @@ export default async function showcaseRoutes(app: App) {
     },
   );
 
+  // ── G12: claim by DNS TXT record (no work email needed) ──
+  app.post(
+    '/v1/showcase/:slug/claim/dns',
+    {
+      config: { rateLimit: { max: 5, timeWindow: '10 minutes' } },
+      schema: { tags: ['showcase'], summary: 'Start a claim verified by a DNS TXT record', params: z.object({ slug: z.string().max(80) }), body: z.object({ orgName: z.string().min(2).max(100) }) },
+    },
+    async (req) => {
+      const user = requireUser(req);
+      const plot = await loadPlot(req.params.slug);
+      if (!plot || plot.kind !== 'showcase' || plot.status !== 'showcase' || !plot.showcase?.approved) throw notFound('Showcase plot');
+      const domain = registrableDomain(new URL(plot.showcase.website).hostname);
+      const token = newDnsToken();
+      const [request] = await db
+        .insert(schema.claimRequests)
+        .values({ plotId: plot.id, userId: user.id, email: user.email, orgName: stripText(req.body.orgName, 100), status: 'pending_dns', dnsToken: token })
+        .returning();
+      return { requestId: request!.id, status: 'pending_dns', domain, record: dnsRecordFor(domain, token), message: `Add this TXT record to ${domain}'s DNS, then press Check. DNS changes can take a few minutes.` };
+    },
+  );
+
+  app.post(
+    '/v1/showcase/claim/:id/verify-dns',
+    { config: { rateLimit: { max: 10, timeWindow: '10 minutes' } }, schema: { tags: ['showcase'], summary: 'Check the DNS TXT record and continue the claim', params: z.object({ id: z.uuid() }) } },
+    async (req) => {
+      const user = requireUser(req);
+      const [request] = await db.select().from(schema.claimRequests).where(eq(schema.claimRequests.id, req.params.id));
+      if (!request || request.userId !== user.id) throw notFound('Claim request');
+      if (request.status !== 'pending_dns' && request.status !== 'verified') throw badRequest('This claim is not waiting for a DNS check');
+      const plot = await loadPlot(request.plotId);
+      if (!plot?.showcase) throw badRequest('This showcase plot is no longer available');
+      if (request.status === 'pending_dns') {
+        const domain = registrableDomain(new URL(plot.showcase.website).hostname);
+        if (!request.dnsToken || !(await domainHasToken(domain, request.dnsToken))) {
+          throw badRequest(`We couldn't find the TXT record on ${domain} yet. DNS changes can take up to an hour; try again soon.`);
+        }
+        const orgId = await verifiedOrgFor(user, request.orgName, plot.showcase.website);
+        await db.update(schema.claimRequests).set({ status: 'verified', orgId, updatedAt: new Date() }).where(eq(schema.claimRequests.id, request.id));
+      }
+      if (!paidCheckout()) {
+        await quietly(emailAdmins(templates.adminClaimLead(request.orgName, request.email, plot.title)));
+        return { status: 'verified', comingSoon: true, message: 'Verified. Brand checkout opens soon: we’ve saved your claim and will email you as soon as you can complete it.' };
+      }
+      const checkout = await landmarkCheckout(user, request.id);
+      return { status: 'verified', checkoutUrl: checkout.url, orderId: checkout.orderId };
+    },
+  );
+
   app.post('/v1/showcase/claim/:id/checkout', { schema: { tags: ['showcase'], summary: 'Checkout for an approved claim', params: z.object({ id: z.uuid() }) } }, async (req) => {
     const user = requireUser(req);
     const checkout = await landmarkCheckout(user, req.params.id);
@@ -113,7 +162,7 @@ export default async function showcaseRoutes(app: App) {
         message: stripText(req.body.message, 2000),
       });
       await quietly(emailAdmins(templates.adminTakedown(stripText(req.body.name, 100), req.body.email, plot.title, stripText(req.body.message, 2000))));
-      return { ok: true, message: 'Thanks. Our team reviews removal requests within 2 working days.' };
+      return { ok: true, message: 'Thanks. We handle removal requests within 48 hours; if we haven’t by then, the plot is hidden automatically until we have.' };
     },
   );
 }

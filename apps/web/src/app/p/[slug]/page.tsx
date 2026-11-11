@@ -106,6 +106,13 @@ export default async function PlotPage({ params }: Params) {
             <div className="flex-1">
               <div className="font-semibold text-[var(--color-gold)]">{t('plot.showcaseTitle')}</div>
               <p className="text-sm muted mt-1">{t('plot.showcaseNote', { brand: p.showcase.brand })}</p>
+              {/* G12: every reserved company plot says so plainly. */}
+              <p className="text-sm font-medium mt-2" data-testid="reserved-label">Reserved for {p.showcase.brand}, not affiliated with FlatMeta.</p>
+              {p.showcase.sourceUrl && (
+                <p className="text-xs muted mt-1">
+                  Company facts from <a className="underline" href={p.showcase.sourceUrl} rel="noopener nofollow" target="_blank">Wikidata</a> ({p.showcase.license ?? 'CC0-1.0'}). Artwork is generic, made by FlatMeta.
+                </p>
+              )}
             </div>
             <div className="flex gap-2 shrink-0">
               <Link href={`/claim/${p.slug}`} className="btn-gold">{t('plot.claimIt')}</Link>

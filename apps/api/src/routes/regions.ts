@@ -123,6 +123,8 @@ export async function sitemapRoutes(app: App) {
       regions: regions.map((r) => r.slug),
       users,
       orgs,
+      // G12: /brands/<cc> pages for countries with reserved company land.
+      brandCountries: (await db.select({ code: schema.plots.countryCode }).from(schema.plots).where(publicShowcase()).groupBy(schema.plots.countryCode)).map((r) => r.code).filter(Boolean),
     };
   });
 }

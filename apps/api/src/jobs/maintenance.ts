@@ -93,10 +93,28 @@ async function payouts() {
   }
 }
 
+/** Hides showcase plots whose takedown request has been open for 48 hours (fail-safe towards the company). */
+export async function takedownSla(now = new Date()) {
+  const due = await db
+    .select({ id: schema.takedownRequests.id, plotId: schema.takedownRequests.plotId })
+    .from(schema.takedownRequests)
+    .where(and(eq(schema.takedownRequests.status, 'open'), lt(schema.takedownRequests.createdAt, new Date(now.getTime() - 48 * 3600_000))));
+  for (const t of due) {
+    await db.update(schema.plots).set({ status: 'hidden', updatedAt: now }).where(and(eq(schema.plots.id, t.plotId), eq(schema.plots.kind, 'showcase')));
+    await db.update(schema.takedownRequests).set({ status: 'removed' }).where(eq(schema.takedownRequests.id, t.id));
+    await db.insert(schema.auditLog).values({ actorId: null, action: 'takedown.auto_hidden_48h', targetType: 'plot', targetId: t.plotId, meta: { takedownId: t.id } });
+  }
+  return { hidden: due.length };
+}
+
 export const JOBS: Record<string, { every?: number; pattern?: string; run: () => Promise<unknown> }> = {
   'expire-holds': { every: 5 * 60_000, run: expireHolds },
   // G11: weekly owner email, Mondays, hourly batches until everyone due has had theirs.
   'weekly-digest': { pattern: '37 * * * 1', run: async () => (await import('../services/weekly-digest.js')).sendWeeklyDigests() },
+  // G12: reserved company land from Wikidata, daily at 04:13 UTC (COMPANY_LAND_ENABLED; auto = staging + production).
+  'company-land': { pattern: '13 4 * * *', run: async () => (await import('../companies/land.js')).runCompanyLand() },
+  // G12: takedown requests are handled within 48 h; if not, the plot is hidden until someone has.
+  'takedown-sla': { every: 60 * 60_000, run: takedownSla },
   'open-houses': { every: 60_000, run: async () => (await import('../services/open-houses.js')).announceOpenHouses() },
   'chat-cleanup': { every: 60 * 60_000, run: async () => (await import('../services/chat.js')).purgeOldNearby() },
   payouts: { every: 15 * 60_000, run: payouts },

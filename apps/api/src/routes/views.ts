@@ -100,7 +100,7 @@ export function plotView(p: Plot, owner: OwnerView | null, extra: { likedByMe?: 
     frame: p.frame,
     business: p.business,
     showcase: sc
-      ? { brand: sc.brand, website: sc.website, sector: sc.sector, kind: sc.kind, city: sc.city, useCase: sc.useCase, highlights: sc.highlights, approved: sc.approved }
+      ? { brand: sc.brand, website: sc.website, sector: sc.sector, kind: sc.kind, city: sc.city, useCase: sc.useCase, highlights: sc.highlights, approved: sc.approved, source: sc.source ?? null, sourceUrl: sc.sourceUrl ?? null, license: sc.license ?? null }
       : null,
     moderationStatus: p.moderationStatus,
     owner,

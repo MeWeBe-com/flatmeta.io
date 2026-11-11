@@ -95,6 +95,18 @@ const schema = z.object({
   // G11: extra free squares for both people when an invited friend claims their first land.
   REFERRAL_BONUS_CELLS: z.coerce.number().int().min(0).max(1000).default(10),
   REFERRAL_MAX_PER_DAY: z.coerce.number().int().min(0).max(1000).default(20),
+  // G12: reserved land for companies near their public HQ, sourced from Wikidata (CC0) by a daily worker job.
+  // auto = on for staging and production, off in development and tests.
+  COMPANY_LAND_ENABLED: z.enum(['auto', 'true', 'false']).default('auto'),
+  // First: the top N companies in each of these countries (ones the curated showcase doesn't cover yet).
+  COMPANY_LAND_FIRST_COUNTRIES: z.string().default('CA,MX,IT,NL,SE,CH,KR,SG,ZA,NG'),
+  COMPANY_LAND_FIRST_PER_COUNTRY: z.coerce.number().int().min(1).max(500).default(50),
+  // Then: this many new companies a day, rotating through these countries.
+  COMPANY_LAND_PER_DAY: z.coerce.number().int().min(0).max(1000).default(40),
+  COMPANY_LAND_COUNTRIES: z.string().default('US,GB,DE,FR,JP,IN,BR,AU,ES,AE,CA,MX,IT,NL,SE,CH,KR,SG,ZA,NG,PL,BE,AT,DK,NO,FI,IE,PT,AR,CL,CO,TR,IL,SA,EG,KE,ID,TH,VN,PH,MY,NZ,TW,HK,CN,CZ,GR,HU,RO,PE'),
+  // Passing the automatic location check makes a plot visible; failing ones wait for an admin.
+  COMPANY_LAND_AUTO_VERIFY: bool.default(true),
+  WIKIDATA_SPARQL_URL: z.string().default('https://query.wikidata.org/sparql'),
   // Showcase plots need an admin-checked location before they appear publicly. auto = only in production.
   SHOWCASE_REQUIRE_LOCATION_CHECK: z.enum(['auto', 'true', 'false']).default('auto'),
   // Legal pages and emails.
@@ -129,6 +141,8 @@ const schema = z.object({
   PAYOUT_MIN_CENTS: z.coerce.number().int().min(0).default(500),
 
   RATE_LIMIT_PER_MINUTE: z.coerce.number().default(300),
+  // Sign-in endpoints per IP per minute. Keep the default in production; the CI test stack signs in many players from one IP.
+  AUTH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(1000).default(10),
 });
 
 export type Config = z.infer<typeof schema>;
@@ -164,6 +178,8 @@ function load(): Config {
 }
 
 export const config = load();
+
+export const companyLandEnabled = () => config.COMPANY_LAND_ENABLED === 'true' || (config.COMPANY_LAND_ENABLED === 'auto' && (config.APP_ENV === 'production' || config.APP_ENV === 'staging'));
 
 type Policy = Pick<Config, 'APP_ENV' | 'SMTP_HOST' | 'STRIPE_SECRET_KEY' | 'PAYMENTS_MOCK' | 'DEV_CODE_ECHO'>;
 

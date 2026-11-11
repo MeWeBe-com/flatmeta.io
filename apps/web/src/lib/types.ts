@@ -53,7 +53,7 @@ export interface Plot {
   theme: { primary: string; accent: string } | null;
   frame: string;
   business: BusinessInfo | null;
-  showcase: { brand: string; website: string; sector: string; kind: string; city: string; useCase: string; highlights: string[]; approved: boolean } | null;
+  showcase: { brand: string; website: string; sector: string; kind: string; city: string; useCase: string; highlights: string[]; approved: boolean; source?: string | null; sourceUrl?: string | null; license?: string | null } | null;
   moderationStatus: string;
   owner: Owner | null;
   hasCustomHtml?: boolean;

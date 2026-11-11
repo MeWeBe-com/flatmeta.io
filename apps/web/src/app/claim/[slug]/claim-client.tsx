@@ -17,7 +17,7 @@ export function ClaimWizard({ plot, takedown, requestId: initialRequest, landmar
   const { me, openSignIn } = useSession();
   const { toast } = useGame();
   const [mode, setMode] = useState<'claim' | 'takedown'>(takedown ? 'takedown' : 'claim');
-  const [step, setStep] = useState<'start' | 'code' | 'review'>(initialRequest ? 'review' : 'start');
+  const [step, setStep] = useState<'start' | 'code' | 'dns' | 'review'>(initialRequest ? 'review' : 'start');
   const [email, setEmail] = useState('');
   const [orgName, setOrgName] = useState(brand);
   const [note, setNote] = useState('');
@@ -29,6 +29,40 @@ export function ClaimWizard({ plot, takedown, requestId: initialRequest, landmar
   const [message, setMessage] = useState<string | null>(null);
   const [td, setTd] = useState({ name: '', email: '', organisation: brand, message: '' });
   const [tdDone, setTdDone] = useState(false);
+  const [dns, setDns] = useState<{ host: string; alsoAccepted: string; value: string } | null>(null);
+
+  // G12: no work email at the domain? Prove control of the domain with a DNS TXT record instead.
+  const startDns = async () => {
+    if (!me.user) return openSignIn(`Sign in first. Then verify ${domain} with a DNS record.`);
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await post<{ requestId: string; record: { host: string; alsoAccepted: string; value: string }; message: string }>(`/showcase/${plot.slug}/claim/dns`, { orgName });
+      setRequestId(r.requestId);
+      setDns(r.record);
+      setMessage(r.message);
+      setStep('dns');
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not start the DNS check');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const checkDns = async () => {
+    if (!requestId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await post<{ checkoutUrl?: string; message?: string }>(`/showcase/claim/${requestId}/verify-dns`);
+      if (r.checkoutUrl) return void (window.location.href = r.checkoutUrl);
+      setMessage(r.message ?? 'Verified. We’ll email you when you can complete the claim.');
+      setStep('review');
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not check the record');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const start = async () => {
     if (!me.user) return openSignIn(`Sign in first. Then verify that you work at ${brand}.`);
@@ -120,6 +154,25 @@ export function ClaimWizard({ plot, takedown, requestId: initialRequest, landmar
             {error && <p className="text-sm text-[var(--color-coral)]">{error}</p>}
             <button className="btn-gold btn-lg" disabled={busy || !email || orgName.length < 2} onClick={() => void start()}>{busy ? <Spinner /> : <Mail size={18} />} Verify my email</button>
             <p className="text-xs muted">Different domain? We’ll review your claim by hand, usually within 2 working days.</p>
+            <div className="border-t border-[var(--line)] pt-4">
+              <p className="text-sm">No email at @{domain}? Whoever runs the domain’s DNS can verify instead.</p>
+              <button className="btn-ghost mt-2" disabled={busy || orgName.length < 2} onClick={() => void startDns()}>Verify with a DNS record</button>
+            </div>
+          </div>
+        )}
+
+        {mode === 'claim' && step === 'dns' && dns && (
+          <div className="space-y-4" role="region" aria-label="DNS verification">
+            <h2 className="text-2xl font-bold">Add a DNS record</h2>
+            <p className="muted text-sm">{message}</p>
+            <dl className="surface p-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+              <dt className="muted">Type</dt><dd className="font-mono">TXT</dd>
+              <dt className="muted">Name / host</dt><dd className="font-mono break-all select-all">{dns.host}</dd>
+              <dt className="muted">Value</dt><dd className="font-mono break-all select-all">{dns.value}</dd>
+            </dl>
+            <p className="text-xs muted">A TXT record on {dns.alsoAccepted} itself works too. You can delete it once you’re verified.</p>
+            {error && <p role="alert" className="text-sm text-[var(--color-coral)]">{error}</p>}
+            <button className="btn-gold btn-lg" disabled={busy} onClick={() => void checkDns()}>{busy && <Spinner />} Check the record</button>
           </div>
         )}
 
@@ -151,7 +204,7 @@ export function ClaimWizard({ plot, takedown, requestId: initialRequest, landmar
           tdDone ? (
             <div className="space-y-2">
               <h2 className="text-2xl font-bold">Request received</h2>
-              <p className="muted">Thank you. Our team reviews removal requests within 2 working days and will email you.</p>
+              <p className="muted">Thank you. We handle removal requests within 48 hours and will email you. If we haven’t by then, the plot is hidden automatically until we have.</p>
             </div>
           ) : (
             <div className="space-y-4">

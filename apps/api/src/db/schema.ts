@@ -59,6 +59,13 @@ export type ShowcaseInfo = {
   sourceLng?: number;
   locationCheckedAt?: string;
   locationNote?: string;
+  /** G12: where the company data came from, under which licence (Wikidata is CC0), and its page. */
+  source?: 'curated' | 'ai' | 'wikidata';
+  sourceId?: string;
+  license?: string;
+  sourceUrl?: string;
+  /** How precise the source coordinates are: the HQ address, or the HQ's city. */
+  precision?: 'address' | 'city';
 };
 
 // ─── Users & auth ────────────────────────────────────────────────────────────
@@ -635,6 +642,34 @@ export const openHouseRsvps = pgTable(
   (t) => [primaryKey({ columns: [t.openHouseId, t.userId] })],
 );
 
+/** G12: companies sourced from Wikidata (CC0) for reserved land near their public headquarters. */
+export const companySources = pgTable(
+  'company_sources',
+  {
+    id: id(),
+    source: text('source').notNull(), // wikidata
+    sourceId: text('source_id').notNull(), // Q-id
+    license: text('license').notNull(), // CC0-1.0
+    sourceUrl: text('source_url').notNull(),
+    name: text('name').notNull(),
+    website: text('website'),
+    industry: text('industry'),
+    hqName: text('hq_name'),
+    queriedCountry: char('queried_country', { length: 2 }).notNull(),
+    countryCode: char('country_code', { length: 2 }),
+    lat: doublePrecision('lat'),
+    lng: doublePrecision('lng'),
+    precision: text('precision'), // address | city
+    popularity: integer('popularity').notNull().default(0), // Wikidata sitelinks
+    status: text('status').notNull().default('new'), // new | created | skipped
+    skipReason: text('skip_reason'),
+    plotId: uuid('plot_id').references(() => plots.id, { onDelete: 'set null' }),
+    fetchedAt: ts('fetched_at').notNull().defaultNow(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('company_sources_source_idx').on(t.source, t.sourceId), index('company_sources_country_idx').on(t.queriedCountry, t.status, t.popularity)],
+);
+
 /** Small runtime switches admins flip without a deploy (e.g. the global custom HTML kill-switch). */
 export const appSettings = pgTable('app_settings', {
   key: text('key').primaryKey(),
@@ -652,7 +687,8 @@ export const claimRequests = pgTable('claim_requests', {
   orgId: uuid('org_id').references(() => organizations.id, { onDelete: 'set null' }),
   email: citext('email').notNull(),
   orgName: text('org_name').notNull(),
-  status: text('status').notNull(), // pending_email | verified | manual_review | approved | rejected | completed
+  status: text('status').notNull(), // pending_email | pending_dns | verified | manual_review | approved | rejected | completed
+  dnsToken: text('dns_token'), // G12: TXT record value for DNS verification
   note: text('note'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
