@@ -7,6 +7,7 @@ import type { Plot } from '../db/schema.js';
 import { requireUser } from '../lib/auth.js';
 import { badRequest, forbidden, notFound, paymentRequired } from '../lib/errors.js';
 import { bboxToRect, rectBounds } from '../lib/grid.js';
+import { haversineKm } from '../lib/geo.js';
 import { safeUrl, stripText } from '../lib/markdown.js';
 import { key, redis } from '../lib/redis.js';
 import { storeImage } from '../lib/storage.js';
@@ -312,6 +313,35 @@ export default async function plotRoutes(app: App) {
       const page = rows.slice(0, q.limit);
       const owners = await ownersFor(page);
       return { plots: page.map((p) => plotView(p, owners.get(p.id) ?? null)), nextCursor: rows.length > q.limit ? q.cursor + q.limit : null };
+    },
+  );
+
+  // The nearest public plots to a point (G3): a new visitor sees content around their start straight away.
+  app.get(
+    '/v1/plots/nearest',
+    {
+      config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+      schema: { tags: ['plots'], summary: 'Nearest public plots (landmarks, showcase, published) to a point', querystring: z.object({ lat: z.coerce.number().min(-85).max(85), lng: z.coerce.number().min(-180).max(180), limit: z.coerce.number().int().min(1).max(12).default(5) }) },
+    },
+    async (req) => {
+      const { lat, lng, limit } = req.query;
+      const P = schema.plots;
+      const k = Math.cos((lat * Math.PI) / 180);
+      // Planar distance with longitude scaled by latitude: good enough to rank, and an index-free scan of public plots.
+      const d2 = sql`power(${P.centerLat} - ${lat}, 2) + power((${P.centerLng} - ${lng}) * ${k}, 2)`;
+      const rows = await db
+        .select()
+        .from(P)
+        .where(and(visiblePlot(), or(isNotNull(P.publishedAt), eq(P.status, 'showcase'), eq(P.kind, 'landmark'))))
+        .orderBy(sql`${d2} asc`)
+        .limit(limit);
+      const owners = await ownersFor(rows);
+      return {
+        plots: rows.map((p) => ({
+          ...plotView(p, owners.get(p.id) ?? null),
+          distanceKm: Math.round(haversineKm(lat, lng, p.centerLat, p.centerLng) * 10) / 10,
+        })),
+      };
     },
   );
 

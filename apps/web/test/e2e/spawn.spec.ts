@@ -140,3 +140,17 @@ test('Locate me: precise when allowed, a friendly message when not', async ({ br
   expect(near(await myPos(blocked.page), { lat: 48.8566, lng: 2.3522 })).toBe(true);
   await blocked.ctx.close();
 });
+
+test('a new visitor sees the nearest places straight away, and can open one', async ({ browser }, info) => {
+  test.skip(!!info.project.use.isMobile, 'the nearby card is desktop-only (the phone layout keeps the map clear)');
+  const { ctx, page, errors } = await open(browser, info, { headers: PARIS });
+  await page.goto('/');
+  const nearby = page.getByRole('region', { name: 'Nearby on FlatMeta' });
+  await expect(nearby).toBeVisible({ timeout: 30_000 });
+  const first = nearby.getByRole('button').nth(1); // after the close button
+  await expect(first).toBeVisible();
+  await first.click();
+  await expect(page.getByRole('complementary', { name: 'Plot details' })).toBeVisible({ timeout: 15_000 });
+  expect(errors).toEqual([]);
+  await ctx.close();
+});

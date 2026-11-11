@@ -67,6 +67,26 @@ export default function ShowcaseLocationsPage() {
     }
   };
 
+  // Verify every unchecked location whose automatic checks all passed (dry run first, then confirm).
+  const verifyPassed = async () => {
+    setBusy('passed');
+    try {
+      const dry = await post<{ verified: number; leftForReview: unknown[] }>('/admin/showcase/locations/verify-passed', { apply: false, ...(country ? { country } : {}) });
+      if (!dry.verified) {
+        toast({ kind: 'info', title: 'Nothing to verify: no unchecked location passed every automatic check.' });
+        return;
+      }
+      if (!confirm(`Verify ${dry.verified} location${dry.verified === 1 ? '' : 's'} that passed every automatic check${country ? ` in ${country}` : ''}? ${dry.leftForReview.length} stay for manual review. In production, verified plots appear on the public map.`)) return;
+      const done = await post<{ verified: number }>('/admin/showcase/locations/verify-passed', { apply: true, ...(country ? { country } : {}) });
+      toast({ kind: 'success', title: `${done.verified} locations verified` });
+      load();
+    } catch (e) {
+      toast({ kind: 'error', title: e instanceof ApiError ? e.message : 'Could not verify' });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const move = async (r: Row, lat: number, lng: number) => {
     setBusy(r.id);
     try {
@@ -116,6 +136,7 @@ export default function ShowcaseLocationsPage() {
       <div className="flex flex-wrap gap-2">
         <button className="btn-primary btn-sm" disabled={!sel.size || !!busy} onClick={() => void bulk(true)}>{busy === 'bulk' ? <Spinner /> : <CheckCircle2 size={14} />} Mark {sel.size || ''} checked</button>
         <button className="btn-ghost btn-sm" disabled={!sel.size || !!busy} onClick={() => void bulk(false)}>Mark unchecked</button>
+        <button className="btn-ghost btn-sm ml-auto" disabled={!!busy} onClick={() => void verifyPassed()}>{busy === 'passed' ? <Spinner /> : <CheckCircle2 size={14} />} Verify all that passed the automatic check</button>
       </div>
 
       {data === null ? (

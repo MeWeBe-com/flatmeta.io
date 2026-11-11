@@ -11,9 +11,8 @@ import { sendEmail, templates } from '../email/index.js';
 import { DEFAULT_TIERS } from '../lib/pricing.js';
 import { refundOrder } from '../services/billing.js';
 import { clearPriceCache, recountCountry, releasePlot } from '../services/plots.js';
-import { curatedCountries, generateShowcase, loadCurated, moveShowcasePlot, regenerateShowcaseImage } from '../showcase/generator.js';
-import { CITIES } from '../data/cities.js';
-import { haversineKm, resolveCountry } from '../lib/geo.js';
+import { curatedCountries, generateShowcase, moveShowcasePlot, regenerateShowcaseImage } from '../showcase/generator.js';
+import { showcaseLocationRows, verifyPassedLocations } from '../services/showcase-locations.js';
 import { applyPlotPatch, loadPlot, PlotPatch } from './plots.js';
 import { ownersFor, plotView, privateUser } from './views.js';
 
@@ -397,48 +396,7 @@ export default async function adminRoutes(app: App) {
     { schema: { tags: ['admin'], summary: 'Showcase plots with location checks', querystring: z.object({ country: z.string().length(2).optional(), status: z.enum(['all', 'unverified', 'verified', 'suspect']).default('all') }) } },
     async (req) => {
       requireStaff(req);
-      const P = schema.plots;
-      const where: SQL[] = [eq(P.kind, 'showcase')];
-      if (req.query.country) where.push(eq(P.countryCode, req.query.country.toUpperCase()));
-      const rows = await db.select().from(P).where(and(...where)).orderBy(P.countryCode, P.title).limit(2000);
-      // Where the curated file says the organisation is (plots can be pushed aside when space is taken).
-      const seeds = new Map<string, { lat: number; lng: number }>();
-      for (const code of new Set(rows.map((r) => r.countryCode).filter((c): c is string => !!c))) {
-        try {
-          for (const e of (await loadCurated(code)).entries) seeds.set(`${code}:${e.brand.toLowerCase()}`, { lat: e.lat, lng: e.lng });
-        } catch {
-          /* no curated file for this country (AI batch) */
-        }
-      }
-      const out = rows.map((p) => {
-        const sc = p.showcase;
-        const flags: string[] = [];
-        const actual = resolveCountry(p.centerLat, p.centerLng);
-        if (actual && p.countryCode && actual !== p.countryCode) flags.push(`map says ${actual}, plot says ${p.countryCode}`);
-        const city = sc?.city ? CITIES.find((c) => c.name.toLowerCase() === sc.city.toLowerCase()) : undefined;
-        const cityKm = city ? haversineKm(p.centerLat, p.centerLng, city.lat, city.lng) : null;
-        if (cityKm !== null && cityKm > 40) flags.push(`${Math.round(cityKm)} km from ${city!.name}`);
-        const seed = sc ? seeds.get(`${p.countryCode}:${sc.brand.toLowerCase()}`) : undefined;
-        const seedKm = seed ? haversineKm(p.centerLat, p.centerLng, seed.lat, seed.lng) : null;
-        if (seedKm !== null && seedKm > 1.5) flags.push(`placed ${seedKm.toFixed(1)} km from its listed address`);
-        return {
-          id: p.id,
-          slug: p.slug,
-          title: p.title,
-          brand: sc?.brand ?? p.title,
-          city: sc?.city ?? null,
-          countryCode: p.countryCode,
-          lat: p.centerLat,
-          lng: p.centerLng,
-          size: { w: p.maxGx - p.minGx + 1, h: p.maxGy - p.minGy + 1 },
-          approved: !!sc?.approved,
-          locationVerified: !!sc?.locationVerified,
-          locationCheckedAt: sc?.locationCheckedAt ?? null,
-          locationNote: sc?.locationNote ?? null,
-          seed,
-          flags,
-        };
-      });
+      const out = await showcaseLocationRows(req.query.country);
       const filtered = out.filter((r) => (req.query.status === 'unverified' ? !r.locationVerified : req.query.status === 'verified' ? r.locationVerified : req.query.status === 'suspect' ? r.flags.length > 0 : true));
       return {
         plots: filtered,
@@ -448,6 +406,21 @@ export default async function adminRoutes(app: App) {
         // In production, unverified showcase plots are hidden from the public map until checked here.
         publicRequiresCheck: showcaseLocationCheck(),
       };
+    },
+  );
+
+  // Bulk: verify every location that passed the automatic coordinate check (G3). Dry run unless apply=true.
+  app.post(
+    '/v1/admin/showcase/locations/verify-passed',
+    {
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+      schema: { tags: ['admin'], summary: 'Verify all showcase locations that passed the automatic check', body: z.object({ apply: z.boolean().default(false), country: z.string().length(2).optional() }) },
+    },
+    async (req) => {
+      const admin = requireAdmin(req);
+      const res = await verifyPassedLocations({ apply: req.body.apply, by: admin.username, country: req.body.country });
+      if (req.body.apply) await audit(admin.id, 'showcase.location_verify_bulk', 'plot', null, { count: res.verified, country: req.body.country ?? null });
+      return res;
     },
   );
 

@@ -104,3 +104,49 @@ describe('showcase locations', () => {
     expect((await app.inject({ url: '/v1/admin/showcase/locations' })).statusCode).toBe(401);
   });
 });
+
+describe('empty map fixes (G3)', () => {
+  const entry = (brand: string, slug: string, lat: number, lng: number, city = 'Reykjavik') => ({
+    kind: 'company', sector: 'tech', city, lat, lng, website: 'https://example.org', title: 't', tagline: 'tag', description: 'desc',
+    useCase: 'demo', cta: null, highlights: ['a'], imagePrompt: 'a fjord', palette: ['#112233', '#445566', '#778899'], motif: 'city', size: { w: 2, h: 2 }, tags: ['x'], brand, slug,
+  });
+
+  it('bulk-verifies only locations that passed the automatic check, admins only, dry run by default', async () => {
+    const { upsertShowcase } = await import('../src/showcase/generator.js');
+    const { db, schema } = await import('../src/db/client.js');
+    const { eq } = await import('drizzle-orm');
+    const stats = { created: 0, updated: 0, skipped: 0, failed: 0, errors: [] as string[], plots: [] as string[] };
+    const tag = Date.now().toString(36);
+    const good = (await upsertShowcase(entry(`Good ${tag}`, `good-${tag}`, 51.507, -0.128, 'London'), 'GB', { countries: ['GB'], source: 'curated', approve: true }, stats))!;
+    // Far from the city it claims to be in: must be left for a person.
+    const bad = (await upsertShowcase(entry(`Bad ${tag}`, `bad-${tag}`, 55.95, -3.19, 'London'), 'GB', { countries: ['GB'], source: 'curated', approve: true }, stats))!;
+
+    const admin = await login(undefined, 'admin');
+    const user = await login();
+    expect((await app.inject({ method: 'POST', url: '/v1/admin/showcase/locations/verify-passed', headers: user.headers, payload: {} })).statusCode).toBe(403);
+    const dry = json(await app.inject({ method: 'POST', url: '/v1/admin/showcase/locations/verify-passed', headers: admin.headers, payload: { country: 'GB' } }));
+    expect(dry.applied).toBe(false);
+    expect(dry.leftForReview.map((x: { id: string }) => x.id)).toContain(bad.id);
+    const verified = async (id: string) => (await db.select().from(schema.plots).where(eq(schema.plots.id, id)))[0]!.showcase!.locationVerified ?? false;
+    expect(await verified(good.id)).toBe(false); // dry run changed nothing
+
+    const done = json(await app.inject({ method: 'POST', url: '/v1/admin/showcase/locations/verify-passed', headers: admin.headers, payload: { apply: true, country: 'GB' } }));
+    expect(done.applied).toBe(true);
+    expect(await verified(good.id)).toBe(true);
+    expect(await verified(bad.id)).toBe(false);
+  });
+
+  it('lists the nearest public plots to a point, closest first', async () => {
+    config.SHOWCASE_REQUIRE_LOCATION_CHECK = 'false'; // an earlier test turns the production gate on
+    const { upsertShowcase } = await import('../src/showcase/generator.js');
+    const stats = { created: 0, updated: 0, skipped: 0, failed: 0, errors: [] as string[], plots: [] as string[] };
+    const tag = Date.now().toString(36);
+    await upsertShowcase(entry(`Near ${tag}`, `near-${tag}`, -54.81, -68.30, 'Ushuaia'), 'AR', { countries: ['AR'], source: 'curated', approve: true }, stats);
+    await upsertShowcase(entry(`Far ${tag}`, `far-${tag}`, -51.62, -69.21, 'Rio Gallegos'), 'AR', { countries: ['AR'], source: 'curated', approve: true }, stats);
+    const r = json(await app.inject({ url: '/v1/plots/nearest?lat=-54.80&lng=-68.31&limit=2' }));
+    expect(r.plots).toHaveLength(2);
+    expect(r.plots[0].slug).toBe(`near-${tag}`);
+    expect(r.plots[0].distanceKm).toBeLessThan(r.plots[1].distanceKm);
+    expect((await app.inject({ url: '/v1/plots/nearest?lat=200&lng=0' })).statusCode).toBe(400);
+  });
+});

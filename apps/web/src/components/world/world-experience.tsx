@@ -15,6 +15,7 @@ import { useGame, useLive, useSession, useTheme } from '../providers';
 import { UserMenu } from '../site-chrome';
 import { Logo, Spinner, clsx } from '../ui';
 import { ChatPanel } from './chat-panel';
+import { NearbyCard } from './nearby-card';
 import { ErrorBoundary } from '../error-boundary';
 import { ClaimPanel } from './claim-panel';
 import { LEVEL_ZOOM, LevelSwitch, type Level } from './level-switch';
@@ -410,8 +411,11 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
       />
       <Tour open={tour.open} onClose={tour.close} />
 
-      {!me.user && !claimMode && !openPlot && (
-        <div className="absolute z-20 left-3 top-[72px] md:w-80 right-3 md:right-auto glass rounded-2xl p-4 animate-rise hidden sm:block">
+      {/* Left column (desktop): the welcome card for guests, then the nearest places to see (G3). */}
+      {!claimMode && !openPlot && (
+        <div className="absolute z-20 left-3 top-[72px] w-80 hidden sm:flex flex-col gap-2">
+      {!me.user && (
+        <div className="glass rounded-2xl p-4 animate-rise">
           <div className="flex items-start gap-2">
             <div>
               <h1 className="font-display font-bold text-lg leading-tight">{t('app.tagline')}</h1>
@@ -422,6 +426,15 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
             <button className="btn-primary btn-sm" onClick={startClaim}><Compass size={14} /> Claim free land</button>
             <Link href="/explore" className="btn-ghost btn-sm"><Users size={14} /> Explore</Link>
           </div>
+        </div>
+      )}
+          <NearbyCard
+            at={spawn && spawn.source !== 'link' ? { lat: spawn.lat, lng: spawn.lng } : null}
+            onOpen={(p) => {
+              setOpenPlot(p.id);
+              map.current?.fitBounds(p.bounds, 16);
+            }}
+          />
         </div>
       )}
     </div>

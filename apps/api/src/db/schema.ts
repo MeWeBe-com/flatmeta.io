@@ -53,6 +53,9 @@ export type ShowcaseInfo = {
   approved: boolean;
   /** An admin confirmed the plot sits on the right place (Admin → Showcase → Locations). Required in production. */
   locationVerified?: boolean;
+  /** Coordinates given by the source (curated file or Wikidata), used by the automatic location check. */
+  sourceLat?: number;
+  sourceLng?: number;
   locationCheckedAt?: string;
   locationNote?: string;
 };
