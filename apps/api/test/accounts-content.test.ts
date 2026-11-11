@@ -122,3 +122,60 @@ describe('custom HTML sandbox documents (G2)', () => {
     expect(bad.body).not.toContain('alert(document.cookie)');
   });
 });
+
+describe('personalising land (G7)', () => {
+  const multipart = (name: string, data: Buffer, type: string) => {
+    const boundary = '----fmtest' + Math.random().toString(36).slice(2);
+    const body = Buffer.concat([
+      Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${name}"\r\nContent-Type: ${type}\r\n\r\n`),
+      data,
+      Buffer.from(`\r\n--${boundary}--\r\n`),
+    ]);
+    return { payload: body, headers: { 'content-type': `multipart/form-data; boundary=${boundary}` } };
+  };
+
+  it('strips EXIF (incl. GPS) and resizes uploads, rejects non-images, and lets owners remove one gallery image', async () => {
+    const sharp = (await import('sharp')).default;
+    const { config } = await import('../src/config.js');
+    const path = await import('node:path');
+    const { readFile } = await import('node:fs/promises');
+    const owner = await login();
+    const plot = json(await app.inject({ method: 'POST', url: '/v1/plots/claim', headers: owner.headers, payload: { rect: freeRect() } })).plot;
+    const jpeg = await sharp({ create: { width: 2400, height: 1600, channels: 3, background: '#3366cc' } })
+      .jpeg()
+      .withExif({ IFD0: { Make: 'SecretCam', Copyright: 'me' }, IFD3: { GPSLatitudeRef: 'N', GPSLatitude: '51/1 30/1 0/1', GPSLongitudeRef: 'W', GPSLongitude: '0/1 7/1 0/1' } })
+      .toBuffer();
+    expect((await sharp(jpeg).metadata()).exif).toBeTruthy(); // the original has EXIF
+    const mp = multipart('photo.jpg', jpeg, 'image/jpeg');
+    const res = await app.inject({ method: 'POST', url: `/v1/plots/${plot.id}/media?use=gallery`, headers: { ...owner.headers, ...mp.headers }, payload: mp.payload });
+    expect(res.statusCode, res.body).toBe(200);
+    const url: string = json(res).plot.gallery.at(-1);
+    const prefix = config.MEDIA_PUBLIC_URL.replace(/\/$/, '') + '/';
+    const stored = await readFile(path.resolve(config.MEDIA_DIR, url.slice(url.indexOf(prefix) + prefix.length)));
+    const meta = await sharp(stored).metadata();
+    expect(meta.format).toBe('webp');
+    expect(meta.exif).toBeUndefined();
+    expect(meta.width).toBeLessThanOrEqual(1600);
+
+    const notImage = multipart('x.svg', Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'), 'image/svg+xml');
+    expect((await app.inject({ method: 'POST', url: `/v1/plots/${plot.id}/media`, headers: { ...owner.headers, ...notImage.headers }, payload: notImage.payload })).statusCode).toBe(400);
+    const stranger = await login();
+    expect((await app.inject({ method: 'POST', url: `/v1/plots/${plot.id}/media`, headers: { ...stranger.headers, ...mp.headers }, payload: mp.payload })).statusCode).toBe(403);
+
+    const removed = json(await app.inject({ method: 'PATCH', url: `/v1/plots/${plot.id}`, headers: owner.headers, payload: { galleryRemove: url } }));
+    expect(removed.plot.gallery).not.toContain(url);
+  });
+
+  it('rate-limits edits per minute and caps them per day', async () => {
+    const owner = await login();
+    const plot = json(await app.inject({ method: 'POST', url: '/v1/plots/claim', headers: owner.headers, payload: { rect: freeRect() } })).plot;
+    const edit = await app.inject({ method: 'PATCH', url: `/v1/plots/${plot.id}`, headers: owner.headers, payload: { tagline: 'Hello' } });
+    expect(edit.statusCode).toBe(200);
+    const { redis, key } = await import('../src/lib/redis.js');
+    const { dayKey } = await import('../src/game/dates.js');
+    await redis.set(key('cap', 'plot-edit', owner.user.id, dayKey()), '300', 'EX', 60);
+    const capped = await app.inject({ method: 'PATCH', url: `/v1/plots/${plot.id}`, headers: owner.headers, payload: { tagline: 'Again' } });
+    expect(capped.statusCode).toBe(429);
+    expect(capped.body).toMatch(/today's limit of 300 plot edits/);
+  });
+});

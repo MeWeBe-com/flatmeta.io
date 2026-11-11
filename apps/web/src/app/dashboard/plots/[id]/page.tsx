@@ -394,7 +394,12 @@ function Look({ plot, theme, setTheme, progress, onSave, onPlot, saving }: { plo
       <div>
         <label className="label">Gallery ({plot.gallery.length}/6)</label>
         <div className="flex flex-wrap gap-2">
-          {plot.gallery.map((g) => <img key={g} src={g} alt="" className="size-20 rounded-xl object-cover" />)}
+          {plot.gallery.map((g, i) => (
+            <span key={g} className="relative">
+              <img src={g} alt="" className="size-20 rounded-xl object-cover" />
+              <button type="button" className="absolute -top-1.5 -right-1.5 size-6 rounded-full bg-[var(--color-night,#0b1020)] border border-[var(--line)] grid place-items-center text-xs" aria-label={`Remove gallery image ${i + 1}`} onClick={() => void onSave({ galleryRemove: g }, 'Image removed')}>×</button>
+            </span>
+          ))}
           {plot.gallery.length < 6 && (
             <label className="size-20 rounded-xl surface grid place-items-center cursor-pointer hover:border-[var(--color-teal)]">
               {uploading === 'gallery' ? <Spinner /> : <Plus />}

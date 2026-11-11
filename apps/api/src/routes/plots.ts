@@ -9,6 +9,7 @@ import { badRequest, forbidden, notFound, paymentRequired } from '../lib/errors.
 import { bboxToRect, rectBounds } from '../lib/grid.js';
 import { haversineKm } from '../lib/geo.js';
 import { countUniqueVisit, isBot, uniqueVisitors, visitorHash } from '../lib/visitors.js';
+import { dailyCap } from '../lib/caps.js';
 import { safeUrl, stripText } from '../lib/markdown.js';
 import { key, redis } from '../lib/redis.js';
 import { storeImage } from '../lib/storage.js';
@@ -51,6 +52,8 @@ export const PlotPatch = z.object({
   frame: z.string().max(20).optional(),
   coverMediaId: z.uuid().optional(),
   galleryMediaIds: z.array(z.uuid()).max(6).optional(),
+  /** Remove one image from the gallery by its URL. */
+  galleryRemove: z.string().max(500).optional(),
   business: z
     .object({
       phone: z.string().max(40).optional(),
@@ -148,6 +151,7 @@ export async function applyPlotPatch(plot: Plot, patch: PlotPatchInput, actor: {
     set.coverImageUrl = m.url;
     set.thumbUrl = m.thumbUrl;
   }
+  if (patch.galleryRemove) set.gallery = (plot.gallery ?? []).filter((u) => u !== patch.galleryRemove);
   if (patch.galleryMediaIds) {
     const urls: string[] = [];
     for (const id of patch.galleryMediaIds) urls.push((await mediaOwnedUrl(id, actor.id, actor.role === 'admin')).url);
@@ -488,9 +492,10 @@ export default async function plotRoutes(app: App) {
   // ── Editing ──
   app.patch(
     '/v1/plots/:id',
-    { schema: { tags: ['plots'], summary: 'Update plot content', params: z.object({ id: z.uuid() }), body: PlotPatch } },
+    { config: { rateLimit: { max: 30, timeWindow: '1 minute' } }, schema: { tags: ['plots'], summary: 'Update plot content', params: z.object({ id: z.uuid() }), body: PlotPatch } },
     async (req) => {
       const user = requireUser(req);
+      await dailyCap(user.id, 'plot-edit', 300, 'plot edits');
       const plot = await loadPlot(req.params.id);
       if (!plot) throw notFound('Plot');
       if (!(await canEditPlot(user, plot))) throw forbidden('You can only edit your own plots');
@@ -525,6 +530,7 @@ export default async function plotRoutes(app: App) {
       const plot = await loadPlot(req.params.id);
       if (!plot) throw notFound('Plot');
       if (!(await canEditPlot(user, plot))) throw forbidden();
+      await dailyCap(user.id, 'upload', 60, 'image uploads');
       const file = await req.file();
       if (!file) throw badRequest('Attach an image in the "file" field');
       const buf = await file.toBuffer();
