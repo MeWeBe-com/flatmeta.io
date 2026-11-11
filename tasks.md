@@ -131,6 +131,7 @@ Live at https://www.flatmeta.io (branch `v2`; CI deploys on green). One commit p
 **P2: then**
 - [x] **G15+** Extra quick wins from G1: G15a fix positioning in llms.txt and insights (about/facts page); G15b welcome AI crawlers in robots.txt; G15c WebSite + SearchAction JSON-LD
   - Done: G15a `/about/facts` (citable facts + live numbers, Organization JSON-LD) and `docs/positioning.md` (one description for everything; how to fix the external insights automation and its static llms.txt, a manual step); G15b robots.txt welcomes GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, Claude-SearchBot, Claude-User, PerplexityBot, Google-Extended and others on public pages, private areas still disallowed (production only; staging stays `Disallow: /`); G15c WebSite + SearchAction JSON-LD on the home page (`/explore?q=`). Unit + e2e tests.
-- [ ] **G-final** `RELEASE-REPORT.md`: what is live (URLs), what is left and why, test results, production smoke test, manual steps (showcase verify command, usercontent subdomain on Hestia, env vars)
+- [x] **G-final** `RELEASE-REPORT.md`: what is live (URLs), what is left and why, test results, production smoke test, manual steps (showcase verify command, usercontent subdomain on Hestia, env vars)
+  - Done: `RELEASE-REPORT.md`: what is live (staging, all of it; production waits for `deploy.sh production`), what is still to do and why, test results (129 API + 21 web unit + 56 e2e; CI #32–#34 green), the smoke test (staging 19/19, production 4/13 on the previous build; `scripts/release-smoke.cjs` to re-run), and the manual steps with exact commands.
 
 ## Phase 2: see docs/03-masterprompt-phase2.md. Not started.
