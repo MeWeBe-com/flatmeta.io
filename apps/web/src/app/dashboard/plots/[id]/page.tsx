@@ -14,6 +14,7 @@ import { Spinner, clsx } from '@/components/ui';
 import { SharePanel, plotShareUrl } from '@/components/share-panel';
 import { VisitorStats } from '@/components/plot/visitor-stats';
 import { sandboxSrc } from '@/lib/sandbox';
+import { ScheduleOpenHouse } from '@/components/plot/open-houses';
 
 type Tab = 'design' | 'content' | 'links' | 'look' | 'business' | 'boost';
 interface Variation { title: string; tagline: string; descriptionMd: string; category: string; tags: string[]; theme: { primary: string; accent: string }; image?: { url: string; thumbUrl: string; pending: boolean } }
@@ -271,6 +272,11 @@ function Editor() {
             </div>
             <div className="p-4 text-sm muted line-clamp-6 whitespace-pre-wrap">{draft.descriptionMd}</div>
             <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${theme.primary}, ${theme.accent})` }} />
+          </div>
+          <div className="surface p-4 space-y-2">
+            <div className="text-xs uppercase tracking-wider muted font-semibold">Open houses</div>
+            <p className="text-xs muted">Pick a time you’ll be at your plot. Visitors can ask for a reminder, and your followers are told when it starts.</p>
+            <ScheduleOpenHouse plotId={plot.id} published={!!plot.publishedAt && plot.status === 'active'} />
           </div>
         </aside>
       </div>

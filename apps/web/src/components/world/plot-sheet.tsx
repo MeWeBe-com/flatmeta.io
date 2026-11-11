@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { OpenHouses } from '../plot/open-houses';
 import { useEffect, useState } from 'react';
 import { ExternalLink, Hand, Heart, Share2, X, MapPin, Sparkles, Pencil, Eye } from 'lucide-react';
 import { ApiError, api, del, post } from '@/lib/api';
@@ -154,6 +155,8 @@ export function PlotSheet({ plotId, onClose, onFocus }: { plotId: string; onClos
                 <MapPin size={16} />
               </button>
             </div>
+
+            <OpenHouses plotId={plot.id} compact />
 
             {plot.cta && (
               <a href={plot.cta.url} target="_blank" rel="noopener nofollow" className="btn-primary w-full btn-lg">

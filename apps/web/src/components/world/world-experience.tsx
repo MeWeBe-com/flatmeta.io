@@ -19,6 +19,7 @@ import { WalkControls } from './walk-controls';
 import { EMOTE_ICONS } from '@/lib/emotes';
 import { AVATAR_MIN_ZOOM } from '../map/avatars';
 import { NearbyCard } from './nearby-card';
+import { HappeningNow } from './happening-now';
 import { ErrorBoundary } from '../error-boundary';
 import { ClaimPanel } from './claim-panel';
 import { LEVEL_ZOOM, LevelSwitch, type Level } from './level-switch';
@@ -436,8 +437,9 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
       <Tour open={tour.open} onClose={tour.close} />
 
       {/* Left column (desktop): the welcome card for guests, then the nearest places to see (G3). */}
+      {/* Capped in height so it never covers the map controls in the bottom-left corner. */}
       {!claimMode && !openPlot && (
-        <div className="absolute z-20 left-3 top-[72px] w-80 hidden sm:flex flex-col gap-2">
+        <div className="absolute z-20 left-3 top-[72px] w-80 hidden sm:flex flex-col gap-2 max-h-[calc(100dvh-380px)] overflow-y-auto overscroll-contain rounded-2xl [&>*]:shrink-0">
       {!me.user && (
         <div className="glass rounded-2xl p-4 animate-rise">
           <div className="flex items-start gap-2">
@@ -452,6 +454,12 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
           </div>
         </div>
       )}
+          <HappeningNow
+            onOpen={(id, at) => {
+              setOpenPlot(id);
+              map.current?.flyTo(at.lng, at.lat, 17);
+            }}
+          />
           <NearbyCard
             at={spawn && spawn.source !== 'link' ? { lat: spawn.lat, lng: spawn.lng } : null}
             onOpen={(p) => {

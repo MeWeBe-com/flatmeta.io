@@ -594,6 +594,39 @@ export const customHtmlVersions = pgTable(
   (t) => [uniqueIndex('custom_html_versions_plot_version_idx').on(t.plotId, t.version), index('custom_html_versions_status_idx').on(t.status, t.createdAt)],
 );
 
+/** Open-house times on a plot (G10): visitors who asked are notified when it starts. */
+export const openHouses = pgTable(
+  'open_houses',
+  {
+    id: id(),
+    plotId: uuid('plot_id')
+      .notNull()
+      .references(() => plots.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    startsAt: ts('starts_at').notNull(),
+    endsAt: ts('ends_at').notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    notifiedAt: ts('notified_at'),
+    canceledAt: ts('canceled_at'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('open_houses_starts_idx').on(t.startsAt), index('open_houses_plot_idx').on(t.plotId, t.startsAt)],
+);
+
+export const openHouseRsvps = pgTable(
+  'open_house_rsvps',
+  {
+    openHouseId: uuid('open_house_id')
+      .notNull()
+      .references(() => openHouses.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.openHouseId, t.userId] })],
+);
+
 /** Small runtime switches admins flip without a deploy (e.g. the global custom HTML kill-switch). */
 export const appSettings = pgTable('app_settings', {
   key: text('key').primaryKey(),

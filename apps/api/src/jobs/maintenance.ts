@@ -95,6 +95,7 @@ async function payouts() {
 
 export const JOBS: Record<string, { every?: number; pattern?: string; run: () => Promise<unknown> }> = {
   'expire-holds': { every: 5 * 60_000, run: expireHolds },
+  'open-houses': { every: 60_000, run: async () => (await import('../services/open-houses.js')).announceOpenHouses() },
   'chat-cleanup': { every: 60 * 60_000, run: async () => (await import('../services/chat.js')).purgeOldNearby() },
   payouts: { every: 15 * 60_000, run: payouts },
   'country-stats': { every: 60 * 60_000, run: refreshCountryStats },

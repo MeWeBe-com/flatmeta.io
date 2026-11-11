@@ -47,6 +47,7 @@ export function describeNotification(n: Pick<AppNotification, 'kind' | 'payload'
     case 'payout_failed': return 'A payout failed. Check your payout details in Billing.';
     case 'refund': return s(p.reason) || 'You have been refunded';
     case 'payment_failed': return `Payment failed for your ${s(p.plan)} plan. Update your card in Billing.`;
+    case 'open_house': return `Open house starting: ${s(p.title)} at ${s(p.plotTitle)}`;
     default: return n.kind.replace(/_/g, ' ');
   }
 }
@@ -70,6 +71,8 @@ export function notificationHref(n: Pick<AppNotification, 'kind' | 'payload'>): 
     case 'payout_failed':
     case 'payment_failed':
       return '/dashboard/billing';
+    case 'open_house':
+      return s(p.plotSlug) ? `/?visit=${encodeURIComponent(s(p.plotSlug))}` : null;
     case 'purchased':
     case 'landmark':
       return s(p.slug) ? `/p/${s(p.slug)}` : '/dashboard/plots';

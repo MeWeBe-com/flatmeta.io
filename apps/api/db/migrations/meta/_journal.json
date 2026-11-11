@@ -43,6 +43,13 @@
       "when": 1794406764921,
       "tag": "0005_custom_html_review",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794408168543,
+      "tag": "0006_open_houses",
+      "breakpoints": true
     }
   ]
 }
