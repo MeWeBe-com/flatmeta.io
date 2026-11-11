@@ -156,6 +156,10 @@ export class LandService {
   private mine: LandArea[] = [];
   private ledger = { boughtUsd: 0, soldUsd: 0 };
 
+  /** Cached areas grouped from loaded tiles and an index for O(1) area lookups. */
+  private cachedAreas: LandArea[] | null = null;
+  private cachedAreasById = new Map<string, LandArea>();
+
   /** What the map shows, and the regions whose land is loaded and still fresh. */
   private view: { box: LatLngBox; zoom: number } | null = null;
   private tileBox: LatLngBox | null = null;
@@ -221,8 +225,15 @@ export class LandService {
     return !!tile && String(tile.user_id) === identity.id;
   }
 
-  /** Areas built from the loaded squares (an area at the edge of the view may be partly loaded). */
+  /**
+   * Areas built from the loaded squares (an area at the edge of the view may be partly loaded).
+   * Cached until `tiles` are re-published so repeated queries (e.g. clicks, searches, inspect)
+   * avoid re-grouping thousands of tiles on every invocation.
+   */
   areas(): LandArea[] {
+    if (this.cachedAreas) {
+      return this.cachedAreas;
+    }
     const groups = new Map<string, LandTile[]>();
     for (const t of this.tiles) {
       const list = groups.get(t.order_id) || [];
@@ -230,13 +241,27 @@ export class LandService {
       groups.set(t.order_id, list);
     }
     const out: LandArea[] = [];
-    groups.forEach((tiles, orderId) => out.push(this.buildArea(orderId, tiles)));
+    const byId = new Map<string, LandArea>();
+    groups.forEach((tiles, orderId) => {
+      const a = this.buildArea(orderId, tiles);
+      out.push(a);
+      byId.set(orderId, a);
+    });
+    this.cachedAreas = out;
+    this.cachedAreasById = byId;
     return out;
   }
 
+  /**
+   * Fast O(1) lookup of an area by order id using cached index, falling back
+   * to `mine` areas from MyPlaces.
+   */
   area(orderId: string): LandArea | undefined {
     const id = String(orderId);
-    return this.areas().find((a) => a.order_id === id) || this.mine.find((a) => a.order_id === id);
+    if (!this.cachedAreas) {
+      this.areas();
+    }
+    return this.cachedAreasById.get(id) || this.mine.find((a) => a.order_id === id);
   }
 
   myAreas(): LandArea[] {
@@ -1002,6 +1027,9 @@ export class LandService {
     this.official.forEach((t) => all.push(t));
     this.server.forEach((t, k) => !this.official.has(k) && all.push(t));
     this.drafts.forEach((t, k) => !this.official.has(k) && !this.server.has(k) && all.push(t));
+    // Invalidate cached areas when tiles change so next read rebuilds fresh.
+    this.cachedAreas = null;
+    this.cachedAreasById.clear();
     this.tiles$.next(all);
     this.myAreas$.next([...this.mine, ...this.localAreas().filter((a) => a.draft && a.is_mine)]);
     this.stats$.next(this.computeStats());
