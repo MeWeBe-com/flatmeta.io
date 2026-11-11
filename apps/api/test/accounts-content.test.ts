@@ -75,7 +75,50 @@ describe('custom HTML', () => {
     const ok = json(await app.inject({ method: 'PATCH', url: `/v1/plots/${plot.id}`, headers: free.headers, payload: { customHtml: '<h1>Welcome</h1>' } }));
     expect(ok.plot.hasCustomHtml).toBe(true);
     const view = json(await app.inject({ url: `/v1/plots/${plot.slug}` }));
-    expect(view.plot.customHtmlDoc).toContain('Content-Security-Policy');
+    // Served as its own sandboxed document (G2), not shipped in the plot view for srcdoc.
+    expect(view.plot.hasCustomHtml).toBe(true);
+    const doc = await app.inject({ url: `/v1/plots/${plot.id}/sandbox` });
+    expect(doc.body).toContain('Content-Security-Policy');
+    expect(String(doc.headers['content-security-policy'])).toMatch(/^sandbox allow-scripts;/);
     expect(view.plot.customHtml).toBeUndefined(); // raw source is for editors only
+  });
+});
+
+describe('custom HTML sandbox documents (G2)', () => {
+  it('serves owner HTML as its own sandboxed document, never inside our origin', async () => {
+    const { db, schema } = await import('../src/db/client.js');
+    const { eq } = await import('drizzle-orm');
+    const owner = await login();
+    const plot = JSON.parse((await app.inject({ method: 'POST', url: '/v1/plots/claim', headers: owner.headers, payload: { rect: freeRect() } })).body).plot;
+    await db.update(schema.plots).set({ customHtml: '<h1>Hi</h1><script>document.body.dataset.ok="1"</script>' }).where(eq(schema.plots.id, plot.id));
+    const res = await app.inject({ url: `/v1/plots/${plot.id}/sandbox` });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toMatch(/text\/html/);
+    const csp = String(res.headers['content-security-policy']);
+    expect(csp).toMatch(/^sandbox allow-scripts;/); // opaque origin even when opened directly
+    expect(csp).not.toMatch(/allow-same-origin|allow-top-navigation|allow-forms|allow-popups/);
+    expect(csp).toMatch(/connect-src 'none'/);
+    expect(csp).toMatch(/frame-ancestors http/);
+    expect(res.headers['x-frame-options']).toBeUndefined();
+    expect(res.body).toContain('<h1>Hi</h1>');
+    // The plot view no longer ships the document for srcdoc.
+    expect(JSON.parse((await app.inject({ url: `/v1/plots/${plot.id}` })).body).plot.customHtmlDoc).toBeUndefined();
+    // Hidden or flagged plots don't serve it.
+    await db.update(schema.plots).set({ moderationStatus: 'flagged' }).where(eq(schema.plots.id, plot.id));
+    expect((await app.inject({ url: `/v1/plots/${plot.id}/sandbox` })).statusCode).toBe(404);
+  });
+
+  it('previews drafts only for signed-in users, screened, in the same sandbox', async () => {
+    const form = (html: string) => `html=${encodeURIComponent(html)}`;
+    const anon = await app.inject({ method: 'POST', url: '/v1/sandbox/preview', headers: { 'content-type': 'application/x-www-form-urlencoded' }, payload: form('<b>x</b>') });
+    expect(anon.statusCode).toBe(401);
+    const u = await login();
+    const ok = await app.inject({ method: 'POST', url: '/v1/sandbox/preview', headers: { ...u.headers, 'content-type': 'application/x-www-form-urlencoded' }, payload: form('<b>hello</b>') });
+    expect(ok.statusCode).toBe(200);
+    expect(String(ok.headers['content-security-policy'])).toMatch(/^sandbox allow-scripts;/);
+    expect(ok.body).toContain('<b>hello</b>');
+    const bad = await app.inject({ method: 'POST', url: '/v1/sandbox/preview', headers: { ...u.headers, 'content-type': 'application/x-www-form-urlencoded' }, payload: form('<script>alert(document.cookie)</script>') });
+    expect(bad.body).toMatch(/can’t be published: reads cookies/);
+    expect(bad.body).not.toContain('alert(document.cookie)');
   });
 });

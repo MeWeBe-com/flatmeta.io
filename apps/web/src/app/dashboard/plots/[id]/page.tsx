@@ -145,7 +145,7 @@ function Editor() {
                 <summary className="cursor-pointer font-semibold">Custom HTML <span className="chip chip-violet ml-2">Plus</span></summary>
                 <p className="text-sm muted mt-2">Add your own HTML, CSS and a little JavaScript. It is shown in a sandbox on your plot page: no cookies, forms, popups or redirects; up to 50 KB. Embeds are limited to YouTube, Vimeo, Spotify and Google Maps.</p>
                 <textarea className="input font-mono text-[13px] mt-3" rows={9} maxLength={50000} value={draft.customHtml} onChange={(e) => setDraft({ ...draft, customHtml: e.target.value })} placeholder={'<h2>Welcome!</h2>\n<p>Opening hours, a playlist, a tiny game…</p>'} aria-label="Custom HTML" />
-                {draft.customHtml && <iframe title="Preview" sandbox="allow-scripts" srcDoc={`<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><body style="margin:0;font-family:system-ui;color:#e6e9f5;background:#0b1020">${draft.customHtml}`} className="w-full h-56 rounded-xl mt-3 border border-[var(--line)]" />}
+                {draft.customHtml && <CustomHtmlPreview html={draft.customHtml} />}
                 {me.user?.plan === 'free' && !me.orgs?.some((o) => o.plan !== 'free') && <p className="text-xs mt-2 text-[var(--color-gold)]">Custom HTML needs <a className="underline" href="/pricing">Plus or a business plan</a>.</p>}
               </details>
               <button className="btn-primary" disabled={saving}>{saving ? <Spinner /> : <Save size={16} />} Save</button>
@@ -441,5 +441,22 @@ export default function PlotEditorPage() {
     <Suspense>
       <Editor />
     </Suspense>
+  );
+}
+
+/** Previews unsaved custom HTML through the API's sandbox endpoint (own origin policy), never with srcdoc. */
+function CustomHtmlPreview({ html }: { html: string }) {
+  const form = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    const t = setTimeout(() => form.current?.submit(), 500);
+    return () => clearTimeout(t);
+  }, [html]);
+  return (
+    <>
+      <form ref={form} method="post" action="/api/v1/sandbox/preview" target="fm-html-preview" className="hidden">
+        <input type="hidden" name="html" value={html} readOnly />
+      </form>
+      <iframe name="fm-html-preview" title="Preview" sandbox="allow-scripts" referrerPolicy="no-referrer" className="w-full h-56 rounded-xl mt-3 border border-[var(--line)] bg-[#0b1020]" />
+    </>
   );
 }

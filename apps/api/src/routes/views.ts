@@ -5,7 +5,6 @@ import { countryName } from '../lib/geo.js';
 import { rectBounds, threeWords } from '../lib/grid.js';
 import { renderMarkdown } from '../lib/markdown.js';
 import { levelTitle } from '../game/levels.js';
-import { wrapCustomHtml } from '../lib/html.js';
 
 export interface OwnerView {
   type: 'user' | 'org';
@@ -83,7 +82,6 @@ export function plotView(p: Plot, owner: OwnerView | null, extra: { likedByMe?: 
     descriptionHtml: renderMarkdown(p.descriptionMd),
     hasCustomHtml: !!p.customHtml,
     ...(extra.canEdit && p.customHtml ? { customHtml: p.customHtml } : {}),
-    ...(extra.withHtml && p.customHtml ? { customHtmlDoc: wrapCustomHtml(p.customHtml) } : {}),
     coverImageUrl: p.coverImageUrl,
     thumbUrl: p.thumbUrl,
     gallery: p.gallery,

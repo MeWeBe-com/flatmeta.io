@@ -44,8 +44,28 @@ export function screenCustomHtml(input: string): HtmlScreen {
   return { ok: reasons.length === 0, reasons: [...new Set(reasons)], html };
 }
 
+/** What owner code may do inside its frame: inline script and style, images and media over https, the embed hosts. */
+export const SANDBOX_CONTENT_CSP =
+  "default-src 'none'; img-src https: data:; media-src https:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; font-src https: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://open.spotify.com https://www.google.com; base-uri 'none'; form-action 'none'; connect-src 'none'";
+
+/**
+ * Response headers for a served sandbox document. The CSP `sandbox allow-scripts` directive gives the document an
+ * opaque origin even when it is opened directly (not in our iframe), so it can never read flatmeta.io cookies or
+ * storage, navigate the top window, open popups or submit forms. Only our own pages may frame it.
+ */
+export function sandboxHeaders(frameAncestors: string[]): Record<string, string> {
+  return {
+    'content-type': 'text/html; charset=utf-8',
+    'content-security-policy': `sandbox allow-scripts; ${SANDBOX_CONTENT_CSP}; frame-ancestors ${frameAncestors.join(' ')}`,
+    'x-content-type-options': 'nosniff',
+    'referrer-policy': 'no-referrer',
+    'cross-origin-opener-policy': 'same-origin',
+    'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+  };
+}
+
 /** The document placed in the sandboxed iframe: a strict CSP on top of the sandbox attribute. */
 export function wrapCustomHtml(html: string): string {
-  const csp = "default-src 'none'; img-src https: data:; media-src https:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; font-src https: data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://open.spotify.com https://www.google.com; base-uri 'none'; form-action 'none'";
+  const csp = SANDBOX_CONTENT_CSP;
   return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:system-ui,sans-serif;color:#e6e9f5;background:transparent}</style></head><body>${html}</body></html>`;
 }

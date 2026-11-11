@@ -2,6 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadEnvConfig } from '@next/env';
 import type { NextConfig } from 'next';
+import { securityHeaders } from './src/lib/csp';
 
 // One .env at the repo root configures both apps. Load it before reading any variable.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -46,14 +47,9 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-cache' }, { key: 'Service-Worker-Allowed', value: '/' }] },
-      {
-        source: '/(.*)',
-        headers: [
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          { key: 'Permissions-Policy', value: 'geolocation=(self), camera=(), microphone=()' },
-        ],
-      },
+      // Frame protection, HSTS (https sites), nosniff, referrer and permissions policies on every response.
+      // The nonce-based CSP for pages is set per request in src/proxy.ts.
+      { source: '/(.*)', headers: securityHeaders((env.APP_URL ?? '').startsWith('https://')) },
     ];
   },
 };

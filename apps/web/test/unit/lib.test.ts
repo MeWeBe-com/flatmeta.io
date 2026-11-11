@@ -87,3 +87,30 @@ describe('spawn order', () => {
     expect(wantsPrecise(pickSpawn({ server: null, device: { lat: 40, lng: 2 } }))).toBe(false);
   });
 });
+
+import { buildCsp, originsOf, securityHeaders } from '../../src/lib/csp';
+
+describe('content security policy', () => {
+  it('requires the per-request nonce for scripts and forbids framing', () => {
+    const csp = buildCsp({ nonce: 'abc123', dev: false, connect: ['https://tiles.openfreemap.org'], frames: ['https://usercontent.flatmeta.io'] });
+    expect(csp).toMatch(/script-src 'self' 'nonce-abc123' 'strict-dynamic';/);
+    expect(csp).not.toMatch(/unsafe-eval/);
+    expect(csp).not.toMatch(/script-src[^;]*unsafe-inline/);
+    expect(csp).toMatch(/frame-ancestors 'none'/);
+    expect(csp).toMatch(/object-src 'none'/);
+    expect(csp).toMatch(/connect-src 'self' https:\/\/tiles\.openfreemap\.org;/);
+    expect(csp).toMatch(/frame-src 'self' https:\/\/usercontent\.flatmeta\.io;/);
+    expect(csp).toMatch(/upgrade-insecure-requests$/);
+    expect(buildCsp({ nonce: 'x', dev: true, connect: [], frames: [] })).toMatch(/'unsafe-eval'/);
+  });
+  it('turns configured URLs into origins and ignores junk', () => {
+    expect(originsOf(['https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf', 'wss://live.example.com/v1/live', 'javascript:alert(1)', undefined, ''])).toEqual(['https://tiles.openfreemap.org', 'wss://live.example.com']);
+  });
+  it('sends HSTS only for https sites', () => {
+    const keys = (h: { key: string }[]) => h.map((x) => x.key);
+    expect(keys(securityHeaders(true))).toEqual(expect.arrayContaining(['Strict-Transport-Security', 'X-Frame-Options', 'X-Content-Type-Options', 'Referrer-Policy']));
+    expect(securityHeaders(true).find((h) => h.key === 'Strict-Transport-Security')!.value).toBe('max-age=31536000; includeSubDomains');
+    expect(securityHeaders(true).find((h) => h.key === 'X-Frame-Options')!.value).toBe('DENY');
+    expect(keys(securityHeaders(false))).not.toContain('Strict-Transport-Security');
+  });
+});

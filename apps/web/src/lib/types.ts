@@ -58,7 +58,6 @@ export interface Plot {
   owner: Owner | null;
   hasCustomHtml?: boolean;
   customHtml?: string;
-  customHtmlDoc?: string;
   listing?: { id: string; priceCents: number; currency: string; version: number } | null;
   likesCount: number;
   visitsCount: number;
