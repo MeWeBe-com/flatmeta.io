@@ -232,3 +232,90 @@ describe('redis reconnects', () => {
     b.close();
   });
 });
+
+describe('walk mode (G9)', () => {
+  const W = { lat: -45.0, lng: -25.0 }; // a spot of its own
+  const near = (d = 0.001) => ({ type: 'move', lat: W.lat + d, lng: W.lng + d });
+  const view = { type: 'view', bbox: [W.lng - 0.2, W.lat - 0.2, W.lng + 0.2, W.lat + 0.2] };
+
+  it('masks swear words in nearby chat, keeps chat for signed-in players, and rate-limits it', async () => {
+    const { maskProfanity, hasProfanity } = await import('../src/lib/profanity.js');
+    expect(maskProfanity('what the fuck is this shit')).toBe('what the f*** is this s***');
+    expect(maskProfanity('F U C K off')).toBe('F****** off'); // spaced out
+    expect(maskProfanity('sh1t happens')).toMatch(/^s\*+ happens$/);
+    expect(maskProfanity('Scunthorpe and class assignments')).toBe('Scunthorpe and class assignments'); // no false hits inside words
+    expect(hasProfanity('hello there')).toBe(false);
+
+    const ann = await login();
+    const a = await client(ann.cookie);
+    const g = await client();
+    await Promise.all([a, g].map((x) => x.waitFor((m) => m.type === 'welcome')));
+    a.send(near());
+    g.send(near(0.002));
+    await new Promise((r) => setTimeout(r, 300));
+    a.send({ type: 'chat', scope: 'nearby', body: 'well shit, nice plot' });
+    const got = await g.waitFor((m) => m.type === 'chat');
+    expect((got.message as { body: string }).body).toBe('well s***, nice plot');
+    // guests read but can't talk
+    g.send({ type: 'chat', scope: 'nearby', body: 'hi' });
+    expect((await g.waitFor((m) => m.type === 'error')).code).toBe('sign_in');
+    // slow mode: 5 per 10 s
+    for (let i = 0; i < 6; i++) a.send({ type: 'chat', scope: 'nearby', body: `msg ${i}` });
+    expect(String((await a.waitFor((m) => m.type === 'error' && m.code === 'chat')).message)).toMatch(/Slow down/);
+    a.close();
+    g.close();
+  });
+
+  it('emotes reach players nearby (and echo to me), only from the fixed set, at most one per 1.5 s', async () => {
+    const [x, y] = [await login(), await login()];
+    const a = await client(x.cookie);
+    const b = await client(y.cookie);
+    const far = await client();
+    await Promise.all([a, b, far].map((c) => c.waitFor((m) => m.type === 'welcome')));
+    a.send(near());
+    b.send(near(0.002));
+    far.send({ type: 'move', lat: W.lat + 5, lng: W.lng }); // ~550 km away
+    await new Promise((r) => setTimeout(r, 300));
+    a.send({ type: 'emote', emote: 'wave' });
+    const seen = await b.waitFor((m) => m.type === 'emote');
+    expect(seen).toMatchObject({ emote: 'wave', userId: x.user.id });
+    expect(await a.waitFor((m) => m.type === 'emote')).toMatchObject({ id: 'me', emote: 'wave' });
+    a.send({ type: 'emote', emote: 'heart' }); // too soon: dropped
+    a.send({ type: 'emote', emote: '<script>' }); // not an emote: dropped
+    await new Promise((r) => setTimeout(r, 600));
+    expect(b.inbox.filter((m) => m.type === 'emote')).toHaveLength(1);
+    expect(far.inbox.filter((m) => m.type === 'emote')).toHaveLength(0);
+    [a, b, far].forEach((c) => c.close());
+  });
+
+  it('blocking hides each player’s avatar, nearby chat and emotes from the other, live', async () => {
+    const [x, y] = [await login(), await login()];
+    const a = await client(x.cookie);
+    const b = await client(y.cookie);
+    await Promise.all([a, b].map((c) => c.waitFor((m) => m.type === 'welcome')));
+    a.send(near());
+    b.send(near(0.002));
+    a.send(view);
+    b.send(view);
+    await a.waitFor((m) => m.type === 'avatars' && (m.avatars as { userId: string }[]).some((p) => p.userId === y.user.id));
+
+    await app.inject({ method: 'POST', url: `/v1/users/${x.user.username}/block`, headers: y.headers }); // y blocks x
+    await a.waitFor((m) => m.type === 'avatars' && !(m.avatars as { userId: string }[]).some((p) => p.userId === y.user.id), 8000);
+    await b.waitFor((m) => m.type === 'avatars' && !(m.avatars as { userId: string }[]).some((p) => p.userId === x.user.id), 8000);
+    b.inbox.length = 0;
+    a.send({ type: 'chat', scope: 'nearby', body: 'are you there?' });
+    await new Promise((r) => setTimeout(r, 1700));
+    a.send({ type: 'emote', emote: 'wave' });
+    await new Promise((r) => setTimeout(r, 600));
+    expect(b.inbox.filter((m) => m.type === 'chat' || m.type === 'emote')).toHaveLength(0);
+    a.close();
+    b.close();
+  });
+
+  it('stores an avatar style from the fixed set', async () => {
+    const u = await login();
+    const ok = await app.inject({ method: 'PATCH', url: '/v1/me', headers: u.headers, payload: { avatar: { face: '🦊', color: '#ff8800', style: 'neon' } } });
+    expect(json(ok).user.avatar).toMatchObject({ style: 'neon' });
+    expect((await app.inject({ method: 'PATCH', url: '/v1/me', headers: u.headers, payload: { avatar: { face: '🦊', color: '#ff8800', style: 'url(javascript:x)' } } })).statusCode).toBe(400);
+  });
+});

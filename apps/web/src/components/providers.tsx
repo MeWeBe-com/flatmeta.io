@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { EMOTE_ICONS, type Emote } from '@/lib/emotes';
 import { api, post } from '@/lib/api';
 import { WS_URL } from '@/lib/config';
 import type { Activity, ChatMsg, GameResult, MeResponse, Peer, You } from '@/lib/types';
@@ -238,6 +239,9 @@ interface LiveCtx {
   onPeers: (fn: (p: Peer[]) => void) => () => void;
   /** Subscribe to my notifications as they arrive (follows, requests, DMs, clan invites…). */
   onNotification: (fn: (n: AppNotification) => void) => () => void;
+  /** Emotes (G9): send one over my avatar, and see the ones sent nearby (`id` is "me" for my own). */
+  sendEmote: (emote: Emote) => void;
+  onEmote: (fn: (e: { id: string; userId: string | null; emote: Emote }) => void) => () => void;
 }
 const Live = createContext<LiveCtx | null>(null);
 const unsub = () => noop;
@@ -255,6 +259,8 @@ const INERT_LIVE: LiveCtx = {
   onChatError: unsub,
   onPeers: unsub,
   onNotification: unsub,
+  sendEmote: () => undefined,
+  onEmote: unsub,
 };
 export const useLive = () => {
   const ctx = useContext(Live);
@@ -274,6 +280,7 @@ function LiveProvider({ children }: { children: ReactNode }) {
   const errorListeners = useRef(new Set<(message: string, code: string) => void>());
   const peerListeners = useRef(new Set<(p: Peer[]) => void>());
   const notifyListeners = useRef(new Set<(n: AppNotification) => void>());
+  const emoteListeners = useRef(new Set<(e: { id: string; userId: string | null; emote: Emote }) => void>());
   const wsRef = useRef<WebSocket | null>(null);
   const lastView = useRef<string | null>(null);
   const lastMove = useRef<string | null>(null);
@@ -330,6 +337,10 @@ function LiveProvider({ children }: { children: ReactNode }) {
             for (const fn of peerListeners.current) fn(msg.avatars);
           }
           if (msg.type === 'chat' && msg.message) for (const fn of chatListeners.current) fn(msg.message);
+          if (msg.type === 'emote') {
+            const e = msg as unknown as { id: string; userId: string | null; emote: Emote };
+            if (e.emote in EMOTE_ICONS) for (const fn of emoteListeners.current) fn(e);
+          }
           if (msg.type === 'error') for (const fn of errorListeners.current) fn(String((msg as unknown as { message?: string }).message ?? 'Something went wrong'), msg.code ?? 'error');
           if (msg.type === 'presence' && typeof msg.online === 'number') setOnline(msg.online);
           if (msg.type === 'activity' && msg.activity) {
@@ -378,6 +389,8 @@ function LiveProvider({ children }: { children: ReactNode }) {
       onChatError: (fn) => add(errorListeners.current, fn),
       onPeers: (fn) => add(peerListeners.current, fn),
       onNotification: (fn) => add(notifyListeners.current, fn),
+      onEmote: (fn) => add(emoteListeners.current, fn),
+      sendEmote: (emote) => sendRaw(JSON.stringify({ type: 'emote', emote })),
       sendMove: (lat, lng) => {
         lastMove.current = JSON.stringify({ type: 'move', lat, lng });
         sendRaw(lastMove.current);

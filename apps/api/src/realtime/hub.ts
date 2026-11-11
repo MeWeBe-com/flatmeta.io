@@ -7,7 +7,7 @@ import { flagEmoji, haversineKm } from '../lib/geo.js';
 import { key, publish, redis, redisOpen, subscriber } from '../lib/redis.js';
 import { LIVE_CHANNEL, NOTIFY_CHANNEL } from '../game/activity.js';
 import { config } from '../config.js';
-import { CHAT_CHANNEL, NEARBY_RADIUS_KM, clanRoom, dmRoom, nearbyRoom, sendMessage, type ChatOut } from '../services/chat.js';
+import { CHAT_CHANNEL, NEARBY_RADIUS_KM, blockedIds, clanRoom, dmRoom, nearbyRoom, sendMessage, type ChatOut } from '../services/chat.js';
 
 /**
  * Real-time hub: online count, live activity, notifications, avatars on the map and chat.
@@ -58,7 +58,7 @@ interface Conn {
   userId: string | null;
   name: string;
   username: string | null;
-  avatar: { face: string; color: string; accessory?: string } | null;
+  avatar: { face: string; color: string; accessory?: string; style?: string } | null;
   level: number;
   clanId: string | null;
   lat: number | null;
@@ -69,7 +69,14 @@ interface Conn {
   /** Signed-in players' last position is saved (their next spawn point): at most every 30 s, and on close. */
   posSavedAt: number;
   posDirty: boolean;
+  /** Players this one blocked or was blocked by (G9): their avatars, nearby chat and emotes are not delivered. */
+  blocked: Set<string>;
+  lastEmote: number;
 }
+
+/** Emotes anyone on the map can send (a fixed set: nothing typed, so no moderation needed). */
+export const EMOTES = ['wave', 'heart', 'laugh', 'clap', 'dance', 'party', 'thumbs', 'wow'] as const;
+const EMOTE_GAP_MS = 1500;
 
 const POS_SAVE_MS = 30_000;
 
@@ -89,10 +96,11 @@ export function registerHub(app: App) {
   const liveChannel = LIVE_CHANNEL();
   const chatChannel = CHAT_CHANNEL();
   const probeChannel = key('live', 'probe');
+  const emoteChannel = key('live', 'emote');
   const notifyPrefix = NOTIFY_CHANNEL('');
   const probes = new Map<string, () => void>();
   void sub
-    .subscribe(liveChannel, chatChannel, probeChannel)
+    .subscribe(liveChannel, chatChannel, probeChannel, emoteChannel)
     .then(() => log.debug({ channels: [liveChannel, chatChannel, probeChannel] }, 'live: subscribed to shared channels'))
     .catch((err: Error) => log.error({ err: err.message }, 'live: subscribe failed'));
 
@@ -129,6 +137,22 @@ export function registerHub(app: App) {
       .catch(() => undefined);
   }
 
+  async function refreshBlocks(c: Conn) {
+    if (!c.userId) return;
+    c.blocked = await blockedIds(c.userId);
+    c.lastSent = ''; // resend the avatar list without (or with) them on the next tick
+  }
+
+  /** An emote shows over the sender's avatar for everyone near enough to see it (G9). */
+  function deliverEmote(e: { id: string; userId: string | null; emote: string; lat: number; lng: number }) {
+    for (const c of conns.values()) {
+      if (c.lat === null || c.lng === null) continue;
+      if (e.userId && c.blocked.has(e.userId)) continue;
+      if (c.id !== e.id && haversineKm(c.lat, c.lng, e.lat, e.lng) > NEARBY_RADIUS_KM) continue;
+      send(c, { type: 'emote', id: c.id === e.id ? 'me' : e.id, userId: e.userId, emote: e.emote });
+    }
+  }
+
   async function refreshClan(c: Conn) {
     if (!c.userId) return;
     const [m] = await db.select({ clanId: schema.clanMembers.clanId }).from(schema.clanMembers).where(eq(schema.clanMembers.userId, c.userId));
@@ -148,6 +172,8 @@ export function registerHub(app: App) {
         for (const c of conns.values()) if (c.ws.readyState === 1) c.ws.send(out);
       } else if (channel === chatChannel) {
         deliverChat(JSON.parse(message) as ChatOut);
+      } else if (channel === emoteChannel) {
+        deliverEmote(JSON.parse(message) as { id: string; userId: string | null; emote: string; lat: number; lng: number });
       } else if (channel === probeChannel) {
         probes.get(message)?.();
       } else if (channel.startsWith(notifyPrefix)) {
@@ -157,6 +183,7 @@ export function registerHub(app: App) {
         for (const c of conns.values()) {
           if (c.userId !== userId) continue;
           if (event.kind === 'clan_changed') void refreshClan(c);
+          if (event.kind === 'blocks_changed') void refreshBlocks(c);
           if (!event.signal) {
             send(c, { type: 'notification', notification: event });
             delivered++;
@@ -214,6 +241,7 @@ export function registerHub(app: App) {
       else if (m.room.startsWith('nearby:')) {
         if (c.lat !== null && c.lng !== null) ok = m.lat !== undefined && m.lng !== undefined ? haversineKm(c.lat, c.lng, m.lat, m.lng) <= NEARBY_RADIUS_KM : nearbyRoom(c.lat, c.lng) === m.room;
       }
+      if (ok && m.senderId && c.blocked.has(m.senderId)) ok = false; // blocked either way: not delivered
       if (ok) {
         send(c, payload);
         delivered++;
@@ -260,7 +288,7 @@ export function registerHub(app: App) {
     const out: { id: string; name: string; username: string | null; avatar: unknown; userId: string | null; level: number; lat: number; lng: number }[] = [];
     rows.forEach(([, h], i) => {
       const r = h as Record<string, string> | null;
-      if (!r?.n) return;
+      if (!r?.n || (r.u && c.blocked.has(r.u))) return;
       out.push({ id: ids[i]!, name: r.n, username: r.un || null, avatar: r.a ? JSON.parse(r.a) : null, userId: r.u || null, level: Number(r.l) || 1, lat: Number(r.lat), lng: Number(r.lng) });
     });
     return out;
@@ -332,6 +360,8 @@ export function registerHub(app: App) {
       lastSent: '',
       posSavedAt: 0,
       posDirty: false,
+      blocked: new Set(),
+      lastEmote: 0,
     };
     conns.set(id, conn);
     if (conn.userId) watchUser(conn.userId);
@@ -347,6 +377,7 @@ export function registerHub(app: App) {
           conn.avatar = u.avatar ?? conn.avatar;
           const [m] = await db.select({ clanId: schema.clanMembers.clanId }).from(schema.clanMembers).where(eq(schema.clanMembers.userId, u.id));
           conn.clanId = m?.clanId ?? null;
+          conn.blocked = await blockedIds(u.id);
         }
       }
       send(conn, { type: 'welcome', you: youOf(conn) });
@@ -386,6 +417,14 @@ export function registerHub(app: App) {
           const lat = (s + nn) / 2;
           const lng = e >= w ? (w + e) / 2 : ((w + e + 360) / 2 + 180) % 360 - 180;
           conn.view = { lat, lng, wKm: haversineKm(lat, w, lat, e >= w ? e : e + 360), hKm: haversineKm(s, lng, nn, lng) };
+          break;
+        }
+        case 'emote': {
+          const emote = typeof msg.emote === 'string' && (EMOTES as readonly string[]).includes(msg.emote) ? msg.emote : null;
+          const now = Date.now();
+          if (!emote || conn.lat === null || conn.lng === null || now - conn.lastEmote < EMOTE_GAP_MS) break;
+          conn.lastEmote = now;
+          void publish(emoteChannel, JSON.stringify({ id: conn.id, userId: conn.userId, emote, lat: conn.lat, lng: conn.lng }));
           break;
         }
         case 'chat': {

@@ -81,7 +81,8 @@ jobs:
             sleep 2
           done
           echo "stack did not start"; tail -n 50 api.log web.log edge.log; exit 1
-      - run: npx playwright install --with-deps chromium
+      # The runner's apt mirror sometimes fails to resolve for a minute: retry the browser install twice before giving up.
+      - run: for i in 1 2 3; do npx playwright install --with-deps chromium && exit 0; echo "install failed (attempt $i), retrying"; sleep 30; done; exit 1
       - name: End-to-end smoke tests
         run: npm run test:e2e
         env:

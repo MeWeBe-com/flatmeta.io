@@ -25,7 +25,8 @@ const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull(
 const updatedAt = () => timestamp('updated_at', { withTimezone: true }).notNull().defaultNow();
 const ts = (name: string) => timestamp(name, { withTimezone: true });
 
-export type Avatar = { face: string; color: string; accessory?: string };
+/** style: the avatar's body (G9): classic | bubble | pixel | neon | ghost. */
+export type Avatar = { face: string; color: string; accessory?: string; style?: string };
 export type PlotLink = { label: string; url: string };
 export type PlotCta = { label: string; url: string } | null;
 export type PlotTheme = { primary: string; accent: string };

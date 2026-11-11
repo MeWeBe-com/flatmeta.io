@@ -15,6 +15,9 @@ import { useGame, useLive, useSession, useTheme } from '../providers';
 import { UserMenu } from '../site-chrome';
 import { Logo, Spinner, clsx } from '../ui';
 import { ChatPanel } from './chat-panel';
+import { WalkControls } from './walk-controls';
+import { EMOTE_ICONS } from '@/lib/emotes';
+import { AVATAR_MIN_ZOOM } from '../map/avatars';
 import { NearbyCard } from './nearby-card';
 import { ErrorBoundary } from '../error-boundary';
 import { ClaimPanel } from './claim-panel';
@@ -71,6 +74,8 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
       }),
     [live, me.user?.id],
   );
+  // Emotes from players nearby (and my own echo) show over the avatars.
+  useEffect(() => live.onEmote((e) => map.current?.emote(e.id, EMOTE_ICONS[e.emote])), [live]);
   const identity = useMemo(() => ({ look: me.user?.avatar ?? live.you?.avatar ?? null, name: me.user?.displayName ?? live.you?.name ?? 'You' }), [me.user?.avatar, me.user?.displayName, live.you?.avatar, live.you?.name]);
 
   const pickLevel = (l: Level) => {
@@ -342,6 +347,8 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
           <LevelSwitch zoom={zoom} onPick={pickLevel} />
         </div>
       )}
+
+      <WalkControls visible={!claimMode && zoom >= AVATAR_MIN_ZOOM} onStick={(x, y) => map.current?.setJoystick(x, y)} onEmote={(e) => live.sendEmote(e)} />
 
       {peer && !claimMode && !openPlot && (
         <ErrorBoundary name="PeerCard">

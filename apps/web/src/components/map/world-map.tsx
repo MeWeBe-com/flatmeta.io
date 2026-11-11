@@ -19,6 +19,10 @@ export interface WorldMapHandle {
   /** Avatars (City and Land levels). */
   setPeers: (peers: Peer[]) => void;
   bubble: (userId: string | null, text: string) => void;
+  /** Shows an emote over an avatar: "me", or a peer's live id. */
+  emote: (id: string, icon: string) => void;
+  /** On-screen joystick input, each axis -1..1 (0,0 stops). */
+  setJoystick: (x: number, y: number) => void;
   myPosition: () => { lat: number; lng: number } | null;
   teleportMe: (lng: number, lat: number) => void;
   /** Sets where my avatar starts (placed when avatars become visible). */
@@ -131,6 +135,8 @@ export function WorldMap(props: Props) {
     reload: () => void loadPlots(true),
     setPeers: (peers) => avatarsRef.current?.setPeers(peers),
     bubble: (userId, text) => avatarsRef.current?.bubble(userId, text),
+    emote: (id, icon) => avatarsRef.current?.emote(id, icon),
+    setJoystick: (x, y) => avatarsRef.current?.setJoystick(x, y),
     myPosition: () => avatarsRef.current?.position() ?? null,
     teleportMe: (lng, lat) => avatarsRef.current?.teleport(lng, lat),
     startMeAt: (lng, lat) => avatarsRef.current?.startAt(lng, lat),

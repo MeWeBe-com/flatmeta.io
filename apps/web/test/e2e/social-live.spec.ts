@@ -116,6 +116,29 @@ test('nearby chat reaches the other player live', async () => {
   await a.page.getByRole('button', { name: 'Close chat' }).click();
 });
 
+test('emotes show over the sender for players nearby (G9)', async () => {
+  await a.page.getByRole('button', { name: 'Emotes', exact: true }).click();
+  await a.page.getByRole('toolbar', { name: 'Emotes' }).getByRole('button', { name: 'Wave' }).click();
+  await expect(b.page.locator('.fm-avatar.fm-emoting', { hasText: 'Ana' }).locator('.fm-emote')).toHaveText('👋', { timeout: 10_000 });
+  await expect(a.page.locator('.fm-avatar-me.fm-emoting .fm-emote')).toHaveText('👋');
+});
+
+test('WASD walks my avatar, and the other player sees it move (G9)', async () => {
+  const me = a.page.locator('.fm-avatar-me');
+  const before = Number(await me.getAttribute('data-lng'));
+  const anaOnB = b.page.locator('.fm-avatar', { hasText: 'Ana' });
+  const xBefore = (await anaOnB.boundingBox())!.x;
+  await a.page.locator('body').focus();
+  await a.page.keyboard.down('d');
+  await a.page.waitForTimeout(900);
+  await a.page.keyboard.up('d');
+  await expect.poll(async () => Number(await me.getAttribute('data-lng'))).toBeGreaterThan(before);
+  const after = Number(await me.getAttribute('data-lng'));
+  // B's copy of Ana glides to the new spot (positions are sent ~4 times a second).
+  await expect.poll(async () => ((await anaOnB.boundingBox())?.x ?? 0) - xBefore, { timeout: 10_000 }).toBeGreaterThan(5);
+  expect(after).toBeGreaterThan(before);
+});
+
 test('follow and connection request notify the recipient live; accepting notifies the sender', async () => {
   // A follows B (B may already have unread notifications from earlier steps, e.g. an achievement)
   const before = await unreadOf(b);

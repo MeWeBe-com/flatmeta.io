@@ -5,6 +5,7 @@ import { KeyRound, Save, User } from 'lucide-react';
 import { ApiError, api, patch, post, put } from '@/lib/api';
 import type { AvatarLook, Country } from '@/lib/types';
 import { ACCESSORIES, COLORS, FACES, FaceBadge } from '@/components/face-badge';
+import { AVATAR_STYLES } from '@/lib/emotes';
 import { useGame, useSession } from '@/components/providers';
 import { SectionTitle, Spinner } from '@/components/ui';
 
@@ -30,7 +31,7 @@ export default function SettingsPage() {
   const saveProfile = async () => {
     setSaving(true);
     try {
-      await patch('/me', { displayName: form.displayName, username: form.username, bio: form.bio || null, homeCountry: form.homeCountry || null, avatar: { face: look.face, color: look.color, ...(look.accessory ? { accessory: look.accessory } : {}) } });
+      await patch('/me', { displayName: form.displayName, username: form.username, bio: form.bio || null, homeCountry: form.homeCountry || null, avatar: { face: look.face, color: look.color, ...(look.accessory ? { accessory: look.accessory } : {}), ...(look.style && look.style !== 'classic' ? { style: look.style } : {}) } });
       await refresh();
       toast({ kind: 'success', title: 'Profile saved' });
     } catch (e) {
@@ -63,6 +64,10 @@ export default function SettingsPage() {
           <div>
             <div className="label">Accessory</div>
             <div className="flex flex-wrap gap-1.5">{ACCESSORIES.map((a) => <button key={a || 'none'} type="button" aria-pressed={(look.accessory ?? '') === a} aria-label={a ? `Accessory ${a}` : 'No accessory'} onClick={() => setLook({ ...look, accessory: a || undefined })} className={`size-9 rounded-xl grid place-items-center ${(look.accessory ?? '') === a ? 'bg-white/15 ring-2 ring-[var(--color-teal)]' : 'bg-white/5 hover:bg-white/10'}`}>{a || '∅'}</button>)}</div>
+          </div>
+          <div>
+            <div className="label">Style</div>
+            <div className="flex flex-wrap gap-1.5">{AVATAR_STYLES.map((st) => <button key={st.key} type="button" aria-pressed={(look.style ?? 'classic') === st.key} onClick={() => setLook({ ...look, style: st.key })} className={`h-9 px-3 rounded-xl text-sm ${(look.style ?? 'classic') === st.key ? 'bg-white/15 ring-2 ring-[var(--color-teal)]' : 'bg-white/5 hover:bg-white/10'}`}>{st.label}</button>)}</div>
           </div>
         </div>
         <div className="grid sm:grid-cols-2 gap-4">

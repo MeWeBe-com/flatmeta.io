@@ -107,7 +107,7 @@ export default async function meRoutes(app: App) {
           bio: z.string().max(280).nullable().optional(),
           homeCountry: z.string().length(2).nullable().optional(),
           avatar: z
-            .object({ face: z.string().min(1).max(8), color: z.string().regex(/^#[0-9a-fA-F]{6}$/), accessory: z.string().max(8).optional() })
+            .object({ face: z.string().min(1).max(8), color: z.string().regex(/^#[0-9a-fA-F]{6}$/), accessory: z.string().max(8).optional(), style: z.enum(['classic', 'bubble', 'pixel', 'neon', 'ghost']).optional() })
             .nullable()
             .optional(),
         }),

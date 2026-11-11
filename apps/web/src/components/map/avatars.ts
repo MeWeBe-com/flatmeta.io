@@ -16,11 +16,16 @@ interface Entry {
   target: [number, number];
   peer?: Peer;
   bubbleTimer?: ReturnType<typeof setTimeout>;
+  emoteEl?: HTMLElement;
+  emoteTimer?: ReturnType<typeof setTimeout>;
 }
+
+/** WASD and the arrow keys walk (G9). */
+const KEY_DIR: Record<string, string> = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right' };
 
 function buildEl(look: AvatarLook | null, name: string, me: boolean): { el: HTMLElement; bubble: HTMLElement } {
   const el = document.createElement('div');
-  el.className = `fm-avatar${me ? ' fm-avatar-me' : ''}`;
+  el.className = `fm-avatar${me ? ' fm-avatar-me' : ''} fm-style-${look?.style ?? 'classic'}`;
   el.style.setProperty('--av', look?.color ?? '#8B7CFF');
   const bubble = document.createElement('div');
   bubble.className = 'fm-bubble';
@@ -54,6 +59,7 @@ export class AvatarLayer {
   private visible = false;
   private reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   private keys = new Set<string>();
+  private stick: [number, number] = [0, 0];
   /** Where I start, decided by the page (saved spot, precise or approximate location). Never the map centre. */
   private start: [number, number] | null = null;
   private glide: { from: [number, number]; to: [number, number]; t0: number; ms: number } | null = null;
@@ -151,6 +157,31 @@ export class AvatarLayer {
     entry.el.classList.add('fm-talking');
     if (entry.bubbleTimer) clearTimeout(entry.bubbleTimer);
     entry.bubbleTimer = setTimeout(() => entry.el.classList.remove('fm-talking'), 6500);
+  }
+
+  /** Shows an emote over me ("me") or over the peer with this live id, for 3 seconds. */
+  emote(id: string, icon: string) {
+    const entry = id === 'me' ? this.me : this.peers.get(id);
+    if (!entry) return;
+    if (!entry.emoteEl) {
+      entry.emoteEl = document.createElement('div');
+      entry.emoteEl.className = 'fm-emote';
+      entry.emoteEl.setAttribute('aria-hidden', 'true');
+      entry.el.prepend(entry.emoteEl);
+    }
+    entry.emoteEl.textContent = icon;
+    entry.el.classList.remove('fm-emoting');
+    void entry.el.offsetWidth; // restart the animation
+    entry.el.classList.add('fm-emoting');
+    if (entry.emoteTimer) clearTimeout(entry.emoteTimer);
+    entry.emoteTimer = setTimeout(() => entry.el.classList.remove('fm-emoting'), 3000);
+  }
+
+  /** On-screen joystick (G9): each axis -1..1, up is +y. */
+  setJoystick(x: number, y: number) {
+    const len = Math.hypot(x, y);
+    this.stick = len > 1 ? [x / len, y / len] : [x, y];
+    if (len > 0.05) this.walkTarget = null;
   }
 
   position(): { lat: number; lng: number } | null {
@@ -267,12 +298,14 @@ export class AvatarLayer {
     const viewH = b.getNorth() - b.getSouth();
     const speed = viewW * WALK_VIEWS_PER_SECOND; // degrees of longitude per second
     let moved = false;
-    const dx = (this.keys.has('ArrowRight') ? 1 : 0) - (this.keys.has('ArrowLeft') ? 1 : 0);
-    const dy = (this.keys.has('ArrowUp') ? 1 : 0) - (this.keys.has('ArrowDown') ? 1 : 0);
+    const kx = (this.keys.has('right') ? 1 : 0) - (this.keys.has('left') ? 1 : 0);
+    const ky = (this.keys.has('up') ? 1 : 0) - (this.keys.has('down') ? 1 : 0);
+    const klen = Math.hypot(kx, ky);
+    // Keys walk at full pace; the joystick scales with how far it is pushed.
+    const [dx, dy] = klen ? [kx / klen, ky / klen] : Math.hypot(this.stick[0], this.stick[1]) > 0.05 ? this.stick : [0, 0];
     if (dx || dy) {
       this.walkTarget = null;
-      const len = Math.hypot(dx, dy);
-      me.cur = [me.cur[0] + (dx / len) * speed * dt, Math.max(-84, Math.min(84, me.cur[1] + (dy / len) * speed * dt * (viewH / viewW)))];
+      me.cur = [me.cur[0] + dx * speed * dt, Math.max(-84, Math.min(84, me.cur[1] + dy * speed * dt * (viewH / viewW)))];
       moved = true;
     } else if (this.walkTarget) {
       const [tx, ty] = this.walkTarget;
@@ -307,13 +340,15 @@ export class AvatarLayer {
     return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
   };
   private onKeyDown = (e: KeyboardEvent) => {
-    if (!this.visible || this.typing() || !e.key.startsWith('Arrow') || e.metaKey || e.ctrlKey || e.altKey) return;
+    const dir = KEY_DIR[e.code] ?? KEY_DIR[e.key];
+    if (!this.visible || this.typing() || !dir || e.metaKey || e.ctrlKey || e.altKey) return;
     if (document.querySelector('[role="dialog"]')) return;
     e.preventDefault();
-    this.keys.add(e.key);
+    this.keys.add(dir);
   };
   private onKeyUp = (e: KeyboardEvent) => {
-    this.keys.delete(e.key);
+    const dir = KEY_DIR[e.code] ?? KEY_DIR[e.key];
+    if (dir) this.keys.delete(dir);
   };
   private clearKeys = () => this.keys.clear();
 }

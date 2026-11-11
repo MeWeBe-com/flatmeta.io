@@ -1,3 +1,4 @@
+import { maskProfanity } from '../lib/profanity.js';
 import { and, desc, eq, gt, inArray, lt, or, sql } from 'drizzle-orm';
 import { db, schema } from '../db/client.js';
 import type { User } from '../db/schema.js';
@@ -6,7 +7,7 @@ import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { stripText } from '../lib/markdown.js';
 import { key, publish, redis } from '../lib/redis.js';
 import { logger } from '../lib/logger.js';
-import { notify } from '../game/activity.js';
+import { notify, signal } from '../game/activity.js';
 import { recordAction } from '../game/engine.js';
 
 export const CHAT_CHANNEL = () => key('chat');
@@ -106,11 +107,23 @@ export async function blockUser(me: User, username: string) {
     .delete(schema.connections)
     .where(or(and(eq(schema.connections.requesterId, me.id), eq(schema.connections.addresseeId, other.id)), and(eq(schema.connections.requesterId, other.id), eq(schema.connections.addresseeId, me.id))));
   await db.insert(schema.connections).values({ requesterId: me.id, addresseeId: other.id, status: 'blocked' });
+  // Live sockets of both players stop showing each other's avatar, chat and emotes at once.
+  await Promise.all([signal(me.id, 'blocks_changed'), signal(other.id, 'blocks_changed')]);
 }
 
 export async function unblockUser(me: User, username: string) {
   const other = await userByName(username);
   await db.delete(schema.connections).where(and(eq(schema.connections.requesterId, me.id), eq(schema.connections.addresseeId, other.id), eq(schema.connections.status, 'blocked')));
+  await Promise.all([signal(me.id, 'blocks_changed'), signal(other.id, 'blocks_changed')]);
+}
+
+/** Everyone I blocked or who blocked me: neither side sees the other's avatar, nearby chat or emotes. */
+export async function blockedIds(userId: string): Promise<Set<string>> {
+  const rows = await db
+    .select({ a: schema.connections.requesterId, b: schema.connections.addresseeId })
+    .from(schema.connections)
+    .where(and(eq(schema.connections.status, 'blocked'), or(eq(schema.connections.requesterId, userId), eq(schema.connections.addresseeId, userId))));
+  return new Set(rows.map((r) => (r.a === userId ? r.b : r.a)));
 }
 
 export async function listConnections(me: User) {
@@ -148,8 +161,10 @@ export interface SendInput {
  */
 export async function sendMessage(sender: User, input: SendInput): Promise<ChatOut> {
   if (sender.bannedAt) throw forbidden('This account is suspended.');
-  const body = stripText(input.body, MAX_MESSAGE_LEN).trim();
-  if (!body) throw badRequest('Say something first.');
+  const raw = stripText(input.body, MAX_MESSAGE_LEN).trim();
+  if (!raw) throw badRequest('Say something first.');
+  // Public rooms mask swear words; private messages between connected players are left as written.
+  const body = input.room.startsWith('dm:') ? raw : maskProfanity(raw);
 
   // Access rules per room kind.
   let dmTo: { id: string; username: string } | null = null;

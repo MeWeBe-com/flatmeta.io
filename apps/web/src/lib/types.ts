@@ -106,7 +106,7 @@ export interface WorldPlot {
   published: boolean;
 }
 
-export interface AvatarLook { face: string; color: string; accessory?: string }
+export interface AvatarLook { face: string; color: string; accessory?: string; style?: 'classic' | 'bubble' | 'pixel' | 'neon' | 'ghost' }
 
 export interface PublicUser {
   id: string;

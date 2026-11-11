@@ -218,4 +218,15 @@ h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0
 .fm-talking .fm-bubble { opacity: 1; transform: translateX(-50%) scale(1); }
 .fm-walking .fm-face { animation: fm-hop .38s ease-in-out infinite; }
 @keyframes fm-hop { 50% { transform: translateY(-4px); } }
+/* G9: emotes over avatars, and avatar body styles */
+.fm-emote { position: absolute; bottom: 58px; left: 50%; transform: translateX(-50%) scale(.4); opacity: 0; font-size: 26px; line-height: 1; pointer-events: none; filter: drop-shadow(0 4px 8px rgb(0 0 0 / .45)); }
+.fm-emoting .fm-emote { animation: fm-emote 3s ease-out forwards; }
+.fm-emoting .fm-bubble { opacity: 0; }
+@keyframes fm-emote { 0% { opacity: 0; transform: translateX(-50%) translateY(8px) scale(.4); } 12% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.15); } 20% { transform: translateX(-50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(1); } }
+.fm-style-bubble .fm-face { border-radius: 45% 45% 50% 50% / 55% 55% 45% 45%; background: radial-gradient(circle at 30% 25%, #fff6 0 18%, transparent 19%), color-mix(in srgb, var(--av) 55%, #0b1020); }
+.fm-style-pixel .fm-face { border-radius: 6px; image-rendering: pixelated; box-shadow: 3px 3px 0 #0b1020, 0 0 0 2px rgb(11 16 32 / .35); }
+.fm-style-neon .fm-face { background: #0b1020; box-shadow: 0 0 10px var(--av), 0 0 22px color-mix(in srgb, var(--av) 60%, transparent), inset 0 0 8px var(--av); }
+.fm-style-ghost .fm-face { border-radius: 999px 999px 8px 8px; background: color-mix(in srgb, var(--av) 22%, #e6e9f5); opacity: .92; }
+.fm-joystick { touch-action: none; }
+@media (prefers-reduced-motion: reduce) { .fm-emoting .fm-emote { animation: none; opacity: 1; transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .fm-walking .fm-face { animation: none; } .fm-bubble { transition: none; } }
