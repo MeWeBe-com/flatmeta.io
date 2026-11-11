@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { clearReferral, storedReferral } from '@/lib/referral';
 import { useEffect, useRef, useState } from 'react';
 import { Mail, Sparkles, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 import { ApiError, post } from '@/lib/api';
@@ -114,7 +115,9 @@ function SignInDialog() {
     setError(null);
     try {
       const countryHint = Intl.DateTimeFormat().resolvedOptions().locale.split('-')[1];
-      const r = await post<{ user: Me; isNew: boolean; game?: GameResult }>('/auth/verify-code', { email, code: value, ...(countryHint?.length === 2 ? { countryHint } : {}) });
+      const ref = storedReferral();
+      const r = await post<{ user: Me; isNew: boolean; game?: GameResult }>('/auth/verify-code', { email, code: value, ...(countryHint?.length === 2 ? { countryHint } : {}), ...(ref ? { ref } : {}) });
+      if (ref) clearReferral();
       toast({ kind: 'success', title: r.isNew ? t('auth.welcome') : t('auth.welcomeBack') });
       handleGame(r.game);
       onSignedIn();

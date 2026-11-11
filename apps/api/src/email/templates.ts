@@ -19,6 +19,7 @@ export type EmailType =
   | 'admin_claim_review'
   | 'admin_claim_lead'
   | 'admin_takedown'
+  | 'weekly_digest'
   | 'notice';
 
 export interface EmailContent {

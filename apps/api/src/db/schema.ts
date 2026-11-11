@@ -72,6 +72,14 @@ export const users = pgTable(
     displayName: text('display_name').notNull(),
     avatarUrl: text('avatar_url'),
     avatar: jsonb('avatar').$type<Avatar>(),
+    // G11 growth loop: referral code and bonus land, weekly owner email preference.
+    referralCode: text('referral_code').unique(),
+    referredBy: uuid('referred_by'),
+    referralRewardedAt: timestamp('referral_rewarded_at', { withTimezone: true }),
+    bonusCells: integer('bonus_cells').notNull().default(0),
+    bonusCellsUsed: integer('bonus_cells_used').notNull().default(0),
+    weeklyEmail: boolean('weekly_email').notNull().default(true),
+    weeklyEmailSentAt: timestamp('weekly_email_sent_at', { withTimezone: true }),
     passwordHash: text('password_hash'),
     bio: text('bio'),
     role: text('role').notNull().default('user'), // user | moderator | admin

@@ -129,6 +129,9 @@ export interface Me extends PublicUser {
   lastCheckin: string | null;
   homesteadUsed: boolean;
   hasPassword: boolean;
+  /** G11: the weekly owner email, and referral bonus squares earned. */
+  weeklyEmail?: boolean;
+  bonusCells?: number;
 }
 
 export interface LevelProgress { level: number; title: string; xp: number; levelXp: number; nextLevelXp: number; progress: number }

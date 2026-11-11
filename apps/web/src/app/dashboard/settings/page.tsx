@@ -84,6 +84,7 @@ export default function SettingsPage() {
         <button className="btn-primary" disabled={saving} onClick={() => void saveProfile()}>{saving ? <Spinner /> : <Save size={16} />} Save profile</button>
       </section>
 
+      <WeeklyEmailCard on={u.weeklyEmail !== false} onChanged={refresh} />
       <PasswordCard hasPassword={u.hasPassword} email={u.email} onChanged={refresh} />
     </div>
   );
@@ -138,6 +139,31 @@ function PasswordCard({ hasPassword, email, onChanged }: { hasPassword: boolean;
           )}
         </div>
       )}
+    </section>
+  );
+}
+
+/** G11: the weekly email with visitors, likes and guestbook signatures. */
+function WeeklyEmailCard({ on, onChanged }: { on: boolean; onChanged: () => Promise<void> }) {
+  const { toast } = useGame();
+  const [busy, setBusy] = useState(false);
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      await patch('/me', { weeklyEmail: !on });
+      await onChanged();
+      toast({ kind: 'success', title: on ? 'Weekly email turned off' : 'Weekly email turned on' });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="surface p-6 space-y-3" aria-label="Email">
+      <h2 className="font-semibold">Email</h2>
+      <label className="flex items-center gap-3 text-sm cursor-pointer">
+        <input type="checkbox" className="size-4 accent-[var(--color-teal)]" checked={on} disabled={busy} onChange={() => void toggle()} />
+        Weekly summary of my land (visitors, likes, guestbook) on Mondays
+      </label>
     </section>
   );
 }

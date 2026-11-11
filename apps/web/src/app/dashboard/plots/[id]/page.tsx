@@ -15,6 +15,7 @@ import { SharePanel, plotShareUrl } from '@/components/share-panel';
 import { VisitorStats } from '@/components/plot/visitor-stats';
 import { sandboxSrc } from '@/lib/sandbox';
 import { ScheduleOpenHouse } from '@/components/plot/open-houses';
+import { InviteLink } from '@/components/invite-card';
 
 type Tab = 'design' | 'content' | 'links' | 'look' | 'business' | 'boost';
 interface Variation { title: string; tagline: string; descriptionMd: string; category: string; tags: string[]; theme: { primary: string; accent: string }; image?: { url: string; thumbUrl: string; pending: boolean } }
@@ -105,6 +106,15 @@ function Editor() {
             <div className="font-bold">{welcome === 'landmark' ? 'Your Landmark is verified and yours!' : 'Welcome to your new plot!'}</div>
             <div className="text-sm muted">Let the AI Designer dress it up, then publish it to the world.</div>
           </div>
+        </div>
+      )}
+      {welcome && welcome !== 'landmark' && (
+        // G11: the moment people are proudest of their land is the best moment to share it.
+        <div className="surface p-5 space-y-3" role="region" aria-label="Share your new land">
+          <div className="font-semibold">Tell your friends where you live on the map</div>
+          <p className="text-sm muted">Your link opens your land. Friends who join with your invite link and claim land get bonus squares, and so do you.</p>
+          <SharePanel url={plotShareUrl(plot)} text={`My land on FlatMeta: ${plot.title}`} plotId={plot.id} />
+          <InviteLink />
         </div>
       )}
       <div className="flex flex-wrap items-center gap-3">

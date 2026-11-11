@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { EMOTE_ICONS, type Emote } from '@/lib/emotes';
+import { captureReferral } from '@/lib/referral';
 import { api, post } from '@/lib/api';
 import { WS_URL } from '@/lib/config';
 import type { Activity, ChatMsg, GameResult, MeResponse, Peer, You } from '@/lib/types';
@@ -76,6 +77,8 @@ function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+  // G11: remember a friend's invite code (?ref=) until sign-up.
+  useEffect(() => captureReferral(location.search), []);
 
   const value = useMemo<SessionCtx>(
     () => ({

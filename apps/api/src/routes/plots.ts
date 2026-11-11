@@ -23,6 +23,7 @@ import { mergeResults, recordAction, type GameResult } from '../game/engine.js';
 import { setPlotLikes } from '../game/leaderboards.js';
 import { FRAMES } from '../game/levels.js';
 import { checkContent } from '../services/moderation.js';
+import { freeLimitFor } from '../services/referrals.js';
 import { recordCustomHtmlVersion, reportCustomHtml, type SavedHtml } from '../services/custom-html.js';
 import { MAX_CUSTOM_HTML, screenCustomHtml } from '../lib/html.js';
 import { afterClaim, assertCanActForOrg, createPlot, ensureCover, neighbours, ownedCells, quoteFor } from '../services/plots.js';
@@ -444,11 +445,21 @@ export default async function plotRoutes(app: App) {
       const title = stripText(req.body.title ?? (q.regionSlug ? `${user.displayName}'s corner` : `${user.displayName}'s plot`), 80);
       if (q.free && !q.homesteadEligible) {
         // Launch without payments: land within the free allowance is claimed straight away.
+        if (q.bonus) {
+          // Paid land is on: spend referral bonus squares first, atomically, so two claims can't spend them twice.
+          const [spent] = await db
+            .update(schema.users)
+            .set({ bonusCellsUsed: sql`${schema.users.bonusCellsUsed} + ${q.cells}` })
+            .where(and(eq(schema.users.id, user.id), sql`${schema.users.bonusCells} - ${schema.users.bonusCellsUsed} >= ${q.cells}`))
+            .returning({ id: schema.users.id });
+          if (!spent) throw badRequest('Your bonus squares were just used. Pick a smaller plot or pay for this one.');
+        }
         let plot = await createPlot({ rect: q.rect, title, kind: 'standard', status: 'active', ownerUserId: user.id, ownerOrgId: orgId ?? null, tier: q.tier, countryCode: q.countryCode, regionSlug: q.regionSlug });
         // Two claims at once could both fit on their own: check the total again now that this one exists.
-        if ((await ownedCells(user.id, orgId)) > config.FREE_LAND_CELLS) {
+        const limit = freeLimitFor(user, orgId);
+        if (!q.bonus && (await ownedCells(user.id, orgId)) > limit) {
           await db.delete(schema.plots).where(eq(schema.plots.id, plot.id));
-          throw badRequest(`That would take you past your ${config.FREE_LAND_CELLS} free squares. Paid land is coming soon.`);
+          throw badRequest(`That would take you past your ${limit} free squares. Paid land is coming soon.`);
         }
         if (!user.homeCountry && q.countryCode) await db.update(schema.users).set({ homeCountry: q.countryCode }).where(eq(schema.users.id, user.id));
         plot = await ensureCover(plot, user.id);

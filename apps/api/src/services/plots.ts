@@ -1,7 +1,8 @@
+import { freeLimitFor, rewardReferral } from './referrals.js';
 import { and, count, eq, gte, inArray, lte, ne, or, sql } from 'drizzle-orm';
 import { publicShowcase, publicShowcaseRaw } from '../lib/visibility.js';
 import { db, schema, type Tx } from '../db/client.js';
-import { config, paidCheckout } from '../config.js';
+import { paidCheckout } from '../config.js';
 import type { Plot, User } from '../db/schema.js';
 import { generateImage } from '../ai/image/index.js';
 import { pickPalette } from '../ai/image/procedural.js';
@@ -71,6 +72,8 @@ export interface QuoteResult extends Quote {
   paidCheckout: boolean;
   /** Free-land allowance while paid checkout is off: squares per person or organisation, and how many are used. */
   freeAllowance: { limit: number; used: number } | null;
+  /** Paid land is on and this claim is paid for by referral bonus squares (G11). */
+  bonus: boolean;
   /** True when this land would need a payment, and payments aren't open yet. */
   comingSoon: boolean;
 }
@@ -93,10 +96,12 @@ export async function quoteFor(user: User | null, rectIn: Rect, orgId?: string |
   const paid = paidCheckout();
   let freeAllowance: QuoteResult['freeAllowance'] = null;
   let comingSoon = false;
+  let bonus = false;
   if (!paid) {
     const used = user ? await ownedCells(user.id, orgId) : 0;
-    freeAllowance = { limit: config.FREE_LAND_CELLS, used };
-    if (used + q.cells <= config.FREE_LAND_CELLS) {
+    const limit = freeLimitFor(user, orgId);
+    freeAllowance = { limit, used };
+    if (used + q.cells <= limit) {
       q.free = true;
       q.discountCents = q.subtotalCents;
       q.totalCents = 0;
@@ -104,6 +109,12 @@ export async function quoteFor(user: User | null, rectIn: Rect, orgId?: string |
       q.free = false;
       comingSoon = true;
     }
+  } else if (user && !orgId && !q.free && user.bonusCells - user.bonusCellsUsed >= q.cells) {
+    // Paid land is on: referral bonus squares pay for a claim that fits in them entirely.
+    q.free = true;
+    q.discountCents = q.subtotalCents;
+    q.totalCents = 0;
+    bonus = true;
   }
   const center = rectCenter(rect);
   const conflicts = await overlapping(rect);
@@ -138,6 +149,7 @@ export async function quoteFor(user: User | null, rectIn: Rect, orgId?: string |
     reasons,
     paidCheckout: paid,
     freeAllowance,
+    bonus,
     comingSoon,
   };
 }
@@ -254,6 +266,7 @@ export async function afterClaim(plot: Plot, actorUserId: string | null): Promis
   if (plot.countryCode) await setUserCells(actorUserId, plot.countryCode, await userCellsIn(actorUserId, plot.countryCode)).catch(() => undefined);
   const results: (GameResult | null)[] = [];
   results.push(await recordAction(actorUserId, 'claim_plot', { ref: plot.id, countryCode: plot.countryCode }));
+  await rewardReferral(actorUserId).catch(() => undefined); // G11: first land of an invited friend
   if (plot.kind === 'homestead') results.push(await unlock(actorUserId, 'homesteader'));
   if (plot.countryCode) {
     const [first] = await db

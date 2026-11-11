@@ -92,6 +92,9 @@ const schema = z.object({
   PAID_CHECKOUT_ENABLED: z.enum(['auto', 'true', 'false']).default('auto'),
   // While paid checkout is off, each person (or organisation) can claim this many squares free in total.
   FREE_LAND_CELLS: z.coerce.number().int().min(1).max(10_000).default(100),
+  // G11: extra free squares for both people when an invited friend claims their first land.
+  REFERRAL_BONUS_CELLS: z.coerce.number().int().min(0).max(1000).default(10),
+  REFERRAL_MAX_PER_DAY: z.coerce.number().int().min(0).max(1000).default(20),
   // Showcase plots need an admin-checked location before they appear publicly. auto = only in production.
   SHOWCASE_REQUIRE_LOCATION_CHECK: z.enum(['auto', 'true', 'false']).default('auto'),
   // Legal pages and emails.

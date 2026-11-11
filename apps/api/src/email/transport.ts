@@ -11,6 +11,8 @@ export interface OutgoingEmail {
   type: EmailType;
   /** Resend de-duplicates sends with the same key for 24 h (safe retries). */
   idempotencyKey?: string;
+  /** Extra headers, e.g. List-Unsubscribe for the weekly digest (G11). */
+  headers?: Record<string, string>;
 }
 
 /** Worth retrying later (rate limit, quota, 5xx, network). `retryAfterMs` comes from the provider when it says. */
@@ -26,7 +28,7 @@ export class EmailPermanentError extends Error {}
 export interface ResendLike {
   emails: {
     send(
-      payload: { from: string; to: string; subject: string; html: string; text: string; replyTo?: string; tags?: { name: string; value: string }[] },
+      payload: { from: string; to: string; subject: string; html: string; text: string; replyTo?: string; tags?: { name: string; value: string }[]; headers?: Record<string, string> },
       options?: { idempotencyKey?: string },
     ): Promise<{ data: { id: string } | null; error: { name: string; message: string; statusCode: number | null } | null; headers?: Record<string, string> | null }>;
   };
@@ -49,7 +51,7 @@ async function resend(): Promise<ResendLike> {
 }
 
 /** Last messages "sent" with no provider (development, tests, staging without keys). */
-export const outbox: { to: string; subject: string; text: string; type: EmailType }[] = [];
+export const outbox: { to: string; subject: string; text: string; type: EmailType; headers?: Record<string, string> }[] = [];
 
 /** Tag values may only contain ASCII letters, numbers, underscores and dashes. */
 const tag = (v: string) => v.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 256);
@@ -68,6 +70,7 @@ async function sendWithResend(msg: OutgoingEmail): Promise<string> {
         html: msg.html,
         text: msg.text,
         ...(config.MAIL_REPLY_TO ? { replyTo: config.MAIL_REPLY_TO } : {}),
+        ...(msg.headers ? { headers: msg.headers } : {}),
         tags: [
           { name: 'type', value: tag(msg.type) },
           { name: 'env', value: tag(config.APP_ENV) },
@@ -99,7 +102,7 @@ async function sendWithSmtp(msg: OutgoingEmail): Promise<string> {
     auth: config.SMTP_USER ? { user: config.SMTP_USER, pass: config.SMTP_PASS } : undefined,
   });
   try {
-    const info = await smtpTransport.sendMail({ from: config.MAIL_FROM, replyTo: config.MAIL_REPLY_TO, to: msg.to, subject: msg.subject, text: msg.text, html: msg.html, headers: { 'X-FlatMeta-Type': msg.type } });
+    const info = await smtpTransport.sendMail({ from: config.MAIL_FROM, replyTo: config.MAIL_REPLY_TO, to: msg.to, subject: msg.subject, text: msg.text, html: msg.html, headers: { 'X-FlatMeta-Type': msg.type, ...msg.headers } });
     return info.messageId;
   } catch (err) {
     const code = (err as { responseCode?: number }).responseCode;
@@ -109,7 +112,7 @@ async function sendWithSmtp(msg: OutgoingEmail): Promise<string> {
 }
 
 function logOnly(msg: OutgoingEmail): string {
-  outbox.push({ to: msg.to, subject: msg.subject, text: msg.text, type: msg.type });
+  outbox.push({ to: msg.to, subject: msg.subject, text: msg.text, type: msg.type, ...(msg.headers ? { headers: msg.headers } : {}) });
   if (outbox.length > 50) outbox.shift();
   if (config.APP_ENV === 'production') {
     // Never write message bodies (sign-in codes, invite links) to production logs.

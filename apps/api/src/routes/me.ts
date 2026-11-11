@@ -106,6 +106,7 @@ export default async function meRoutes(app: App) {
           username: z.string().regex(/^[a-zA-Z0-9_]{3,20}$/).optional(),
           bio: z.string().max(280).nullable().optional(),
           homeCountry: z.string().length(2).nullable().optional(),
+          weeklyEmail: z.boolean().optional(),
           avatar: z
             .object({ face: z.string().min(1).max(8), color: z.string().regex(/^#[0-9a-fA-F]{6}$/), accessory: z.string().max(8).optional(), style: z.enum(['classic', 'bubble', 'pixel', 'neon', 'ghost']).optional() })
             .nullable()
@@ -120,6 +121,7 @@ export default async function meRoutes(app: App) {
       if (req.body.bio !== undefined) set.bio = req.body.bio ? stripText(req.body.bio, 280) : null;
       if (req.body.avatar !== undefined) set.avatar = req.body.avatar;
       if (req.body.homeCountry !== undefined) set.homeCountry = req.body.homeCountry?.toUpperCase() ?? null;
+      if (req.body.weeklyEmail !== undefined) set.weeklyEmail = req.body.weeklyEmail;
       if (req.body.username && req.body.username.toLowerCase() !== user.username.toLowerCase()) {
         // Your username is your public handle (flatmeta.io/@handle): reserved and look-alike names are refused.
         const blocked = await handleBlocked(req.body.username, { exceptUserId: user.id });

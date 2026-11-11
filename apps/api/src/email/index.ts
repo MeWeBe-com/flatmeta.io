@@ -27,13 +27,13 @@ export async function suppress(email: string, reason: 'bounced' | 'complained' |
  * The single way to send email. Skips suppressed addresses, then queues (worker: retries, rate limits) or,
  * in log-only mode or if Redis is unreachable, sends inline with a few quick retries.
  */
-export async function sendEmail(to: string, content: EmailContent, opts: { idempotencyKey?: string } = {}): Promise<SendResult> {
+export async function sendEmail(to: string, content: EmailContent, opts: { idempotencyKey?: string; headers?: Record<string, string> } = {}): Promise<SendResult> {
   const address = to.trim().toLowerCase();
   if (await isSuppressed(address)) {
     logger.info({ type: content.type }, 'email skipped: address is suppressed (bounce or complaint)');
     return 'suppressed';
   }
-  const msg: OutgoingEmail = { to: address, subject: content.subject, text: content.text, html: content.html, type: content.type, idempotencyKey: opts.idempotencyKey };
+  const msg: OutgoingEmail = { to: address, subject: content.subject, text: content.text, html: content.html, type: content.type, idempotencyKey: opts.idempotencyKey, ...(opts.headers ? { headers: opts.headers } : {}) };
   if (queueEnabled()) {
     try {
       await enqueueEmail(msg);

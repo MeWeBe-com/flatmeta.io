@@ -8,6 +8,7 @@ import { timeAgo } from '@/lib/format';
 import type { Plot, Progress } from '@/lib/types';
 import { useSession } from '@/components/providers';
 import { SharePanel } from '@/components/share-panel';
+import { InviteCard } from '@/components/invite-card';
 import { SITE_URL } from '@/lib/config';
 import { describeNotification, type AppNotification } from '@/lib/notifications';
 import { EmptyState, LevelRing, NamedIcon, PlotCard, SectionTitle, Stat } from '@/components/ui';
@@ -48,6 +49,7 @@ export default function DashboardHome() {
           <Link href="/?claim" className="btn-primary"><Compass size={16} /> Claim land</Link>
         </div>
       </header>
+      <InviteCard />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat label="Plots" value={plots?.length ?? '–'} icon="flag" />
         <Stat label="XP" value={progress?.xp.toLocaleString() ?? '–'} icon="sparkles" />

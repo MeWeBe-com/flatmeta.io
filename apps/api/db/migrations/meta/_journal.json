@@ -50,6 +50,13 @@
       "when": 1794408168543,
       "tag": "0006_open_houses",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794410070241,
+      "tag": "0007_growth_loop",
+      "breakpoints": true
     }
   ]
 }

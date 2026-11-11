@@ -1,3 +1,4 @@
+import { attachReferrer } from '../services/referrals.js';
 import { and, desc, eq, gt, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { App } from '../app.js';
@@ -97,6 +98,7 @@ export default async function authRoutes(app: App) {
           code: z.string().regex(/^\d{6}$/),
           displayName: z.string().min(2).max(40).optional(),
           countryHint: z.string().length(2).optional(),
+          ref: z.string().max(16).optional(), // G11: a friend's referral code, remembered from ?ref=
         }),
       },
     },
@@ -107,6 +109,7 @@ export default async function authRoutes(app: App) {
       const { user, isNew } = await findOrCreateUser(req.body.email, { displayName: req.body.displayName, homeCountry: country });
       if (user.bannedAt) throw badRequest('This account is suspended.');
       if (isNew && (await userCount()) <= 10_000) await unlock(user.id, 'founder');
+      if (isNew && req.body.ref) await attachReferrer(user, req.body.ref).catch(() => false);
       await createSession(user.id, req, reply);
       const [fresh] = await db.select().from(schema.users).where(eq(schema.users.id, user.id));
       return { user: privateUser(fresh!), isNew };

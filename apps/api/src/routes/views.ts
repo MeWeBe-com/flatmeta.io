@@ -41,6 +41,8 @@ export const privateUser = (u: User) => ({
   lastCheckin: u.lastCheckin,
   homesteadUsed: u.homesteadUsed,
   hasPassword: !!u.passwordHash,
+  weeklyEmail: u.weeklyEmail,
+  bonusCells: u.bonusCells,
 });
 
 export const publicOrg = (o: Organization) => ({
