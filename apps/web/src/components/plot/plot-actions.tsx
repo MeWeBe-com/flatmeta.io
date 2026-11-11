@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Hand, Heart, Map as MapIcon, Pencil, Share2, Sparkles, Flag, Megaphone } from 'lucide-react';
+import { Hand, Heart, Map as MapIcon, Pencil, Sparkles, Flag, Megaphone } from 'lucide-react';
 import { ApiError, del, post } from '@/lib/api';
 import { t } from '@/lib/i18n';
 import type { GameResult, Plot } from '@/lib/types';
 import { useGame, useSession } from '../providers';
 import { Modal, Spinner, clsx } from '../ui';
-import { shareLinks, sharePlot } from '../world/share';
+import { SharePanel, plotShareUrl } from '../share-panel';
 
 export function PlotActions({ plot: initial }: { plot: Plot }) {
   const [plot, setPlot] = useState(initial);
@@ -70,9 +70,6 @@ export function PlotActions({ plot: initial }: { plot: Plot }) {
     setReason('');
     toast({ kind: 'success', title: 'Thanks, our moderators will take a look.' });
   };
-  const [origin, setOrigin] = useState('');
-  useEffect(() => setOrigin(location.origin), []);
-  const links = shareLinks(`${origin}/p/${plot.slug}`, `${plot.title} on FlatMeta`);
 
   return (
     <div className="surface p-5 space-y-4">
@@ -89,17 +86,10 @@ export function PlotActions({ plot: initial }: { plot: Plot }) {
         ) : (
           <Link href={`/dashboard/plots/${plot.id}`} className="btn-ghost"><Pencil size={16} /> Edit</Link>
         )}
-        <button onClick={() => void sharePlot(plot, me.user ? handleGame : undefined)} className="btn-ghost">
-          <Share2 size={16} /> {t('plot.share')}
-        </button>
-        <Link href={`/?plot=${plot.slug}`} className="btn-ghost"><MapIcon size={16} /> {t('plot.showOnMap')}</Link>
+        {/* Visit: the map flies here and your avatar appears next to the plot (G5). */}
+        <Link href={`/?visit=${plot.slug}`} className="btn-ghost col-span-2"><MapIcon size={16} /> Visit on the map</Link>
       </div>
-      <div className="flex justify-center gap-4 text-xs muted">
-        <a href={links.x} target="_blank" rel="noopener" className="hover:text-[var(--text)]">X</a>
-        <a href={links.facebook} target="_blank" rel="noopener" className="hover:text-[var(--text)]">Facebook</a>
-        <a href={links.linkedin} target="_blank" rel="noopener" className="hover:text-[var(--text)]">LinkedIn</a>
-        <a href={links.whatsapp} target="_blank" rel="noopener" className="hover:text-[var(--text)]">WhatsApp</a>
-      </div>
+      <SharePanel url={plotShareUrl(plot)} text={`${plot.showcase?.brand ?? plot.title} on FlatMeta`} plotId={plot.id} />
       {canEdit && (
         <div className="grid grid-cols-2 gap-2">
           <Link href={`/dashboard/plots/${plot.id}`} className="btn-gold"><Pencil size={16} /> {t('plot.edit')}</Link>

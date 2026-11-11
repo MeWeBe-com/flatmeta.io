@@ -41,6 +41,9 @@ const nextConfig: NextConfig = {
   // In production the Hestia nginx proxy routes /api and /media before they reach Next; these rewrites make dev (and a bare `next start`) work the same way.
   async rewrites() {
     return [
+      // Share links: flatmeta.io/@handle and /@handle/plot-slug (Next.js can't name a folder "@…": that's a parallel route).
+      { source: '/@:handle', destination: '/h/:handle' },
+      { source: '/@:handle/:plot', destination: '/h/:handle/:plot' },
       { source: '/api/:path*', destination: `${API}/:path*` },
       { source: '/media/:path*', destination: `${API}/media/:path*` },
     ];

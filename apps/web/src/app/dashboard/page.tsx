@@ -7,6 +7,8 @@ import { api, post } from '@/lib/api';
 import { timeAgo } from '@/lib/format';
 import type { Plot, Progress } from '@/lib/types';
 import { useSession } from '@/components/providers';
+import { SharePanel } from '@/components/share-panel';
+import { SITE_URL } from '@/lib/config';
 import { describeNotification, type AppNotification } from '@/lib/notifications';
 import { EmptyState, LevelRing, NamedIcon, PlotCard, SectionTitle, Stat } from '@/components/ui';
 
@@ -36,6 +38,11 @@ export default function DashboardHome() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold">Welcome back, {u.displayName}</h1>
           {progress && <p className="muted text-sm mt-1">Level {progress.level} {progress.title} · {progress.nextLevelXp - progress.xp} XP to level {progress.level + 1} · {progress.streak > 0 ? `${progress.streak}-day streak` : 'Start a streak today'}</p>}
+          {/* Your public link (G5): flatmeta.io/@you opens your main plot. Change the handle in Settings. */}
+          <div className="mt-3 max-w-md">
+            <div className="text-xs muted mb-1">Your FlatMeta link · <Link className="underline" href="/dashboard/settings">change your handle</Link></div>
+            <SharePanel url={`${SITE_URL}/@${u.username}`} text={`${u.displayName} on FlatMeta`} />
+          </div>
         </div>
         <div className="flex gap-2">
           <Link href="/?claim" className="btn-primary"><Compass size={16} /> Claim land</Link>

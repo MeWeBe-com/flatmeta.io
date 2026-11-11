@@ -8,6 +8,7 @@ import { stripText } from '../lib/markdown.js';
 import { storeImage } from '../lib/storage.js';
 import { aiCreditsStatus } from '../lib/users.js';
 import { resolveStart } from '../lib/start-location.js';
+import { handleBlocked, resolveHandle } from '../services/handles.js';
 import { ACHIEVEMENTS } from '../game/achievements.js';
 import { addDays, dayKey } from '../game/dates.js';
 import { claimQuest, ensureQuests, recordAction } from '../game/engine.js';
@@ -120,8 +121,9 @@ export default async function meRoutes(app: App) {
       if (req.body.avatar !== undefined) set.avatar = req.body.avatar;
       if (req.body.homeCountry !== undefined) set.homeCountry = req.body.homeCountry?.toUpperCase() ?? null;
       if (req.body.username && req.body.username.toLowerCase() !== user.username.toLowerCase()) {
-        const [taken] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.username, req.body.username));
-        if (taken) throw conflict('That username is taken');
+        // Your username is your public handle (flatmeta.io/@handle): reserved and look-alike names are refused.
+        const blocked = await handleBlocked(req.body.username, { exceptUserId: user.id });
+        if (blocked) throw conflict(blocked);
         set.username = req.body.username;
       }
       const text = [set.displayName, set.username, set.bio].filter(Boolean).join('\n');
@@ -215,6 +217,28 @@ export default async function meRoutes(app: App) {
           return c ?? null;
         },
       });
+    },
+  );
+
+  // ── Handles: flatmeta.io/@handle (G5) ──
+  app.get(
+    '/v1/handles/:handle',
+    { config: { rateLimit: { max: 120, timeWindow: '1 minute' } }, schema: { tags: ['me'], summary: 'Who a @handle is and their public plots', params: z.object({ handle: z.string().min(1).max(40).regex(/^[A-Za-z0-9_-]+$/) }) } },
+    async (req) => {
+      const target = await resolveHandle(req.params.handle);
+      if (!target) throw notFound('Handle');
+      return target;
+    },
+  );
+
+  app.get(
+    '/v1/handles/:handle/available',
+    { config: { rateLimit: { max: 30, timeWindow: '1 minute' } }, schema: { tags: ['me'], summary: 'Can I take this handle?', params: z.object({ handle: z.string().min(1).max(40) }) } },
+    async (req) => {
+      const user = requireUser(req);
+      if (!/^[a-zA-Z0-9_]{3,20}$/.test(req.params.handle)) return { available: false, reason: '3 to 20 letters, numbers or underscores.' };
+      const reason = await handleBlocked(req.params.handle, { exceptUserId: user.id });
+      return { available: !reason, reason };
     },
   );
 

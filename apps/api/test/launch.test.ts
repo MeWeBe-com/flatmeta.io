@@ -150,3 +150,42 @@ describe('empty map fixes (G3)', () => {
     expect((await app.inject({ url: '/v1/plots/nearest?lat=200&lng=0' })).statusCode).toBe(400);
   });
 });
+
+describe('handles and share links (G5)', () => {
+  it('resolves @handle to the owner and their public plots, primary first', async () => {
+    const u = await login();
+    const handle = `h${Date.now().toString(36)}`.slice(0, 20);
+    expect((await app.inject({ method: 'PATCH', url: '/v1/me', headers: u.headers, payload: { username: handle } })).statusCode).toBe(200);
+    const plot = json(await app.inject({ method: 'POST', url: '/v1/plots/claim', headers: u.headers, payload: { rect: freeRect() } })).plot;
+    await app.inject({ method: 'PATCH', url: `/v1/plots/${plot.id}`, headers: u.headers, payload: { publish: true } });
+    const r = json(await app.inject({ url: `/v1/handles/${handle}` }));
+    expect(r).toMatchObject({ type: 'user', handle });
+    expect(r.plots[0].slug).toBe(plot.slug);
+    expect((await app.inject({ url: '/v1/handles/nobody_here_zz9' })).statusCode).toBe(404);
+    expect((await app.inject({ url: '/v1/handles/bad%20name' })).statusCode).toBe(400);
+  });
+
+  it('reserves system names and the names of companies with reserved land', async () => {
+    const { upsertShowcase } = await import('../src/showcase/generator.js');
+    const tag = Date.now().toString(36).slice(-5);
+    const brand = `Zeta Widgets ${tag}`;
+    const stats = { created: 0, updated: 0, skipped: 0, failed: 0, errors: [] as string[], plots: [] as string[] };
+    await upsertShowcase(
+      { kind: 'company', sector: 'tech', city: 'Oslo', lat: 59.91, lng: 10.75, website: 'https://example.org', title: 't', tagline: 'tag', description: 'd', useCase: 'demo', cta: null, highlights: ['a'], imagePrompt: 'x', palette: ['#112233', '#445566', '#778899'], motif: 'city', size: { w: 2, h: 2 }, tags: ['x'], brand, slug: `zeta-${tag}` },
+      'NO',
+      { countries: ['NO'], source: 'curated', approve: true },
+      stats,
+    );
+    const u = await login();
+    const tryName = async (username: string) => app.inject({ method: 'PATCH', url: '/v1/me', headers: u.headers, payload: { username } });
+    const company = await tryName(`zeta_widgets_${tag}`); // look-alike of the company name
+    expect(company.statusCode).toBe(409);
+    expect(company.body).toMatch(/reserved for a company/);
+    expect((await tryName('admin')).statusCode).toBe(409);
+    expect((await tryName('flatmeta_io')).statusCode).toBe(409);
+    const avail = json(await app.inject({ url: `/v1/handles/zetawidgets${tag}/available`, headers: u.headers }));
+    expect(avail).toMatchObject({ available: false });
+    expect(json(await app.inject({ url: `/v1/handles/free_${tag}/available`, headers: u.headers }))).toMatchObject({ available: true });
+    expect((await app.inject({ url: `/v1/handles/free_${tag}/available` })).statusCode).toBe(401);
+  });
+});

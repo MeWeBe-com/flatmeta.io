@@ -113,6 +113,23 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
   useEffect(() => {
     if (spawnStarted.current) return;
     spawnStarted.current = true;
+    // A "Visit" link (?visit=plot-slug, G5): fly to the plot and start me right next to it (just south of its edge).
+    const visit = params.get('visit');
+    if (visit && /^[a-z0-9-]{1,80}$/.test(visit)) {
+      void fetch(`/api/v1/plots/${visit}`)
+        .then((r) => (r.ok ? (r.json() as Promise<{ plot: Plot }>) : null))
+        .then((d) => {
+          if (!d) return;
+          const b = d.plot.bounds;
+          const beside = { lat: b.south - (b.north - b.south) * 0.35, lng: (b.west + b.east) / 2 };
+          map.current?.startMeAt(beside.lng, beside.lat);
+          map.current?.fitBounds(b, 17);
+          setOpenPlot(d.plot.id);
+          setSpawn({ source: 'link', lat: beside.lat, lng: beside.lng, zoom: 17, approximate: false });
+        })
+        .catch(() => undefined);
+      return;
+    }
     // An explicit ?at= link is a place to be: start me there and don't move me away.
     if (initialView) {
       map.current?.startMeAt(initialView.lng, initialView.lat);

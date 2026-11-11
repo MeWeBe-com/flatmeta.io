@@ -11,7 +11,7 @@ import { usd } from '@/lib/format';
 import type { BusinessInfo, GameResult, Link as PlotLink, Plot, Progress } from '@/lib/types';
 import { useGame, useSession } from '@/components/providers';
 import { Spinner, clsx } from '@/components/ui';
-import { sharePlot } from '@/components/world/share';
+import { SharePanel, plotShareUrl } from '@/components/share-panel';
 
 type Tab = 'design' | 'content' | 'links' | 'look' | 'business' | 'boost';
 interface Variation { title: string; tagline: string; descriptionMd: string; category: string; tags: string[]; theme: { primary: string; accent: string }; image?: { url: string; thumbUrl: string; pending: boolean } }
@@ -114,11 +114,18 @@ function Editor() {
         </div>
         <Link href={`/p/${plot.slug}`} className="btn-ghost"><Eye size={16} /> View</Link>
         {plot.published ? (
-          <button className="btn-ghost" onClick={() => void sharePlot(plot, handleGame)}>Share</button>
+          <a className="btn-ghost" href={`/?visit=${plot.slug}`}>Visit</a>
         ) : (
           <button className="btn-gold" onClick={() => void publish()} disabled={saving || plot.status !== 'active'}><Rocket size={16} /> Publish</button>
         )}
       </div>
+
+      {plot.published && (
+        <div className="surface p-4 max-w-xl">
+          <div className="text-xs muted mb-2">Share your plot the link opens it, and <a className="underline" href={`/?visit=${plot.slug}`}>Visit</a> brings people right next to it on the map.</div>
+          <SharePanel url={plotShareUrl(plot)} text={`${plot.title} on FlatMeta`} plotId={plot.id} />
+        </div>
+      )}
 
       <div className="flex gap-1 overflow-x-auto p-1 surface rounded-full w-fit max-w-full">
         {TABS.map((t) => (

@@ -67,7 +67,7 @@ export default function SettingsPage() {
         </div>
         <div className="grid sm:grid-cols-2 gap-4">
           <label className="block"><span className="label">Display name</span><input className="input" maxLength={40} value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} /></label>
-          <label className="block"><span className="label">Username</span><input className="input" maxLength={20} value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })} /></label>
+          <label className="block"><span className="label">Username <span className="muted font-normal">· your link: flatmeta.io/@{form.username || '…'}</span></span><input className="input" maxLength={20} value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })} /></label>
         </div>
         <label className="block"><span className="label">Bio</span><textarea className="input" rows={3} maxLength={280} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} /></label>
         <label className="block max-w-xs"><span className="label">Home country</span>
