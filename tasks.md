@@ -104,7 +104,7 @@ Status note: milestones M1–M12 were first built **before** the kickoff file wa
 Live at https://www.flatmeta.io (branch `v2`; CI deploys on green). One commit per task ID. `[!]` = blocked, with the reason.
 
 **P0: today**
-- [ ] **G1** Growth analysis → `docs/growth-analysis-2026-11.md` (AI market, funnel and leaks, top 10 changes ranked; G15+ quick wins)
+- [x] **G1** Growth analysis → `docs/growth-analysis-2026-11.md` (AI market, funnel and leaks, top 10 changes ranked; G15+ quick wins). *Done: biggest leaks are the empty first visit (G3) and no share loop (G5); G15a–c added.*
 - [ ] **G2** Security headers on the web app: nonce-based CSP (Next.js + map tiles), `frame-ancestors 'none'`, X-Frame-Options DENY, HSTS 1 year + subdomains, nosniff, Referrer-Policy; e2e header check; map, Stripe checkout and WebSockets still work
 - [ ] **G3** Empty map, part 1: admin bulk "verify all showcase locations that passed the automatic check" + CLI (no auto-publish in production; command in the report); map shows the nearest showcase/landmark plots around the visitor's start
 - [ ] **G4** SEO and canonical host: robots.txt and sitemaps on www.flatmeta.io; `sitemap-plots.xml` (sitemap index) with every public plot; per-plot OpenGraph/Twitter images and titles; JSON-LD (Place / Organization); canonical URLs
@@ -122,7 +122,7 @@ Live at https://www.flatmeta.io (branch `v2`; CI deploys on green). One commit p
 - [ ] **G14** AI-native: plots, search and claim through the API/MCP for AI agents; `llms.txt`; "Ask FlatMeta" search on the map (AI with a no-AI fallback)
 
 **P2: then**
-- [ ] **G15+** Extra quick wins from G1
+- [ ] **G15+** Extra quick wins from G1: G15a fix positioning in llms.txt and insights (about/facts page); G15b welcome AI crawlers in robots.txt; G15c WebSite + SearchAction JSON-LD
 - [ ] **G-final** `RELEASE-REPORT.md`: what is live (URLs), what is left and why, test results, production smoke test, manual steps (showcase verify command, usercontent subdomain on Hestia, env vars)
 
 ## Phase 2: see docs/03-masterprompt-phase2.md. Not started.
