@@ -114,3 +114,16 @@ describe('content security policy', () => {
     expect(keys(securityHeaders(false))).not.toContain('Strict-Transport-Security');
   });
 });
+
+import { canonicalUrl } from '../../src/lib/canonical';
+
+describe('canonical host', () => {
+  it('uses www for production on the bare domain, and leaves everything else alone', () => {
+    expect(canonicalUrl({ APP_ENV: 'production', NODE_ENV: 'production', APP_URL: 'https://flatmeta.io' })).toBe('https://www.flatmeta.io');
+    expect(canonicalUrl({ APP_ENV: 'production', APP_URL: 'https://www.flatmeta.io/' })).toBe('https://www.flatmeta.io');
+    expect(canonicalUrl({ APP_ENV: 'staging', APP_URL: 'https://staging.flatmeta.io' })).toBe('https://staging.flatmeta.io');
+    expect(canonicalUrl({ APP_ENV: 'production', APP_URL: 'https://flatmeta.io', CANONICAL_WWW: 'false' })).toBe('https://flatmeta.io');
+    expect(canonicalUrl({ APP_ENV: 'production', APP_URL: 'https://flatmeta.io', CANONICAL_URL: 'https://flatmeta.io/' })).toBe('https://flatmeta.io');
+    expect(canonicalUrl({ APP_URL: 'http://localhost:3200' })).toBe('http://localhost:3200');
+  });
+});

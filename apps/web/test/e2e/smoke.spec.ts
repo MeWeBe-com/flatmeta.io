@@ -34,5 +34,5 @@ test('robots and sitemap are served', async ({ request }) => {
   expect((await request.get('/robots.txt')).ok()).toBeTruthy();
   const sm = await request.get('/sitemap.xml');
   expect(sm.ok()).toBeTruthy();
-  expect(await sm.text()).toContain('<urlset');
+  expect(await sm.text()).toMatch(/<urlset|<sitemapindex/); // the app's index (production serves the insights sitemap here)
 });

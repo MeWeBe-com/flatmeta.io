@@ -32,7 +32,17 @@ export function plotJsonLd(p: Plot) {
   } else if (p.kind === 'landmark' && p.owner?.type === 'org') {
     main = { ...base, '@type': 'Organization', logo: p.owner.avatarUrl ?? undefined };
   } else {
-    main = { ...base, '@type': 'Place', ...(p.showcase ? { additionalProperty: { '@type': 'PropertyValue', name: 'status', value: 'Sample showcase, not affiliated' } } : {}) };
+    main = {
+      ...base,
+      '@type': 'Place',
+      ...(p.showcase
+        ? {
+            // A place on FlatMeta reserved for this organisation (not affiliated, unclaimed): it is *about* the organisation.
+            about: { '@type': 'Organization', name: p.showcase.brand, ...(p.showcase.website ? { url: p.showcase.website } : {}) },
+            additionalProperty: { '@type': 'PropertyValue', name: 'status', value: 'Reserved for this organisation, not affiliated with FlatMeta' },
+          }
+        : {}),
+    };
   }
   const crumbs = {
     '@context': 'https://schema.org',

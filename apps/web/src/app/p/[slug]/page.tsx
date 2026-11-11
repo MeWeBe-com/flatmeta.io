@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   if (!data) return { title: 'Plot not found' };
   const p = data.plot;
   const where = p.countryName ? ` in ${p.countryName}` : '';
-  const title = p.showcase ? `${p.title} (showcase)${where}` : `${p.title}${where}`;
+  const title = p.showcase ? `${p.showcase.brand} on FlatMeta${where}` : `${p.title}${where}`;
   const description = p.tagline ?? `${p.title} is a ${p.width}×${p.height} plot on FlatMeta${where}. Visit, like and wave hello.`;
   return {
     title,

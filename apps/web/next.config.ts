@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { loadEnvConfig } from '@next/env';
 import type { NextConfig } from 'next';
 import { securityHeaders } from './src/lib/csp';
+import { canonicalUrl } from './src/lib/canonical';
 
 // One .env at the repo root configures both apps. Load it before reading any variable.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -25,7 +26,7 @@ const nextConfig: NextConfig = {
   // Browser-visible values derive from the shared root .env (APP_URL etc.), so there is one place to configure them.
   env: {
     NEXT_PUBLIC_APP_NAME: env.APP_NAME ?? 'FlatMeta',
-    NEXT_PUBLIC_APP_URL: env.APP_URL ?? 'http://localhost:3200',
+    NEXT_PUBLIC_APP_URL: canonicalUrl(env),
     NEXT_PUBLIC_APP_ENV: env.APP_ENV ?? 'development',
     NEXT_PUBLIC_PRODUCTION_DOMAIN: env.PRODUCTION_DOMAIN ?? 'flatmeta.io',
     NEXT_PUBLIC_STAGING_DOMAIN: env.STAGING_DOMAIN ?? 'staging.flatmeta.io',
