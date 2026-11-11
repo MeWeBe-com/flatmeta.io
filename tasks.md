@@ -129,7 +129,8 @@ Live at https://www.flatmeta.io (branch `v2`; CI deploys on green). One commit p
   - Done: MCP gains `ask_flatmeta`, `find_nearby`, `list_companies`, `list_open_houses`; `claim_plot` now follows the website's free-land rules (one shared `claimFreeLand`: allowance, bonus squares, Homestead; paid land still returns a checkout link for the person). `GET /v1/ask` answers from FlatMeta's own results (Claude when a key is set, user text passed as data, citations limited to the results, plain text) with a no-AI search-summary fallback; shown as “Ask FlatMeta” in the map search. App-served `/llms.txt` and `/llms-full.txt` (production's static file must be replaced: see report). API + e2e tests.
 
 **P2: then**
-- [ ] **G15+** Extra quick wins from G1: G15a fix positioning in llms.txt and insights (about/facts page); G15b welcome AI crawlers in robots.txt; G15c WebSite + SearchAction JSON-LD
+- [x] **G15+** Extra quick wins from G1: G15a fix positioning in llms.txt and insights (about/facts page); G15b welcome AI crawlers in robots.txt; G15c WebSite + SearchAction JSON-LD
+  - Done: G15a `/about/facts` (citable facts + live numbers, Organization JSON-LD) and `docs/positioning.md` (one description for everything; how to fix the external insights automation and its static llms.txt, a manual step); G15b robots.txt welcomes GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, Claude-SearchBot, Claude-User, PerplexityBot, Google-Extended and others on public pages, private areas still disallowed (production only; staging stays `Disallow: /`); G15c WebSite + SearchAction JSON-LD on the home page (`/explore?q=`). Unit + e2e tests.
 - [ ] **G-final** `RELEASE-REPORT.md`: what is live (URLs), what is left and why, test results, production smoke test, manual steps (showcase verify command, usercontent subdomain on Hestia, env vars)
 
 ## Phase 2: see docs/03-masterprompt-phase2.md. Not started.

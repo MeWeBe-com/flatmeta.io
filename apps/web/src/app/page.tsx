@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { API_INTERNAL_URL } from '@/lib/internal';
 import { Suspense } from 'react';
 import { WorldExperience } from '@/components/world/world-experience';
+import { JsonLd } from '@/lib/seo';
+import { SITE_URL } from '@/lib/config';
 
 // The map takes ?at=, ?plot=, ?dm= … parameters: they all describe the same page.
 export const metadata: Metadata = { alternates: { canonical: '/' } };
@@ -19,6 +21,17 @@ export default async function Home() {
   const stats = await getStats();
   return (
     <main id="main">
+      {/* G15c: site name and search box for search engines and agents. */}
+      <JsonLd
+        data={{
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          name: 'FlatMeta',
+          url: SITE_URL,
+          description: 'A shared world map where people, businesses and brands own land.',
+          potentialAction: { '@type': 'SearchAction', target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/explore?q={search_term_string}` }, 'query-input': 'required name=search_term_string' },
+        }}
+      />
       <Suspense>
         <WorldExperience stats={stats} />
       </Suspense>
