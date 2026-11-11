@@ -3,7 +3,7 @@ import { publicShowcase } from '../lib/visibility.js';
 import { z } from 'zod';
 import type { App } from '../app.js';
 import { db, schema } from '../db/client.js';
-import type { Plot } from '../db/schema.js';
+import type { Plot, User } from '../db/schema.js';
 import { requireUser } from '../lib/auth.js';
 import { badRequest, forbidden, notFound, paymentRequired } from '../lib/errors.js';
 import { bboxToRect, rectBounds } from '../lib/grid.js';
@@ -26,7 +26,7 @@ import { checkContent } from '../services/moderation.js';
 import { freeLimitFor } from '../services/referrals.js';
 import { recordCustomHtmlVersion, reportCustomHtml, type SavedHtml } from '../services/custom-html.js';
 import { MAX_CUSTOM_HTML, screenCustomHtml } from '../lib/html.js';
-import { afterClaim, assertCanActForOrg, createPlot, ensureCover, neighbours, ownedCells, quoteFor } from '../services/plots.js';
+import { afterClaim, assertCanActForOrg, createPlot, ensureCover, neighbours, ownedCells, quoteFor, type QuoteResult } from '../services/plots.js';
 import { createCheckout } from '../services/billing.js';
 import { canEditPlot, ownersFor, plotView } from './views.js';
 
@@ -193,6 +193,49 @@ export async function applyPlotPatch(plot: Plot, patch: PlotPatchInput, actor: {
   }
   const game = actor.id ? await recordAction(actor.id, 'edit_plot', { ref: plot.id, noXp: true }) : null;
   return { plot: updated!, game, ...(customHtml ? { customHtml } : {}) };
+}
+
+/**
+ * Free land: within the free allowance (paid land off), paid by referral bonus squares, or the Homestead.
+ * Shared by REST (POST /v1/plots/claim) and MCP (claim_plot). Returns the new plot; the caller runs afterClaim.
+ */
+export async function claimFreeLand(user: User, q: QuoteResult, title: string, orgId: string | null): Promise<Plot> {
+  if (!q.homesteadEligible) {
+    if (q.bonus) {
+      // Paid land is on: spend referral bonus squares first, atomically, so two claims can't spend them twice.
+      const [spent] = await db
+        .update(schema.users)
+        .set({ bonusCellsUsed: sql`${schema.users.bonusCellsUsed} + ${q.cells}` })
+        .where(and(eq(schema.users.id, user.id), sql`${schema.users.bonusCells} - ${schema.users.bonusCellsUsed} >= ${q.cells}`))
+        .returning({ id: schema.users.id });
+      if (!spent) throw badRequest('Your bonus squares were just used. Pick a smaller plot or pay for this one.');
+    }
+    const plot = await createPlot({ rect: q.rect, title, kind: 'standard', status: 'active', ownerUserId: user.id, ownerOrgId: orgId, tier: q.tier, countryCode: q.countryCode, regionSlug: q.regionSlug });
+    // Two claims at once could both fit on their own: check the total again now that this one exists.
+    const limit = freeLimitFor(user, orgId);
+    if (!q.bonus && (await ownedCells(user.id, orgId)) > limit) {
+      await db.delete(schema.plots).where(eq(schema.plots.id, plot.id));
+      throw badRequest(`That would take you past your ${limit} free squares. Paid land is coming soon.`);
+    }
+    if (!user.homeCountry && q.countryCode) await db.update(schema.users).set({ homeCountry: q.countryCode }).where(eq(schema.users.id, user.id));
+    return ensureCover(plot, user.id);
+  }
+  // Mark the homestead as used first so two parallel requests can't both get one.
+  const [marked] = await db
+    .update(schema.users)
+    .set({ homesteadUsed: true })
+    .where(and(eq(schema.users.id, user.id), eq(schema.users.homesteadUsed, false)))
+    .returning({ id: schema.users.id });
+  if (!marked) throw badRequest('Your free Homestead has already been claimed');
+  let plot: Plot;
+  try {
+    plot = await createPlot({ rect: q.rect, title, kind: 'homestead', status: 'active', ownerUserId: user.id, tier: q.tier, countryCode: q.countryCode, regionSlug: q.regionSlug });
+  } catch (err) {
+    await db.update(schema.users).set({ homesteadUsed: false }).where(eq(schema.users.id, user.id));
+    throw err;
+  }
+  if (!user.homeCountry && q.countryCode) await db.update(schema.users).set({ homeCountry: q.countryCode }).where(eq(schema.users.id, user.id));
+  return ensureCover(plot, user.id);
 }
 
 export async function publishPlot(plot: Plot, actorId: string): Promise<{ plot: Plot; game: GameResult | null; blocked?: string }> {
@@ -443,46 +486,8 @@ export default async function plotRoutes(app: App) {
       const q = await quoteFor(user, rect, orgId);
       if (!q.available) throw badRequest(q.reasons[0] ?? 'This land is not available', { quote: q });
       const title = stripText(req.body.title ?? (q.regionSlug ? `${user.displayName}'s corner` : `${user.displayName}'s plot`), 80);
-      if (q.free && !q.homesteadEligible) {
-        // Launch without payments: land within the free allowance is claimed straight away.
-        if (q.bonus) {
-          // Paid land is on: spend referral bonus squares first, atomically, so two claims can't spend them twice.
-          const [spent] = await db
-            .update(schema.users)
-            .set({ bonusCellsUsed: sql`${schema.users.bonusCellsUsed} + ${q.cells}` })
-            .where(and(eq(schema.users.id, user.id), sql`${schema.users.bonusCells} - ${schema.users.bonusCellsUsed} >= ${q.cells}`))
-            .returning({ id: schema.users.id });
-          if (!spent) throw badRequest('Your bonus squares were just used. Pick a smaller plot or pay for this one.');
-        }
-        let plot = await createPlot({ rect: q.rect, title, kind: 'standard', status: 'active', ownerUserId: user.id, ownerOrgId: orgId ?? null, tier: q.tier, countryCode: q.countryCode, regionSlug: q.regionSlug });
-        // Two claims at once could both fit on their own: check the total again now that this one exists.
-        const limit = freeLimitFor(user, orgId);
-        if (!q.bonus && (await ownedCells(user.id, orgId)) > limit) {
-          await db.delete(schema.plots).where(eq(schema.plots.id, plot.id));
-          throw badRequest(`That would take you past your ${limit} free squares. Paid land is coming soon.`);
-        }
-        if (!user.homeCountry && q.countryCode) await db.update(schema.users).set({ homeCountry: q.countryCode }).where(eq(schema.users.id, user.id));
-        plot = await ensureCover(plot, user.id);
-        const game = await afterClaim(plot, user.id);
-        return { plot: await viewFor(plot, user), game };
-      }
       if (q.free) {
-        // Mark the homestead as used first so two parallel requests can't both get one.
-        const [marked] = await db
-          .update(schema.users)
-          .set({ homesteadUsed: true })
-          .where(and(eq(schema.users.id, user.id), eq(schema.users.homesteadUsed, false)))
-          .returning({ id: schema.users.id });
-        if (!marked) throw badRequest('Your free Homestead has already been claimed');
-        let plot: Plot;
-        try {
-          plot = await createPlot({ rect: q.rect, title, kind: 'homestead', status: 'active', ownerUserId: user.id, tier: q.tier, countryCode: q.countryCode, regionSlug: q.regionSlug });
-        } catch (err) {
-          await db.update(schema.users).set({ homesteadUsed: false }).where(eq(schema.users.id, user.id));
-          throw err;
-        }
-        if (!user.homeCountry && q.countryCode) await db.update(schema.users).set({ homeCountry: q.countryCode }).where(eq(schema.users.id, user.id));
-        plot = await ensureCover(plot, user.id);
+        const plot = await claimFreeLand(user, q, title, orgId ?? null);
         const game = await afterClaim(plot, user.id);
         return { plot: await viewFor(plot, user), game };
       }

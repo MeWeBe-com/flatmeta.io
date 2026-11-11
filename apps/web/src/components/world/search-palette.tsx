@@ -25,6 +25,8 @@ export function SearchPalette({ open, onClose, onFlyTo, onPlot }: { open: boolea
   const [ai, setAi] = useState(false);
   const [res, setRes] = useState<Results | null>(null);
   const [loading, setLoading] = useState(false);
+  // G14: "Ask FlatMeta": questions get a short answer grounded in our own results (plain search summary without AI).
+  const [answer, setAnswer] = useState<{ answer: string; provider: string; plots: Plot[] } | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -35,14 +37,20 @@ export function SearchPalette({ open, onClose, onFlyTo, onPlot }: { open: boolea
   useEffect(() => {
     if (!open || q.trim().length < 2) {
       setRes(null);
+      setAnswer(null);
       return;
     }
-    const looksLikeQuestion = q.trim().split(/\s+/).length >= 3;
+    const looksLikeQuestion = q.trim().split(/\s+/).length >= 3 || q.trim().endsWith('?');
     const useAi = ai || looksLikeQuestion;
     const tm = setTimeout(async () => {
       setLoading(true);
       try {
-        setRes(await api<Results>(`/search?q=${encodeURIComponent(q.trim())}&ai=${useAi ? 1 : 0}`));
+        const [r, a] = await Promise.all([
+          api<Results>(`/search?q=${encodeURIComponent(q.trim())}&ai=${useAi ? 1 : 0}`),
+          looksLikeQuestion ? api<{ answer: string; provider: string; plots: Plot[] }>(`/ask?q=${encodeURIComponent(q.trim())}`).catch(() => null) : Promise.resolve(null),
+        ]);
+        setRes(r);
+        setAnswer(a);
       } catch {
         setRes(null);
       } finally {
@@ -71,7 +79,7 @@ export function SearchPalette({ open, onClose, onFlyTo, onPlot }: { open: boolea
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === 'Escape' && onClose()}
             className="flex-1 bg-transparent outline-none text-base"
-            placeholder={ai ? t('hud.searchAi') : t('hud.search')}
+            placeholder={ai ? t('hud.searchAi') : 'Search, or ask FlatMeta a question'}
             aria-label="Search"
           />
           <button onClick={() => setAi((a) => !a)} className={clsx('chip h-7', ai ? 'chip-violet' : '')} title="AI search understands natural language">
@@ -82,6 +90,23 @@ export function SearchPalette({ open, onClose, onFlyTo, onPlot }: { open: boolea
           </button>
         </div>
         <div className="max-h-[60vh] overflow-y-auto p-2">
+          {answer && (
+            <section aria-label="Ask FlatMeta answer" className="m-1 mb-3 rounded-2xl p-3 border border-[rgb(139_124_255/.35)] bg-[rgb(139_124_255/.08)]">
+              <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-violet)] flex items-center gap-1.5">
+                <Sparkles size={12} /> Ask FlatMeta {answer.provider === 'ai' ? '' : '· search summary'}
+              </div>
+              <p className="text-sm mt-1.5">{answer.answer}</p>
+              {answer.plots.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {answer.plots.slice(0, 4).map((p) => (
+                    <button key={p.id} type="button" className="chip normal-case tracking-normal" onClick={() => pick(() => onPlot(p))}>
+                      <MapPin size={11} /> {p.title}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
           {res?.intent && (
             <div className="px-3 py-2 text-xs muted flex flex-wrap gap-1.5 items-center">
               <Sparkles size={12} className="text-[var(--color-violet)]" /> Understood as:

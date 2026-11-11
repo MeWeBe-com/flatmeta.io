@@ -60,7 +60,7 @@ export function createMcpServer(getUser: () => User | null): McpServer {
     { name: 'flatmeta', version: '2.0.0', title: 'FlatMeta' },
     {
       instructions:
-        'FlatMeta is a world map where people, businesses and brands own rectangular plots of land made of grid cells (≈120–190 m each) and publish a mini-page on them. Use search_plots / get_plot to find places and organisations on the map; check_availability before claim_plot. Plots marked showcase are samples for well-known organisations and are NOT affiliated with them. Write tools need an API key (Dashboard → Developers).',
+        'FlatMeta is a world map where people, businesses and brands own rectangular plots of land made of grid cells (≈120–190 m each) and publish a mini-page on them. Use ask_flatmeta, search_plots, find_nearby, list_companies and get_plot to find places and organisations on the map; check_availability before claim_plot. Plots marked showcase are samples for well-known organisations and are NOT affiliated with them. Write tools need an API key (Dashboard → Developers).',
     },
   );
 
@@ -219,7 +219,7 @@ export function createMcpServer(getUser: () => User | null): McpServer {
     'claim_plot',
     {
       title: 'Claim a plot',
-      description: 'Claims a width×height plot centred on a coordinate. Free if it qualifies as the user’s Homestead; otherwise returns a checkout link the human must open to pay.',
+      description: 'Claims a width×height plot centred on a coordinate. Free when it fits the user’s free allowance, bonus squares or Homestead; otherwise returns a checkout link the human must open to pay.',
       inputSchema: { lat: z.number().min(-85).max(85), lng: z.number().min(-180).max(180), width: z.number().int().min(1).max(20), height: z.number().int().min(1).max(20), title: z.string().min(2).max(80) },
       annotations: { destructiveHint: false },
     },
@@ -232,13 +232,88 @@ export function createMcpServer(getUser: () => User | null): McpServer {
       if (!q.free) {
         return text({ needsPayment: true, priceUsd: q.totalCents / 100, tier: q.tier, message: 'Open this link to review and pay for the plot.', url: web(`/?claim=${q.rect.minGx},${q.rect.minGy},${q.rect.maxGx},${q.rect.maxGy}&title=${encodeURIComponent(title)}`) });
       }
-      const { createPlot, ensureCover, afterClaim } = await import('../services/plots.js');
-      const [marked] = await db.update(schema.users).set({ homesteadUsed: true }).where(and(eq(schema.users.id, user.id), eq(schema.users.homesteadUsed, false))).returning({ id: schema.users.id });
-      if (!marked) return fail('Free Homestead already used');
-      let plot = await createPlot({ rect: q.rect, title, kind: 'homestead', status: 'active', ownerUserId: user.id, tier: q.tier, countryCode: q.countryCode, regionSlug: q.regionSlug });
-      plot = await ensureCover(plot, user.id);
+      const { afterClaim } = await import('../services/plots.js');
+      const { claimFreeLand } = await import('../routes/plots.js');
+      let plot;
+      try {
+        plot = await claimFreeLand(user, q, title, null);
+      } catch (err) {
+        return fail((err as Error).message);
+      }
       await afterClaim(plot, user.id);
       return text({ ok: true, free: true, url: web(`/p/${plot.slug}`), editUrl: web(`/dashboard/plots/${plot.id}`) });
+    },
+  );
+
+  // ── G14: agent-friendly discovery ──
+  server.registerTool(
+    'ask_flatmeta',
+    {
+      title: 'Ask FlatMeta',
+      description: 'A short answer to a natural-language question about places on the map ("cafés in Lisbon", "where is Volvo on FlatMeta?"), with the matching plots and their links.',
+      inputSchema: { question: z.string().min(2).max(300) },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ question }) => {
+      const { runSearch } = await import('../routes/search.js');
+      const { fallbackAnswer } = await import('../routes/ask.js');
+      const found = await runSearch(question, false, 8);
+      return text({ answer: fallbackAnswer(question, found), plots: found.plots.slice(0, 8).map((p) => brief(p)), places: found.places.slice(0, 3) });
+    },
+  );
+
+  server.registerTool(
+    'find_nearby',
+    {
+      title: 'Find places near a point',
+      description: 'Published and showcase plots nearest to a coordinate, with distance in km.',
+      inputSchema: { lat: z.number().min(-85).max(85), lng: z.number().min(-180).max(180), limit: z.number().int().min(1).max(25).default(10) },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ lat, lng, limit }) => {
+      const P = schema.plots;
+      const rows = await db
+        .select()
+        .from(P)
+        .where(and(visiblePlot(), sql`(${P.publishedAt} is not null or ${P.status} = 'showcase')`))
+        .orderBy(sql`(${P.centerLat} - ${lat})^2 + ((${P.centerLng} - ${lng}) * cos(radians(${lat})))^2`)
+        .limit(limit);
+      const owners = await ownersFor(rows);
+      const { haversineKm } = await import('../lib/geo.js');
+      return text(rows.map((p) => ({ ...brief(plotView(p, owners.get(p.id) ?? null)), distanceKm: Number(haversineKm(lat, lng, p.centerLat, p.centerLng).toFixed(2)) })));
+    },
+  );
+
+  server.registerTool(
+    'list_companies',
+    {
+      title: 'Companies with reserved land',
+      description: 'Companies with land reserved next to their headquarters (not affiliated with FlatMeta; claimable by the company). Filter by country or name.',
+      inputSchema: { country: z.string().length(2).optional(), query: z.string().max(80).optional(), limit: z.number().int().min(1).max(50).default(20) },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ country, query, limit }) => {
+      const P = schema.plots;
+      const { publicShowcase } = await import('../lib/visibility.js');
+      const where = [publicShowcase()];
+      if (country) where.push(eq(P.countryCode, country.toUpperCase()));
+      if (query) where.push(sql`${P.title} ilike ${'%' + query.replace(/[%_\\]/g, '') + '%'}`);
+      const rows = await db.select().from(P).where(and(...where)).orderBy(P.title).limit(limit);
+      return text(rows.map((p) => ({ company: p.showcase?.brand ?? p.title, country: p.countryCode, city: p.showcase?.city, sector: p.showcase?.sector, label: `Reserved for ${p.showcase?.brand ?? p.title}, not affiliated with FlatMeta`, url: web(`/p/${p.slug}`), claimUrl: web(`/claim/${p.slug}`) })));
+    },
+  );
+
+  server.registerTool(
+    'list_open_houses',
+    {
+      title: 'Open houses happening now',
+      description: 'Plots whose owners are hosting an open house right now, with how many people are there.',
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    async () => {
+      const { liveOpenHouses } = await import('../services/open-houses.js');
+      return text((await liveOpenHouses()).map((o) => ({ title: o.title, endsAt: o.endsAt, peopleHere: o.hereNow, plot: o.plot.title, url: web(`/?visit=${o.plot.slug}`) })));
     },
   );
 
