@@ -20,6 +20,39 @@ Companies whose HQ is in another country are handed to that country's queue (e.g
 Companies without a website, without coordinates, with a name the moderation heuristics flag, or whose website
 already has land, are skipped with a reason (`company_sources.skip_reason`).
 
+## Logos (H1)
+
+Each company plot shows a **small official logo** to identify the company for claiming: a badge on the plot page,
+on the map at close zoom, on `/brands` and in the share image. The generic artwork stays the main visual, the
+"Reserved for …" label stays, and the page adds: "Logo shown to identify the company for claiming; trademarks
+belong to their owners."
+
+Where it comes from, in this order (and stored with it on `company_sources`: `logo_url`, `logo_source`,
+`logo_source_url`, `logo_license`, `logo_author`, `logo_fetched_at`):
+
+1. **Wikidata P154** through the Commons API: the file page, licence and author are kept. Commons renders SVGs to
+   PNG itself; we download that raster. Curated plots without a Q-id are matched by name, and only accepted when the
+   Wikidata item's official website (P856) is the same domain.
+2. Otherwise the **official website** only (P856 / the curated file): `apple-touch-icon`, then `<link rel="icon">`
+   (SVG or PNG), then `/favicon.ico`. Never search engines or third-party logo sites.
+
+Every download: the official domain (or the Wikimedia hosts) only, no private addresses (checked by the connection's
+own DNS lookup), at most 3 redirects (each checked), 1 MB, a timeout, the content-type must match the real bytes,
+SVGs are sanitised (no scripts, handlers, foreign content, external references, DOCTYPE or entities) before
+rasterising, ICO files are used only when they hold a PNG. Stored as a PNG of at most 128×128 under `media/logos/`.
+
+Controls: `COMPANY_LAND_LOGOS=false` hides every logo; **admins** can hide one plot's logo (the link on the plot page,
+or Admin → Company land) or all of them (the global switch); a **removal request hides the logo at once**, while the
+plot itself follows the 48-hour process.
+
+Backfill (dry run by default; the daily job fetches logos for new plots by itself):
+
+```bash
+npm run company-land:logos                       # every company plot: how many from Wikidata, the website, none
+npm run company-land:logos -- --country GB       # one country
+npm run company-land:logos -- --apply            # store them
+```
+
 ## Schedule
 
 Worker job `company-land`, daily at 04:13 UTC:

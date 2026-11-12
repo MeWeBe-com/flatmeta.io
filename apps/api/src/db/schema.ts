@@ -66,6 +66,12 @@ export type ShowcaseInfo = {
   sourceUrl?: string;
   /** How precise the source coordinates are: the HQ address, or the HQ's city. */
   precision?: 'address' | 'city';
+  /** H1: Wikidata item found for a curated company (by name, confirmed by its official website). */
+  wikidataId?: string;
+  /** H1: the small official logo (badge only), where it came from, and whether it is hidden. */
+  logo?: { url: string; source: 'wikidata' | 'website'; sourceUrl: string; license: string | null; author: string | null };
+  logoHidden?: boolean;
+  logoHiddenReason?: string | null;
 };
 
 // ─── Users & auth ────────────────────────────────────────────────────────────
@@ -665,6 +671,14 @@ export const companySources = pgTable(
     skipReason: text('skip_reason'),
     plotId: uuid('plot_id').references(() => plots.id, { onDelete: 'set null' }),
     fetchedAt: ts('fetched_at').notNull().defaultNow(),
+    // H1: the small official logo and where it came from (Commons file page + licence + author, or the official site).
+    logoUrl: text('logo_url'),
+    logoSource: text('logo_source'), // wikidata | website
+    logoSourceUrl: text('logo_source_url'),
+    logoLicense: text('logo_license'),
+    logoAuthor: text('logo_author'),
+    logoFetchedAt: ts('logo_fetched_at'),
+    logoHidden: boolean('logo_hidden').notNull().default(false),
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex('company_sources_source_idx').on(t.source, t.sourceId), index('company_sources_country_idx').on(t.queriedCountry, t.status, t.popularity)],

@@ -8,6 +8,7 @@
   "scripts": {
     "showcase:verify": "npm run showcase:verify -w flatmeta-api --",
     "company-land": "npm run company-land -w flatmeta-api --",
+    "company-land:logos": "npm run company-land:logos -w flatmeta-api --",
     "stripe:sync": "npm run stripe:sync -w flatmeta-api --",
     "postinstall": "npm run build -w @flatmeta/shared",
     "build:shared": "npm run build -w @flatmeta/shared",

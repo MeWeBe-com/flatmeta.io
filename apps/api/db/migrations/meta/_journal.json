@@ -64,6 +64,13 @@
       "when": 1794411046405,
       "tag": "0008_company_land",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794469316462,
+      "tag": "0009_company_logos",
+      "breakpoints": true
     }
   ]
 }

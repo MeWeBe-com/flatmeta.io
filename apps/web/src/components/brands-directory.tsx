@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-export interface Brand { slug: string; title: string; countryCode: string | null; thumbUrl: string | null; sector: string | null; city: string | null; source: string | null }
+export interface Brand { slug: string; title: string; countryCode: string | null; thumbUrl: string | null; sector: string | null; city: string | null; source: string | null; logoUrl?: string | null }
 export interface BrandsRes { brands: Brand[]; hasMore: boolean; countries: { code: string; name: string; count: number }[] }
 
 const flag = (cc: string) => cc.toUpperCase().replace(/./g, (c) => String.fromCodePoint(127397 + c.charCodeAt(0)));
@@ -13,7 +13,7 @@ export function BrandsDirectory({ data, country, q, page }: { data: BrandsRes; c
       <header className="space-y-3">
         <h1 className="text-3xl md:text-4xl font-bold">{country ? `Companies in ${data.countries.find((c) => c.code === country)?.name ?? country} on FlatMeta` : 'Companies on FlatMeta'}</h1>
         <p className="muted max-w-2xl">
-          Land is reserved for these companies next to their real headquarters on the world map. None of them is affiliated with FlatMeta: each plot is waiting for its company to claim it. Work at one? Open its plot and claim it with your work email or a DNS record.
+          Land is reserved for these companies next to their real headquarters on the world map. None of them is affiliated with FlatMeta: each plot is waiting for its company to claim it. Work at one? Open its plot and claim it with your work email or a DNS record. Logos are shown only to identify each company for claiming; trademarks belong to their owners.
         </p>
         <form action={base} className="flex gap-2 max-w-md" role="search">
           <input className="input" name="q" defaultValue={q} placeholder="Search companies" aria-label="Search companies" />
@@ -35,7 +35,10 @@ export function BrandsDirectory({ data, country, q, page }: { data: BrandsRes; c
           {data.brands.map((b) => (
             <li key={b.slug}>
               <Link href={`/p/${b.slug}`} className="surface p-3 flex gap-3 items-center hover:border-[var(--color-teal)]">
-                {b.thumbUrl ? <img src={b.thumbUrl} alt="" className="size-14 rounded-xl object-cover shrink-0" loading="lazy" /> : <span className="size-14 rounded-xl bg-white/5 shrink-0" />}
+                <span className="relative shrink-0">
+                  {b.thumbUrl ? <img src={b.thumbUrl} alt="" className="size-14 rounded-xl object-cover" loading="lazy" /> : <span className="block size-14 rounded-xl bg-white/5" />}
+                  {b.logoUrl && <img src={b.logoUrl} alt={`${b.title} logo`} className="absolute -bottom-1 -right-1 size-7 rounded-lg bg-white p-0.5 object-contain shadow" loading="lazy" />}
+                </span>
                 <span className="min-w-0">
                   <span className="block font-semibold truncate">{b.title}</span>
                   <span className="block text-xs muted truncate">{[b.sector, b.city, b.countryCode && flag(b.countryCode)].filter(Boolean).join(' · ')}</span>

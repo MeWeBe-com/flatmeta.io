@@ -230,3 +230,7 @@ h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0
 .fm-joystick { touch-action: none; }
 @media (prefers-reduced-motion: reduce) { .fm-emoting .fm-emote { animation: none; opacity: 1; transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .fm-walking .fm-face { animation: none; } .fm-bubble { transition: none; } }
+
+/* H1: company logo badge on the map (small; never the plot's main visual) */
+.fm-plot-logo { width: 26px; height: 26px; border-radius: 8px; background: #fff; padding: 2px; box-shadow: 0 2px 8px rgb(0 0 0 / .45); pointer-events: none; }
+.fm-plot-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }

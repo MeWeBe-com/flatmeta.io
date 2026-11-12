@@ -1,3 +1,4 @@
+import { visibleLogo } from '../companies/logos.js';
 import { customHtmlGloballyDisabledCached, plotSandboxUrl } from '../services/custom-html.js';
 import { and, eq, inArray } from 'drizzle-orm';
 import { db, schema } from '../db/client.js';
@@ -100,7 +101,7 @@ export function plotView(p: Plot, owner: OwnerView | null, extra: { likedByMe?: 
     frame: p.frame,
     business: p.business,
     showcase: sc
-      ? { brand: sc.brand, website: sc.website, sector: sc.sector, kind: sc.kind, city: sc.city, useCase: sc.useCase, highlights: sc.highlights, approved: sc.approved, source: sc.source ?? null, sourceUrl: sc.sourceUrl ?? null, license: sc.license ?? null }
+      ? { brand: sc.brand, website: sc.website, sector: sc.sector, kind: sc.kind, city: sc.city, useCase: sc.useCase, highlights: sc.highlights, approved: sc.approved, source: sc.source ?? null, sourceUrl: sc.sourceUrl ?? null, license: sc.license ?? null, logo: visibleLogo(p) }
       : null,
     moderationStatus: p.moderationStatus,
     owner,

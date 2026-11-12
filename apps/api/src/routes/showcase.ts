@@ -1,3 +1,4 @@
+import { setPlotLogoHidden } from '../companies/logos.js';
 import { desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { emailAdmins, quietly, templates } from '../email/index.js';
@@ -154,6 +155,8 @@ export default async function showcaseRoutes(app: App) {
     async (req) => {
       const plot = await loadPlot(req.params.slug);
       if (!plot || plot.kind !== 'showcase') throw notFound('Showcase plot');
+      // H1: a removal request hides the logo at once; the plot itself follows the 48 h process.
+      await setPlotLogoHidden(plot.id, true, 'takedown request');
       await db.insert(schema.takedownRequests).values({
         plotId: plot.id,
         name: stripText(req.body.name, 100),

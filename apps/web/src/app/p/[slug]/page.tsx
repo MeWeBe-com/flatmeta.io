@@ -5,6 +5,7 @@ import { Clock, ExternalLink, Mail, MapPin, Phone, Tag, CalendarCheck } from 'lu
 import { PageShell } from '@/components/site-chrome';
 import { PlotActions } from '@/components/plot/plot-actions';
 import { Markdown } from '@/components/markdown';
+import { LogoAdminToggle } from '@/components/plot/logo-admin';
 import { OpenHouses } from '@/components/plot/open-houses';
 import { PlotMarket } from '@/components/plot/plot-market';
 import { ReportCustomHtml } from '@/components/plot/report-custom-html';
@@ -104,11 +105,23 @@ export default async function PlotPage({ params }: Params) {
 
         {p.showcase && (
           <div className="rounded-2xl p-5 border border-[rgb(255_201_77/.35)] bg-[rgb(255_201_77/.07)] flex flex-col md:flex-row gap-4 md:items-center">
+            {p.showcase.logo && (
+              // H1: a small official logo to identify the company for claiming: a badge, never the main artwork.
+              <img src={p.showcase.logo.url} alt={`${p.showcase.brand} logo`} width={56} height={56} className="size-14 rounded-xl bg-white p-1.5 object-contain shrink-0" data-testid="company-logo" />
+            )}
             <div className="flex-1">
               <div className="font-semibold text-[var(--color-gold)]">{t('plot.showcaseTitle')}</div>
               <p className="text-sm muted mt-1">{t('plot.showcaseNote', { brand: p.showcase.brand })}</p>
               {/* G12: every reserved company plot says so plainly. */}
               <p className="text-sm font-medium mt-2" data-testid="reserved-label">Reserved for {p.showcase.brand}, not affiliated with FlatMeta.</p>
+              {p.showcase.logo && (
+                <p className="text-xs muted mt-1" data-testid="logo-note">
+                  Logo shown to identify the company for claiming; trademarks belong to their owners.{' '}
+                  <a className="underline" href={p.showcase.logo.sourceUrl} rel="noopener nofollow" target="_blank">Logo source</a>
+                  {p.showcase.logo.license ? ` (${p.showcase.logo.license}${p.showcase.logo.author ? `, ${p.showcase.logo.author}` : ''})` : ''}.
+                </p>
+              )}
+              <LogoAdminToggle plotId={p.id} hasLogo={!!p.showcase.logo} />
               {p.showcase.sourceUrl && (
                 <p className="text-xs muted mt-1">
                   Company facts from <a className="underline" href={p.showcase.sourceUrl} rel="noopener nofollow" target="_blank">Wikidata</a> ({p.showcase.license ?? 'CC0-1.0'}). Artwork is generic, made by FlatMeta.

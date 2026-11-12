@@ -1,6 +1,6 @@
 'use client';
 
-import { Map as MapLibreMap, setWorkerUrl, type GeoJSONSource, type ImageSource, type LngLat, type Map as MLMap, type MapMouseEvent, type MapTouchEvent } from 'maplibre-gl';
+import { Map as MapLibreMap, Marker, setWorkerUrl, type GeoJSONSource, type ImageSource, type LngLat, type Map as MLMap, type MapMouseEvent, type MapTouchEvent } from 'maplibre-gl';
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { MAP_STYLE_URL } from '@/lib/config';
 import { bboxToRect, lngLatToCell, normalizeRect, rectBounds, rectPolygon, type Rect } from '@/lib/grid';
@@ -55,6 +55,9 @@ if (typeof window !== 'undefined') setWorkerUrl('/vendor/maplibre-gl-worker.mjs'
 const DEFAULT_COLORS = ['#2DE2C4', '#8B7CFF', '#FF8FB1', '#3FA9F5', '#FFC94D', '#4ADE80', '#FB923C'];
 const ART_MIN_ZOOM = 12.5;
 const ART_MAX = 90;
+// H1: company logos are small badges at close zoom only; the plot's generic artwork stays the main visual.
+const LOGO_MIN_ZOOM = 14.5;
+const LOGO_MAX = 40;
 const GRID_MIN_ZOOM = 14;
 
 function colorFor(p: WorldPlot): string {
@@ -120,6 +123,7 @@ export function WorldMap(props: Props) {
   const mapRef = useRef<MLMap | null>(null);
   const plotsRef = useRef<Map<string, WorldPlot>>(new Map());
   const artRef = useRef<Map<string, string>>(new Map()); // plot id → image url currently shown
+  const logoRef = useRef<Map<string, Marker>>(new Map()); // plot id → logo badge marker
   const propsRef = useRef(props);
   propsRef.current = props;
   const [hover, setHover] = useState<{ x: number; y: number; plot: WorldPlot } | null>(null);
@@ -175,8 +179,42 @@ export function WorldMap(props: Props) {
     }
   }
 
+  // ── company logo badges (H1) ──
+  function syncLogos() {
+    const map = mapRef.current;
+    if (!map) return;
+    const want = new Set<string>();
+    if (map.getZoom() >= LOGO_MIN_ZOOM) {
+      const b = map.getBounds();
+      [...plotsRef.current.values()]
+        .filter((p) => p.logoUrl && p.center.lng >= b.getWest() && p.center.lng <= b.getEast() && p.center.lat >= b.getSouth() && p.center.lat <= b.getNorth())
+        .slice(0, LOGO_MAX)
+        .forEach((p) => want.add(p.id));
+    }
+    for (const [id, m] of logoRef.current) {
+      if (!want.has(id)) {
+        m.remove();
+        logoRef.current.delete(id);
+      }
+    }
+    for (const id of want) {
+      if (logoRef.current.has(id)) continue;
+      const p = plotsRef.current.get(id)!;
+      const el = document.createElement('div');
+      el.className = 'fm-plot-logo';
+      el.title = `${p.title} logo (identifies the company for claiming)`;
+      const img = document.createElement('img');
+      img.src = p.logoUrl!;
+      img.alt = '';
+      img.loading = 'lazy';
+      el.appendChild(img);
+      logoRef.current.set(id, new Marker({ element: el, anchor: 'bottom', offset: [0, -18] }).setLngLat([p.center.lng, p.center.lat]).addTo(map));
+    }
+  }
+
   // ── plot artwork (image sources) at high zoom ──
   function syncArt() {
+    syncLogos();
     const map = mapRef.current;
     // isStyleLoaded() is false while tiles stream in; our own layer existing is the right readiness check.
     if (!map || !map.getLayer('plots-outline')) return;

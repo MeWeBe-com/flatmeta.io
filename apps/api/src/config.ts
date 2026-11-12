@@ -106,6 +106,8 @@ const schema = z.object({
   COMPANY_LAND_COUNTRIES: z.string().default('US,GB,DE,FR,JP,IN,BR,AU,ES,AE,CA,MX,IT,NL,SE,CH,KR,SG,ZA,NG,PL,BE,AT,DK,NO,FI,IE,PT,AR,CL,CO,TR,IL,SA,EG,KE,ID,TH,VN,PH,MY,NZ,TW,HK,CN,CZ,GR,HU,RO,PE'),
   // Passing the automatic location check makes a plot visible; failing ones wait for an admin.
   COMPANY_LAND_AUTO_VERIFY: bool.default(true),
+  // H1: small official logos on company plots (badge only). false hides every logo at once.
+  COMPANY_LAND_LOGOS: bool.default(true),
   WIKIDATA_SPARQL_URL: z.string().default('https://query.wikidata.org/sparql'),
   // Showcase plots need an admin-checked location before they appear publicly. auto = only in production.
   SHOWCASE_REQUIRE_LOCATION_CHECK: z.enum(['auto', 'true', 'false']).default('auto'),

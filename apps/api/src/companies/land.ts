@@ -1,3 +1,4 @@
+import { backfillLogos, type LogoRun } from './logos.js';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { config, companyLandEnabled } from '../config.js';
 import { db, schema } from '../db/client.js';
@@ -119,10 +120,11 @@ export interface CountryRun {
   created: string[];
   skipped: { name: string; reason: string }[];
   verified: number;
+  logos?: LogoRun;
 }
 
 /** Fetches a country's companies (stored with source and licence) and creates up to `take` reserved plots. */
-export async function processCountry(country: string, take: number, opts: { fetcher?: typeof fetch; dryRun?: boolean } = {}): Promise<CountryRun> {
+export async function processCountry(country: string, take: number, opts: { fetcher?: typeof fetch; dryRun?: boolean; skipLogos?: boolean } = {}): Promise<CountryRun> {
   const iso = country.toUpperCase();
   const facts = await fetchCompanies(iso, 300, opts.fetcher);
   const run: CountryRun = { country: iso, fetched: facts.length, created: [], skipped: [], verified: 0 };
@@ -200,6 +202,8 @@ export async function processCountry(country: string, take: number, opts: { fetc
   }
   if (!opts.dryRun && createdIds.length) {
     if (config.COMPANY_LAND_AUTO_VERIFY) run.verified = await verifyCreated(createdIds, iso);
+    // H1: small official logos for the new plots (Wikidata/Commons, else the official website).
+    if (config.COMPANY_LAND_LOGOS && !opts.skipLogos) run.logos = (await backfillLogos({ apply: true, plotIds: createdIds }).catch(() => null)) ?? undefined;
     await recountCountry(iso);
   }
   return run;

@@ -28,6 +28,11 @@ async function s3Client() {
   return s3;
 }
 
+/** Stores a file under the media root (or S3) and returns its public URL. */
+export async function putFile(rel: string, body: Buffer, contentType: string): Promise<string> {
+  return put(rel, body, contentType);
+}
+
 async function put(rel: string, body: Buffer, contentType: string): Promise<string> {
   if (config.STORAGE_DRIVER === 's3') {
     const { PutObjectCommand } = await import('@aws-sdk/client-s3');

@@ -53,7 +53,7 @@ export interface Plot {
   theme: { primary: string; accent: string } | null;
   frame: string;
   business: BusinessInfo | null;
-  showcase: { brand: string; website: string; sector: string; kind: string; city: string; useCase: string; highlights: string[]; approved: boolean; source?: string | null; sourceUrl?: string | null; license?: string | null } | null;
+  showcase: { brand: string; website: string; sector: string; kind: string; city: string; useCase: string; highlights: string[]; approved: boolean; source?: string | null; sourceUrl?: string | null; license?: string | null; logo?: { url: string; source: string; sourceUrl: string; license: string | null; author: string | null } | null } | null;
   moderationStatus: string;
   owner: Owner | null;
   hasCustomHtml?: boolean;
@@ -101,6 +101,8 @@ export interface WorldPlot {
   spotlight: boolean;
   beacon: boolean;
   ownerName: string | null;
+  /** H1: small official logo for company plots (badge only). */
+  logoUrl?: string | null;
   verified: boolean;
   mine: boolean;
   published: boolean;

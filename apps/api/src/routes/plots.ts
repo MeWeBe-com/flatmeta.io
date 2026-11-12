@@ -1,3 +1,4 @@
+import { visibleLogo } from '../companies/logos.js';
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
 import { publicShowcase } from '../lib/visibility.js';
 import { z } from 'zod';
@@ -311,6 +312,8 @@ export default async function plotRoutes(app: App) {
             spotlight: !!p.spotlightUntil && p.spotlightUntil.getTime() > now,
             beacon: !!p.beaconUntil && p.beaconUntil.getTime() > now,
             ownerName: o?.displayName ?? (p.showcase ? p.showcase.brand : null),
+            // H1: a small official logo for company plots (badge at close zoom; never the main artwork).
+            logoUrl: p.showcase ? (visibleLogo(p)?.url ?? null) : null,
             verified: o?.type === 'org' ? !!o.verified : false,
             mine: !!me && (p.ownerUserId === me),
             published: !!p.publishedAt,
