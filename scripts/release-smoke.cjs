@@ -7,6 +7,10 @@ const ok = (name, pass, detail = '') => { results.push({ name, pass, detail }); 
 const j = async (path) => (await fetch(base + path)).json();
 
 (async () => {
+  if (!/^https?:\/\//.test(base || '')) {
+    console.error('Usage: node scripts/release-smoke.cjs <https://site>');
+    process.exit(2);
+  }
   // 1. Security headers on a page
   const home = await fetch(base + '/');
   const csp = home.headers.get('content-security-policy') || '';
@@ -92,4 +96,5 @@ const j = async (path) => (await fetch(base + path)).json();
   const failed = results.filter((r) => !r.pass).length;
   console.log(`\n${results.length - failed}/${results.length} passed`);
   require('fs').writeFileSync(process.env.OUT || '/dev/null', JSON.stringify(results, null, 1));
+  process.exitCode = failed ? 1 : 0; // CI gates production on this
 })();

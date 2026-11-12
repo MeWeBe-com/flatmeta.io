@@ -7,6 +7,42 @@ Branch `v2`, commits `9a5fe4d`…`9dcc782` on top of G1–G6. Every task in `tas
 - **Production, https://www.flatmeta.io: still the previous build.** Production deploys only by hand (`scripts/deploy.sh` refuses CI). Run step 1 under "Manual steps" below.
 
 
+
+## Automatic production deploys (12 Nov 2026)
+
+Production can now deploy itself after staging passes. It stays off until you do the one-time setup below.
+
+**How it works:**
+- **CI (`.github/workflows/ci.yml`):** after the staging deploy, `smoke-staging` runs `scripts/release-smoke.cjs` against https://staging.flatmeta.io. If it passes, `deploy-production` deploys the same commit over SSH. Without the `PROD_DEPLOY_*` secrets the job is skipped with a notice.
+- **Server guard (`scripts/deploy-guard.sh`, used by `deploy.sh`):** a non-interactive production deploy needs:
+  - `--auto`, from a non-interactive SSH session;
+  - `AUTO_DEPLOY=true` in the production `.env` (the caller can't set it);
+  - a full commit SHA on `origin/v2`;
+  - a commit that hasn't failed before.
+
+  Manual deploys still ask you to type `production`.
+- **Automatic deploys:**
+  - `pg_dump` first (no dump, no deploy);
+  - then migrations, the build and the swap;
+  - health checks (API `/healthz`, web `/` and `/robots.txt`);
+  - on failure: roll back to the previous release, record the commit in `.deploy/failed/` (never retried automatically), and set a failed `deploy/production` status on the commit.
+- **Email:** admins get an email after every production deploy (deployed, rolled back or aborted) with the commit and the end of the log. This includes manual ones.
+- **Tests:** `apps/api/test/deploy-guard.test.ts` (7 tests: the guard rules, deploy.sh refusing before it touches anything, a failed commit never retried, the SHA taken from the forced command, the email contents).
+
+**One-time setup** (details in `docs/deploy-hestia.md` → "Automatic production deploys"):
+1. Make a production-only key:
+   ```bash
+   ssh-keygen -t ed25519 -N '' -C flatmeta-ci-production -f flatmeta_ci_production
+   ```
+2. On the server, as the app user, add one line to `~/.ssh/authorized_keys`: the public key, behind a forced command:
+   ```text
+   command="cd /home/USER/web/flatmeta.io/private/flatmeta && bash scripts/deploy.sh production --auto",no-pty,no-port-forwarding,no-agent-forwarding,no-X11-forwarding ssh-ed25519 AAAA… flatmeta-ci-production
+   ```
+3. Check that `pg_dump --version` works for that user.
+4. In the production `.env`, set `AUTO_DEPLOY=true`, and optionally `ADMIN_EMAILS=…` for extra recipients.
+5. In GitHub secrets, set `PROD_DEPLOY_HOST`, `PROD_DEPLOY_USER`, `PROD_DEPLOY_PATH` (`/home/USER/web/flatmeta.io/private/flatmeta`) and `PROD_DEPLOY_KEY` (the private key), plus `PROD_DEPLOY_PORT` if not 22. Then delete the local key files.
+6. **The first production deploy must still be by hand** (`bash scripts/deploy.sh production`). The server has to run the new `deploy.sh` once before it understands `--auto`; until then the CI job fails with "refused", and nothing changes.
+
 ## Update, 12 Nov 2026: boss feedback (H1–H3)
 
 Three changes, each pushed to `v2` after lint, typecheck, unit/API tests (**160 passed**) and the e2e suite

@@ -11,7 +11,7 @@ Production runs as a **second instance on the staging server**, next to staging,
 | Redis | DB 6, `REDIS_PREFIX=fm-staging` | **DB 7, `REDIS_PREFIX=fm-prod`** |
 | PM2 apps | `flatmeta-{web,api,worker}-staging` | **`flatmeta-{web,api,worker}-production`** |
 | Media | `…/staging.flatmeta.io/private/uploads` | **`…/flatmeta.io/private/uploads`** |
-| Deploys | automatic on every push to `v2` (CI) | **by hand only**: `bash scripts/deploy.sh production` |
+| Deploys | automatic on every push to `v2` (CI) | by hand (`bash scripts/deploy.sh production`), or automatically after staging passes its smoke test once you opt in (`AUTO_DEPLOY=true`, see deploy-hestia.md) |
 | Payments | test mode | off (`PAID_CHECKOUT_ENABLED=auto` → off in production) |
 | Robots | `Disallow: /`, `noindex` | indexed, sitemap at `/sitemap.xml`, canonical `https://flatmeta.io` |
 

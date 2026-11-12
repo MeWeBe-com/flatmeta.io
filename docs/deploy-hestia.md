@@ -107,7 +107,77 @@ Each environment is **its own checkout with its own `.env`** (database, Redis DB
 | Redis | DB 6, `fm-staging` | DB 7, `fm-prod` |
 | media | `/home/USER/web/staging.flatmeta.io/private/uploads` | `/home/USER/web/flatmeta.io/private/uploads` |
 
-**Deploys:** CI deploys only the checkout in `DEPLOY_PATH` (staging) with `deploy.sh v2`. `scripts/deploy.sh` checks the environment you name against the checkout's `.env`, and **production deploys only when a person runs `bash scripts/deploy.sh production` in a terminal** (it refuses CI, cron and forced-command keys, and asks you to type `production`). Staging shows a banner and serves `Disallow: /` and `noindex`.
+**Deploys:** CI deploys the staging checkout (`DEPLOY_PATH`) with `deploy.sh v2` after every green push. `scripts/deploy.sh` checks the environment you name against the checkout's `.env`.
+
+Production deploys in one of two ways:
+- **By hand:** `bash scripts/deploy.sh production` in a terminal. It asks you to type `production`.
+- **Automatically:** CI deploys production only after staging passes its smoke test, and only once you opt in (see "Automatic production deploys" below). Without that, production refuses CI, cron and forced-command keys.
+
+Staging shows a banner and serves `Disallow: /` and `noindex`.
+
+## Automatic production deploys
+
+After every green push to `v2`, CI deploys staging, then runs the smoke test (`scripts/release-smoke.cjs`) against https://staging.flatmeta.io. If it passes, CI deploys **the same commit** to production over SSH. That last step happens only when all of these are true:
+- the four `PROD_DEPLOY_*` secrets are set (otherwise the job is skipped with a notice);
+- the production `.env` has `AUTO_DEPLOY=true` (otherwise the server refuses, exit 2);
+- the session is a non-interactive SSH session;
+- the target is a full commit SHA on `origin/v2`;
+- that commit has never failed in production before.
+
+What an automatic deploy does (`deploy.sh production --auto`):
+1. **One at a time** (a lock in `.deploy/lock`).
+2. **`pg_dump`** of the production database to `~/backups/flatmeta-deploys/<time>-before-<sha>.dump` (mode 600; the last 10 are kept, set `DEPLOY_KEEP_DUMPS` to change that). If the dump fails, nothing is changed.
+3. Check out the commit, install, build the API and the web app, **run the migrations**, swap the web build in, reload PM2.
+4. **Health checks:** API `/healthz`, web `/` and `/robots.txt`, for up to 80 s.
+5. **On failure: roll back.** The previous release's code and web build are restored and reloaded. The migrations stay, since they are expand-only; the dump is there if needed. The commit is written to `.deploy/failed/<sha>`, so **it is never deployed automatically again**: fix forward with a new commit, or deploy by hand.
+6. **Email to the admins** (`ADMIN_EMAILS` plus every admin user) with the commit, the result (deployed / rolled back / aborted) and the end of the log. Manual production deploys send the same email. The log is in `.deploy/logs/`.
+
+CI marks the commit with a `deploy/production` status: success, failure (rolled back) or error (refused).
+
+### One-time setup
+
+**1. A deploy key for production only** (on your machine; never reuse the staging key):
+```bash
+ssh-keygen -t ed25519 -N '' -C flatmeta-ci-production -f flatmeta_ci_production
+```
+
+**2. On the server, as the app user, restrict the key to one command.** Add one line to `~/.ssh/authorized_keys`: the public key, behind a forced command and without a terminal or forwarding. Replace `USER`, and paste the public key from `flatmeta_ci_production.pub`:
+```text
+command="cd /home/USER/web/flatmeta.io/private/flatmeta && bash scripts/deploy.sh production --auto",no-pty,no-port-forwarding,no-agent-forwarding,no-X11-forwarding ssh-ed25519 AAAA… flatmeta-ci-production
+```
+Whatever CI sends, this key can only run that command. `deploy.sh` reads nothing from the client's command line except the 40-character commit SHA.
+
+**3. Check the server has `pg_dump`** (the same major version as the database or newer):
+```bash
+pg_dump --version
+```
+
+**4. Opt in, in the production `.env`:**
+```bash
+AUTO_DEPLOY=true
+ADMIN_EMAILS=you@example.com    # optional: extra recipients for deploy emails (admins in the database always get them)
+```
+
+**5. GitHub → repository → Settings → Secrets and variables → Actions:**
+
+| Secret | Value |
+| --- | --- |
+| `PROD_DEPLOY_HOST` | the server's hostname or IP |
+| `PROD_DEPLOY_USER` | the app user that owns `~/web/flatmeta.io` |
+| `PROD_DEPLOY_PATH` | `/home/USER/web/flatmeta.io/private/flatmeta` |
+| `PROD_DEPLOY_KEY` | the **private** key `flatmeta_ci_production` (the whole file) |
+| `PROD_DEPLOY_PORT` | optional, default 22 |
+
+Then delete the local key files.
+
+**6. Try it.** Push to `v2` and watch the `deploy-production` job. You get an email either way. To pause automatic deploys, set `AUTO_DEPLOY=false` (the job then fails with "refused", and nothing changes on the server) or remove the `PROD_DEPLOY_KEY` secret (the job is skipped).
+
+**A commit failed and was rolled back.** It stays in `.deploy/failed/` and CI won't retry it. Push a fix, and that new commit deploys automatically. To deploy the failed commit anyway, do it by hand (`bash scripts/deploy.sh production`) after fixing the cause, or delete its file in `.deploy/failed/`.
+
+**Restoring the database** (rarely needed: migrations are expand-only, so the old code keeps working on the new schema):
+```bash
+pg_restore --clean --if-exists --no-owner -d "$DATABASE_URL" ~/backups/flatmeta-deploys/<file>.dump
+```
 
 ## Usercontent origin (custom HTML)
 

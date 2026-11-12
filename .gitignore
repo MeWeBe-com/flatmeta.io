@@ -25,3 +25,6 @@ dump.rdb
 
 # Rendered per-instance nginx files (scripts/new-instance.mjs)
 deploy/out/
+
+# Deploy state on servers (logs, failed commits, lock)
+.deploy/

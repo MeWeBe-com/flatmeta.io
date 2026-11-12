@@ -112,6 +112,8 @@ jobs:
     concurrency:
       group: deploy-v2
       cancel-in-progress: false
+    outputs:
+      deployed: ${{ steps.check.outputs.run }}
     env:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -139,3 +141,89 @@ jobs:
         # The server key can be restricted with a forced command; either way the server runs scripts/deploy.sh on branch v2.
         run: |
           ssh -i ~/.ssh/deploy_key -p "${DEPLOY_PORT:-22}" -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" "cd '$DEPLOY_PATH' && bash scripts/deploy.sh v2"
+
+  # Staging smoke test (public checks, no account needed) against the commit just deployed to staging.
+  smoke-staging:
+    needs: deploy
+    if: needs.deploy.outputs.deployed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Install Chromium for Playwright
+        timeout-minutes: 15
+        run: |
+          npx playwright install chromium
+          if ! node -e "require('playwright').chromium.launch().then((b) => b.close()).catch(() => process.exit(1))"; then
+            for i in 1 2 3; do timeout 300 npx playwright install-deps chromium && exit 0; sleep 20; done; exit 1
+          fi
+      - name: Smoke test https://staging.flatmeta.io
+        run: node scripts/release-smoke.cjs https://staging.flatmeta.io
+
+  # Production: the same commit, only after staging passed its smoke test. Needs the PROD_DEPLOY_* secrets and
+  # AUTO_DEPLOY=true in the production .env (see docs/deploy-hestia.md → Automatic production deploys).
+  deploy-production:
+    needs: smoke-staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      statuses: write
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      PROD_DEPLOY_HOST: ${{ secrets.PROD_DEPLOY_HOST }}
+      PROD_DEPLOY_USER: ${{ secrets.PROD_DEPLOY_USER }}
+      PROD_DEPLOY_PATH: ${{ secrets.PROD_DEPLOY_PATH }}
+      PROD_DEPLOY_KEY: ${{ secrets.PROD_DEPLOY_KEY }}
+      PROD_DEPLOY_PORT: ${{ secrets.PROD_DEPLOY_PORT }}
+      SHA: ${{ github.sha }}
+    steps:
+      - name: Check production deploy secrets
+        id: check
+        run: |
+          if [ -z "$PROD_DEPLOY_HOST" ] || [ -z "$PROD_DEPLOY_USER" ] || [ -z "$PROD_DEPLOY_PATH" ] || [ -z "$PROD_DEPLOY_KEY" ]; then
+            echo "::notice title=Production deploy skipped::Set the repository secrets PROD_DEPLOY_HOST, PROD_DEPLOY_USER, PROD_DEPLOY_PATH and PROD_DEPLOY_KEY (optional PROD_DEPLOY_PORT), and AUTO_DEPLOY=true in the production .env, to deploy production automatically after staging passes."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Set up SSH
+        if: steps.check.outputs.run == 'true'
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$PROD_DEPLOY_KEY" > ~/.ssh/prod_key && chmod 600 ~/.ssh/prod_key
+          ssh-keyscan -p "${PROD_DEPLOY_PORT:-22}" -H "$PROD_DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Deploy ${{ github.sha }} to production
+        id: deploy
+        if: steps.check.outputs.run == 'true'
+        # With the recommended forced command the server ignores everything but the SHA in this command line.
+        # deploy.sh: pg_dump → migrate → health checks → roll back on failure; it emails the admins either way.
+        run: |
+          set +e
+          ssh -i ~/.ssh/prod_key -p "${PROD_DEPLOY_PORT:-22}" -o BatchMode=yes -o ServerAliveInterval=30 "$PROD_DEPLOY_USER@$PROD_DEPLOY_HOST" \
+            "cd '$PROD_DEPLOY_PATH' && bash scripts/deploy.sh production --auto --commit $SHA"
+          code=$?
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          case $code in
+            0) echo "::notice title=Production deployed::${SHA:0:7} is live." ;;
+            1) echo "::error title=Production deploy failed::${SHA:0:7} failed its checks; production was rolled back and the commit is recorded as failed (never retried automatically)." ;;
+            *) echo "::error title=Production deploy refused::The server refused or aborted the deploy of ${SHA:0:7} before changing anything (exit $code): check AUTO_DEPLOY=true, the key, and the deploy log." ;;
+          esac
+          exit $code
+      - name: Record the result on the commit
+        if: always() && steps.check.outputs.run == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CODE: ${{ steps.deploy.outputs.code }}
+        run: |
+          case "$CODE" in 0) state=success; desc="Deployed to production" ;; 1) state=failure; desc="Failed in production: rolled back" ;; *) state=error; desc="Production deploy refused or aborted" ;; esac
+          curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/$SHA" \
+            -d "{\"state\":\"$state\",\"context\":\"deploy/production\",\"description\":\"$desc\",\"target_url\":\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" >/dev/null
