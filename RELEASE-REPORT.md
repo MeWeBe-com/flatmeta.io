@@ -6,6 +6,103 @@ Branch `v2`, commits `9a5fe4d`…`9dcc782` on top of G1–G6. Every task in `tas
 - **Staging, https://staging.flatmeta.io: the whole release is live.** CI deploys every green push to `v2`.
 - **Production, https://www.flatmeta.io: still the previous build.** Production deploys only by hand (`scripts/deploy.sh` refuses CI). Run step 1 under "Manual steps" below.
 
+
+## Update, 12 Nov 2026: boss feedback (H1–H3)
+
+Three changes, each pushed to `v2` after lint, typecheck, unit/API tests (**160 passed**) and the e2e suite
+(**59 passed, 0 failed**) all passed. CI runs [#37](https://github.com/MeWeBe-com/flatmeta.io/actions/runs/43179128205)
+(H1) and [#38](https://github.com/MeWeBe-com/flatmeta.io/actions/runs/43180707905) (H2) are green and deployed to
+staging; H3 deploys the same way.
+
+### What's live on staging
+
+Smoke test after the H3 deploy (`PW_CHROMIUM_PATH=… node scripts/release-smoke.cjs https://staging.flatmeta.io`): **19/19 passed**. The admin register and the logo switches answer 401 to guests. Reserved plots report `guestbookOpen: false`, and signing their guestbook is refused.
+
+Staging already has **367 company plots** on `/brands` (140 curated plus those the daily company-land job added since G12), across 20 countries. None has a logo yet: the backfill (step H-2) hasn't been run there.
+
+- **H1 Company logos.** Each company plot gets a small official logo, used only as a badge:
+  - shown on the plot page (`/p/<slug>`) with "Logo shown to identify the company for claiming; trademarks belong to their owners." and a link to the logo's source and licence;
+  - on the map from zoom 14.5, on https://staging.flatmeta.io/brands, and in the share image;
+  - the generic artwork stays the main visual, and the "Reserved for …, not affiliated with FlatMeta" label stays.
+  - **Staging has no logos yet:** run the backfill there (step H-2 below). The daily job only fetches logos for new plots.
+- **H2 Company land register.** https://staging.flatmeta.io/admin/company-land (admins only) lists every company plot with:
+  - country, HQ city, plot and map links, website, Wikidata, logo and its source, and status;
+  - filters, search, CSV export, and admin-only outreach fields.
+  - A daily admin digest is emailed at 06:43 UTC, and public contact pages are looked up at 05:29 UTC.
+- **H3 Owner-only content.** Every way of writing plot content now follows one rule:
+  - the current owner, or someone the owning organisation invited as owner, admin or editor;
+  - admins can edit anything;
+  - reserved, company and unclaimed land, and unpaid or released land, are admin-only;
+  - the old owner loses access after a transfer.
+  - Refusals return 403 with a plain reason, and only owners see edit controls.
+  - Walk mode stays move, chat and emote only. The guestbook works only on owned land, and owners can close it.
+  - Every content change is written to the audit log.
+
+### H1: where logos come from, and the backfill numbers
+
+Logos are looked up in this order, using only these two sources:
+1. Wikidata P154, through the Commons API (stores the file page, licence and author).
+2. The company's official website, on its own domain only: `apple-touch-icon`, then `<link rel="icon">`, then `/favicon.ico`.
+
+Every download is checked:
+- private addresses are refused inside the connection itself;
+- each redirect is checked again;
+- 1 MB size limit and a timeout;
+- the declared content-type must match the real image bytes;
+- SVGs are sanitised before rasterising;
+- the result is stored as a PNG of at most 128×128.
+
+**Dry run on the 140 curated showcase plots** (the same set as production), run from the dev database:
+
+| Source | Plots |
+| --- | --- |
+| Wikidata / Commons | **65** |
+| Official website | **29** |
+| None found | **46** |
+
+The 46 with none are mostly museums, orchestras, universities and venues: either the Wikidata item has no free logo, or the site only offers a BMP `.ico` or blocks bots. Examples: Manchester United, Co-op, SNCF, Louvre Abu Dhabi, Elbphilharmonie, Canva. They keep the generic artwork. There is no manual logo upload, by design: only these two sources are allowed.
+
+Company-land plots get their logo when they are created. Production's count will grow as the daily job adds companies.
+
+```bash
+npm run company-land:logos                      # dry run: counts by source, and which have none
+npm run company-land:logos -- --country GB      # one country
+npm run company-land:logos -- --apply           # store them
+```
+
+### H1–H3 env vars and migrations
+
+```bash
+COMPANY_LAND_LOGOS=true       # H1: false hides every company logo (there is also an admin kill-switch in Admin -> Company land)
+```
+
+The other H1–H3 settings need no env var: the digest and contact-page jobs run by themselves.
+
+Migrations `0009_company_logos`, `0010_company_register` and `0011_guestbook_open` are expand-only (new columns with defaults). `deploy.sh` applies them.
+
+### Manual production steps for H1–H3
+
+These come on top of the earlier steps below: the production deploy and the usercontent subdomain still apply.
+
+**H-1. Deploy** (as the app user; asks you to type `production`; runs migrations 0005–0011):
+```bash
+cd ~/web/flatmeta.io/private/flatmeta && bash scripts/deploy.sh production
+```
+
+**H-2. Logo backfill** (production; also once on staging, in `~/web/staging.flatmeta.io/private/flatmeta`):
+```bash
+npm run company-land:logos              # dry run: check the counts
+npm run company-land:logos -- --apply   # store them (a few minutes; Wikimedia requests are throttled)
+```
+
+**H-3. Check:**
+- Admin → Company land shows the register; Download CSV works.
+- A company plot page (for example `/p/bbc`) shows the small logo with the trademark line.
+
+**H-4. Optional:** press "Find contact pages" in Admin → Company land, or wait for the daily job (60 a day).
+
+The usercontent subdomain (steps 2–3 below) is still needed for custom HTML on production.
+
 ## What is live (staging URLs; the same paths on www.flatmeta.io after the production deploy)
 
 | Task | What | Try it |

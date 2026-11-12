@@ -57,7 +57,7 @@ const j = async (path) => (await fetch(base + path)).json();
   ok('Ask FlatMeta answers', !!aj?.answer, aj ? `${aj.provider}: ${aj.answer.slice(0, 90)}` : String(ask.status));
 
   // 5. Walk mode with two guests: both on the map, one walks (WASD), emotes reach the other, chat asks to sign in
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {});
   const mk = async () => {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
     await ctx.addInitScript(() => { localStorage.setItem('fm-tour-done', '1'); localStorage.setItem('fm-geo', 'declined'); });
