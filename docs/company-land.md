@@ -82,6 +82,27 @@ Admins can do the same from the API: `POST /api/v1/admin/company-land/run` with 
 - **Removal** ("Request removal" on every plot): admins are emailed at once. Requests are handled within 48 hours;
   if one is still open after 48 hours the `takedown-sla` job hides the plot automatically until someone has looked.
 
+## Register (H2): what is added, and where
+
+**Admin → Company land** (`/admin/company-land`) lists every company plot, curated showcase and company land:
+- company, country, HQ city;
+- plot link and map link (`/?visit=<slug>` flies to it);
+- official website, Wikidata, logo with its source;
+- status: hidden, reserved, claim started, claimed, removal requested, removed;
+- date created and last claim activity.
+
+Filter by country, status, outreach status and date, or search by name. **Download CSV** exports the filtered view.
+The export is protected against spreadsheet formula injection and recorded in the audit log.
+
+Outreach fields are admin-only: `outreach_status` (not contacted, contacted, replied, sold), notes, contacted date,
+and the company's **public contact or press page**. The `company-contacts` job (daily, 60 a day) and the "Find
+contact pages" button try `/contact`, `/contact-us`, `/press` and `/media` on the official domain. A page is stored
+only if it answers 200 with HTML and stays on that domain. Admins can set it by hand, but only to a URL on the
+official domain. No personal emails or names of individuals are ever scraped or stored.
+
+Daily admin digest (`company-digest`, 06:43 UTC): yesterday's new company plots (company, country, plot link),
+claims, and removal requests. It isn't sent on days with nothing to report.
+
 ## Discovery
 
 `/brands` (all countries) and `/brands/<cc>` list the public company plots; both are in `sitemap-pages.xml`, and each

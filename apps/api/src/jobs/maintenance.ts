@@ -114,6 +114,9 @@ export const JOBS: Record<string, { every?: number; pattern?: string; run: () =>
   // G12: reserved company land from Wikidata, daily at 04:13 UTC (COMPANY_LAND_ENABLED; auto = staging + production).
   'company-land': { pattern: '13 4 * * *', run: async () => (await import('../companies/land.js')).runCompanyLand() },
   // G12: takedown requests are handled within 48 h; if not, the plot is hidden until someone has.
+  // H2: the daily admin digest (new company plots, claims, removal requests) and public contact pages for outreach.
+  'company-digest': { pattern: '43 6 * * *', run: async () => (await import('../companies/register.js')).companyDigest() },
+  'company-contacts': { pattern: '29 5 * * *', run: async () => (await import('../companies/register.js')).findContactPages(60) },
   'takedown-sla': { every: 60 * 60_000, run: takedownSla },
   'open-houses': { every: 60_000, run: async () => (await import('../services/open-houses.js')).announceOpenHouses() },
   'chat-cleanup': { every: 60 * 60_000, run: async () => (await import('../services/chat.js')).purgeOldNearby() },

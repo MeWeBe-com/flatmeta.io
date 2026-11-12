@@ -20,6 +20,7 @@ export type EmailType =
   | 'admin_claim_lead'
   | 'admin_takedown'
   | 'weekly_digest'
+  | 'admin_company_digest'
   | 'notice';
 
 export interface EmailContent {
@@ -171,6 +172,17 @@ export const templates = {
       title: 'A showcase removal was requested',
       paragraphs: [`${name} <${email}> asks us to remove "${plotTitle}".`, `Message: ${message}`],
       button: { label: 'Review requests', path: '/admin/claims' },
+    }),
+
+  adminCompanyDigest: (day: string, lines: { added: string[]; claims: string[]; removals: string[] }) =>
+    render('admin_company_digest', `[Admin] Company land ${day}: ${lines.added.length} added, ${lines.claims.length} claims, ${lines.removals.length} removal requests`, {
+      title: `Company land on ${day}`,
+      paragraphs: [
+        `New company plots (${lines.added.length}):\n${lines.added.slice(0, 60).join('\n') || 'none'}${lines.added.length > 60 ? `\n… and ${lines.added.length - 60} more` : ''}`,
+        `Claims started or updated (${lines.claims.length}):\n${lines.claims.join('\n') || 'none'}`,
+        `Removal requests (${lines.removals.length}, handle within 48 h):\n${lines.removals.join('\n') || 'none'}`,
+      ],
+      button: { label: 'Open the register', path: '/admin/company-land' },
     }),
 
   notice: (subject: string, body: string) => render('notice', subject, { title: subject, paragraphs: body.split(/\n{2,}/) }),

@@ -679,6 +679,12 @@ export const companySources = pgTable(
     logoAuthor: text('logo_author'),
     logoFetchedAt: ts('logo_fetched_at'),
     logoHidden: boolean('logo_hidden').notNull().default(false),
+    // H2: outreach (admin-only). Only the company's public contact or press page: never personal emails or names.
+    contactUrl: text('contact_url'),
+    contactCheckedAt: ts('contact_checked_at'),
+    outreachStatus: text('outreach_status').notNull().default('not_contacted'), // not_contacted | contacted | replied | sold
+    outreachNotes: text('outreach_notes'),
+    contactedAt: ts('contacted_at'),
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex('company_sources_source_idx').on(t.source, t.sourceId), index('company_sources_country_idx').on(t.queriedCountry, t.status, t.popularity)],
