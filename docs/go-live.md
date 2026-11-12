@@ -11,11 +11,11 @@ Production runs as a **second instance on the staging server**, next to staging,
 | Redis | DB 6, `REDIS_PREFIX=fm-staging` | **DB 7, `REDIS_PREFIX=fm-prod`** |
 | PM2 apps | `flatmeta-{web,api,worker}-staging` | **`flatmeta-{web,api,worker}-production`** |
 | Media | `…/staging.flatmeta.io/private/uploads` | **`…/flatmeta.io/private/uploads`** |
-| Deploys | automatic on every push to `v2` (CI) | by hand (`bash scripts/deploy.sh production`), or automatically after staging passes its smoke test once you opt in (`AUTO_DEPLOY=true`, see deploy-hestia.md) |
+| Deploys | automatic: cron (`scripts/auto-deploy.sh --cron`) after CI passes, plus CI's SSH job | automatic from cron once you opt in (`AUTO_DEPLOY=true`): only after the commit has run on staging for 10 min with a passing smoke test; or by hand (`bash scripts/auto-deploy.sh`). See docs/deploy/auto-deploy.md |
 | Payments | test mode | off (`PAID_CHECKOUT_ENABLED=auto` → off in production) |
 | Robots | `Disallow: /`, `noindex` | indexed, sitemap at `/sitemap.xml`, canonical `https://flatmeta.io` |
 
-`scripts/deploy.sh` refuses to deploy production from CI, cron or a forced-command SSH key, refuses a checkout whose `.env` names a different environment, and asks you to type `production`. The CI deploy job keeps calling `deploy.sh v2` on the staging checkout only.
+`scripts/deploy.sh` refuses a checkout whose `.env` names a different environment. It deploys production without a person only with `--auto` from cron or the CI key, with `AUTO_DEPLOY=true` in the production `.env`; by hand it asks you to type `production`. The CI deploy job calls `deploy.sh staging --ci v2` on the staging checkout only.
 
 Redis pub/sub ignores the DB number, which is why the prefixes must differ (`fm-staging` vs `fm-prod`). The API and the worker of one instance read the same `.env`, so they always agree.
 

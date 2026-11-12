@@ -1,8 +1,9 @@
-// Emails the admins after a production deploy (success, rollback or abort). No dependencies of its own, so it
+// Emails the admins after a deploy: every production result, and every rollback or abort on any environment. No dependencies of its own, so it
 // still works after a rollback to an older release: Resend over HTTPS when RESEND_API_KEY is set, else SMTP through
 // the repo's nodemailer, else it only prints. Recipients: ADMIN_EMAILS plus every admin in the database.
-//   node deploy-notify.mjs --root <checkout> --result success|rolled_back|aborted --commit <sha> [--prev <sha>]
-//                          [--message <text>] [--log <file>] [--dry-run]
+//   node deploy-notify.mjs --root <checkout> --result success|rolled_back|manual_rollback|aborted --commit <sha>
+//                          [--env production] [--prev <sha>] [--message <text>] [--step <step>] [--duration <s>]
+//                          [--log <file>] [--dry-run]
 // Never prints secrets: the log tail is the deploy's own output.
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -20,21 +21,26 @@ const commit = arg('commit') ?? '';
 const prev = arg('prev') ?? '';
 const message = arg('message') ?? '';
 const logFile = arg('log');
+const step = arg('step') ?? '';
+const duration = arg('duration') ?? '';
 const dry = args.includes('--dry-run');
 
 const env = existsSync(join(root, '.env')) ? parseEnv(readFileSync(join(root, '.env'), 'utf8')) : {};
 const get = (k) => process.env[k] ?? env[k] ?? '';
 const site = get('APP_URL') || 'FlatMeta';
+const envName = arg('env') || get('APP_ENV') || 'production';
+const Env = envName.charAt(0).toUpperCase() + envName.slice(1);
 const short = (s) => (s ? s.slice(0, 7) : '–');
 const repoUrl = get('DEPLOY_REPO_URL') || 'https://github.com/MeWeBe-com/flatmeta.io';
 
 const TITLES = {
-  success: `✓ Production deployed ${short(commit)}`,
-  rolled_back: `✗ Production deploy of ${short(commit)} failed: rolled back to ${short(prev)}`,
-  aborted: `✗ Production deploy of ${short(commit)} aborted before any change`,
+  success: `✓ ${Env} deployed ${short(commit)}`,
+  rolled_back: `✗ ${Env} deploy of ${short(commit)} failed: rolled back to ${short(prev)}`,
+  manual_rollback: `↩ ${Env} rolled back by hand to ${short(commit)} (from ${short(prev)})`,
+  aborted: `✗ ${Env} deploy of ${short(commit)} aborted before any change`,
 };
 export function buildEmail() {
-  const subject = `[FlatMeta] ${TITLES[result] ?? `Production deploy: ${result}`}`;
+  const subject = `[FlatMeta] ${TITLES[result] ?? `${Env} deploy: ${result}`}`;
   const tail = logFile && existsSync(logFile) ? readFileSync(logFile, 'utf8').split('\n').slice(-40).join('\n') : '';
   const text = [
     TITLES[result] ?? result,
@@ -43,8 +49,11 @@ export function buildEmail() {
     `Commit: ${commit} (${repoUrl}/commit/${commit})`,
     prev ? `Previous release: ${prev}` : '',
     `Result: ${result}`,
-    message ? `\n${message}` : '',
-    result === 'rolled_back' ? '\nThis commit is recorded as failed and will not be deployed automatically again. The database backup taken before the migrations is in ~/backups (see the log).' : '',
+    result === 'success' && message ? `Subject: ${message}` : '',
+    duration ? `Duration: ${duration} s` : '',
+    result !== 'success' && step ? `Failing step: ${step}` : '',
+    result !== 'success' && message ? `\n${message}` : '',
+    result === 'rolled_back' ? '\nThis commit is recorded as failed and will not be deployed automatically again. The database was not rolled back (migrations are expand-only); the backup taken before the migrations and the restore command are in the log below.' : '',
     tail ? `\nLast lines of the deploy log:\n${tail}` : '',
   ]
     .filter((l) => l !== '')

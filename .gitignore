@@ -28,3 +28,4 @@ deploy/out/
 
 # Deploy state on servers (logs, failed commits, lock)
 .deploy/
+/logs/

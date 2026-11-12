@@ -140,7 +140,7 @@ jobs:
         if: steps.check.outputs.run == 'true'
         # The server key can be restricted with a forced command; either way the server runs scripts/deploy.sh on branch v2.
         run: |
-          ssh -i ~/.ssh/deploy_key -p "${DEPLOY_PORT:-22}" -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" "cd '$DEPLOY_PATH' && bash scripts/deploy.sh v2"
+          ssh -i ~/.ssh/deploy_key -p "${DEPLOY_PORT:-22}" -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" "cd '$DEPLOY_PATH' && bash scripts/deploy.sh staging --ci v2"
 
   # Staging smoke test (public checks, no account needed) against the commit just deployed to staging.
   smoke-staging:

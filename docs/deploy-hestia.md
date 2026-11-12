@@ -84,12 +84,12 @@ Add these **repository secrets** (*Settings → Secrets and variables → Action
 Create the key pair on your own machine and put the **public** key in the app user's `~/.ssh/authorized_keys`. The server's key can use a **forced command**, so it can only run the deploy:
 
 ```
-command="cd /home/flatmeta/flatmeta && bash scripts/deploy.sh v2",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAA… github-deploy
+command="cd /home/flatmeta/flatmeta && bash scripts/deploy.sh staging --ci v2",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAA… github-deploy
 ```
 
-`scripts/deploy.sh` is written for that: it loads **nvm** and `.env` itself (SSH sessions don't read your profile), exports `COREPACK_ENABLE_DOWNLOAD_PROMPT=0`, defaults to branch **v2**, installs, builds (the web app into a side directory so the running site keeps serving), migrates, swaps, reloads PM2, and **health-checks `http://127.0.0.1:$PORT/healthz` and the web port**. If the checks fail it rolls the code back to the previous commit (migrations are not reverted: fix forward or restore a backup).
+`scripts/deploy.sh` is written for that: it loads **nvm** and `.env` itself (SSH sessions don't read your profile), exports `COREPACK_ENABLE_DOWNLOAD_PROMPT=0`, defaults to branch **v2**, installs, builds (the web app into a side directory so the running site keeps serving), migrates, swaps, reloads PM2, and **health-checks `HEALTH_URLS`** (web `/` and API `/v1/me` by default). It backs up the database first. If the checks fail, it rolls the code back to the previous release and records the commit in `logs/failed-shas` (migrations are not reverted: fix forward or restore the backup).
 
-Run it by hand any time: `cd ~/flatmeta && bash scripts/deploy.sh [branch]`.
+Run it by hand any time: `bash scripts/auto-deploy.sh` in the checkout (or `bash scripts/deploy.sh <env> [branch]`).
 
 ## 3. Staging next to production
 
@@ -107,77 +107,74 @@ Each environment is **its own checkout with its own `.env`** (database, Redis DB
 | Redis | DB 6, `fm-staging` | DB 7, `fm-prod` |
 | media | `/home/USER/web/staging.flatmeta.io/private/uploads` | `/home/USER/web/flatmeta.io/private/uploads` |
 
-**Deploys:** CI deploys the staging checkout (`DEPLOY_PATH`) with `deploy.sh v2` after every green push. `scripts/deploy.sh` checks the environment you name against the checkout's `.env`.
+**Deploys:** each checkout deploys itself from cron (see "Automatic deploys" below and [docs/deploy/auto-deploy.md](deploy/auto-deploy.md)). CI's SSH job also deploys staging (`deploy.sh staging --ci v2`) after every green push. `scripts/deploy.sh` checks the environment you name against the checkout's `.env`.
 
 Production deploys in one of two ways:
-- **By hand:** `bash scripts/deploy.sh production` in a terminal. It asks you to type `production`.
-- **Automatically:** CI deploys production only after staging passes its smoke test, and only once you opt in (see "Automatic production deploys" below). Without that, production refuses CI, cron and forced-command keys.
+- **By hand:** `bash scripts/auto-deploy.sh` (or `bash scripts/deploy.sh production`) in a terminal. It asks you to type `production`.
+- **Automatically:** cron deploys a commit only after it has been live and healthy on staging for 10 minutes with a passing smoke test, and only with `AUTO_DEPLOY=true` in the production `.env`. Without that, production refuses cron, CI and forced-command keys.
 
 Staging shows a banner and serves `Disallow: /` and `noindex`.
 
-## Automatic production deploys
+## Automatic deploys (cron, staging and production)
 
-After every green push to `v2`, CI deploys staging, then runs the smoke test (`scripts/release-smoke.cjs`) against https://staging.flatmeta.io. If it passes, CI deploys **the same commit** to production over SSH. That last step happens only when all of these are true:
-- the four `PROD_DEPLOY_*` secrets are set (otherwise the job is skipped with a notice);
-- the production `.env` has `AUTO_DEPLOY=true` (otherwise the server refuses, exit 2);
-- the session is a non-interactive SSH session;
-- the target is a full commit SHA on `origin/v2`;
-- that commit has never failed in production before.
+Both checkouts deploy themselves from cron: `scripts/auto-deploy.sh --cron` every 2 minutes, as the app user (`najamussaqib`). A tick deploys the new tip of `v2` once its GitHub checks pass. Production also waits until the same commit has been live and healthy on staging for 10 minutes with a passing smoke test. Every deploy:
+- backs up the database first;
+- runs expand-only migrations;
+- health-checks web `/` and API `/v1/me`;
+- on failure, rolls back and records the commit in `logs/failed-shas`, so it is never retried automatically.
 
-What an automatic deploy does (`deploy.sh production --auto`):
-1. **One at a time** (a lock in `.deploy/lock`).
-2. **`pg_dump`** of the production database to `~/backups/flatmeta-deploys/<time>-before-<sha>.dump` (mode 600; the last 10 are kept, set `DEPLOY_KEEP_DUMPS` to change that). If the dump fails, nothing is changed.
-3. Check out the commit, install, build the API and the web app, **run the migrations**, swap the web build in, reload PM2.
-4. **Health checks:** API `/healthz`, web `/` and `/robots.txt`, for up to 80 s.
-5. **On failure: roll back.** The previous release's code and web build are restored and reloaded. The migrations stay, since they are expand-only; the dump is there if needed. The commit is written to `.deploy/failed/<sha>`, so **it is never deployed automatically again**: fix forward with a new commit, or deploy by hand.
-6. **Email to the admins** (`ADMIN_EMAILS` plus every admin user) with the commit, the result (deployed / rolled back / aborted) and the end of the log. Manual production deploys send the same email. The log is in `.deploy/logs/`.
+Admins get an email for every production deploy and every rollback. Pause a checkout with `AUTO_DEPLOY=false` in its `.env`.
 
-CI marks the commit with a `deploy/production` status: success, failure (rolled back) or error (refused).
+**The full guide is [docs/deploy/auto-deploy.md](deploy/auto-deploy.md):** the exact cron lines, the `.env` keys for both environments, deploying and rolling back by hand, and restoring a backup.
 
-### One-time setup
-
-**1. A deploy key for production only** (on your machine; never reuse the staging key):
-```bash
-ssh-keygen -t ed25519 -N '' -C flatmeta-ci-production -f flatmeta_ci_production
+```cron
+*/2 * * * * bash /home/flatmeta/web/staging.flatmeta.io/private/flatmeta/scripts/auto-deploy.sh --cron
+*/2 * * * * bash /home/flatmeta/web/flatmeta.io/private/flatmeta/scripts/auto-deploy.sh --cron
 ```
 
-**2. On the server, as the app user, restrict the key to one command.** Add one line to `~/.ssh/authorized_keys`: the public key, behind a forced command and without a terminal or forwarding. Replace `USER`, and paste the public key from `flatmeta_ci_production.pub`:
-```text
-command="cd /home/USER/web/flatmeta.io/private/flatmeta && bash scripts/deploy.sh production --auto",no-pty,no-port-forwarding,no-agent-forwarding,no-X11-forwarding ssh-ed25519 AAAA… flatmeta-ci-production
-```
-Whatever CI sends, this key can only run that command. `deploy.sh` reads nothing from the client's command line except the 40-character commit SHA.
+CI's staging SSH job (`deploy.sh staging --ci v2`) still works and uses the same lock: it waits for a running cron deploy and skips a commit that is already live. Leave the `PROD_DEPLOY_*` secrets unset; cron is the production path. The CI production job (`deploy.sh production --auto` behind a forced-command key) still exists, but it doesn't wait for the 10-minute staging gate.
 
-**3. Check the server has `pg_dump`** (the same major version as the database or newer):
-```bash
-pg_dump --version
-```
+## Static files in public_html (llms.txt, robots.txt, sitemaps)
 
-**4. Opt in, in the production `.env`:**
-```bash
-AUTO_DEPLOY=true
-ADMIN_EMAILS=you@example.com    # optional: extra recipients for deploy emails (admins in the database always get them)
-```
+Hestia's NodeJS template serves `.txt` and `.xml` straight from `public_html`, so a file there wins over the app. Once that file is deleted, nginx answers 404 (this happened with `/llms.txt`). `deploy/hestia/nodejs-app.conf` now proxies these to the app, with exact and `^~` locations that beat the template's regex:
+- `/llms.txt`
+- `/llms-full.txt`
+- `/robots.txt`
+- `/sitemap-*.xml`
 
-**5. GitHub → repository → Settings → Secrets and variables → Actions:**
+`/sitemap.xml` stays static on purpose: in production it is the insights sitemap from the insights automation, listed in robots.txt.
 
-| Secret | Value |
-| --- | --- |
-| `PROD_DEPLOY_HOST` | the server's hostname or IP |
-| `PROD_DEPLOY_USER` | the app user that owns `~/web/flatmeta.io` |
-| `PROD_DEPLOY_PATH` | `/home/USER/web/flatmeta.io/private/flatmeta` |
-| `PROD_DEPLOY_KEY` | the **private** key `flatmeta_ci_production` (the whole file) |
-| `PROD_DEPLOY_PORT` | optional, default 22 |
-
-Then delete the local key files.
-
-**6. Try it.** Push to `v2` and watch the `deploy-production` job. You get an email either way. To pause automatic deploys, set `AUTO_DEPLOY=false` (the job then fails with "refused", and nothing changes on the server) or remove the `PROD_DEPLOY_KEY` secret (the job is skipped).
-
-**A commit failed and was rolled back.** It stays in `.deploy/failed/` and CI won't retry it. Push a fix, and that new commit deploys automatically. To deploy the failed commit anyway, do it by hand (`bash scripts/deploy.sh production`) after fixing the cause, or delete its file in `.deploy/failed/`.
-
-**Restoring the database** (rarely needed: migrations are expand-only, so the old code keeps working on the new schema):
-```bash
-pg_restore --clean --if-exists --no-owner -d "$DATABASE_URL" ~/backups/flatmeta-deploys/<file>.dump
-```
+1. **As `najamussaqib`, render the file for each checkout** (it has the ports and `MEDIA_DIR` from that `.env`):
+   ```bash
+   cd /home/flatmeta/web/flatmeta.io/private/flatmeta && node scripts/new-instance.mjs production --nginx-only
+   ```
+   ```bash
+   cd /home/flatmeta/web/staging.flatmeta.io/private/flatmeta && node scripts/new-instance.mjs staging --nginx-only
+   ```
+2. **As root, find the include path, compare, install, re-apply the template and reload.** The paths below are the usual ones; the `grep` confirms them.
+   ```bash
+   grep -rn "nodejs-app" /usr/local/hestia/data/templates/web/nginx/
+   ```
+   ```bash
+   diff /home/flatmeta/conf/web/flatmeta.io/nodejs/nodejs-app.conf /home/flatmeta/web/flatmeta.io/private/flatmeta/deploy/out/production/nodejs-app.conf
+   ```
+   ```bash
+   install -m 644 /home/flatmeta/web/flatmeta.io/private/flatmeta/deploy/out/production/nodejs-app.conf /home/flatmeta/conf/web/flatmeta.io/nodejs/nodejs-app.conf
+   ```
+   ```bash
+   install -m 644 /home/flatmeta/web/staging.flatmeta.io/private/flatmeta/deploy/out/staging/nodejs-app.conf /home/flatmeta/conf/web/staging.flatmeta.io/nodejs/nodejs-app.conf
+   ```
+   ```bash
+   v-change-web-domain-proxy-tpl flatmeta flatmeta.io NodeJS && v-change-web-domain-proxy-tpl flatmeta staging.flatmeta.io NodeJS
+   ```
+   ```bash
+   nginx -t && systemctl reload nginx
+   ```
+   The `diff` should show only the new `location` lines at the end. If it shows more, keep your installed file and paste just those lines at its end. On Hestia versions without the include, put the lines in `/home/flatmeta/conf/web/<domain>/nginx.conf_flatmeta` and `nginx.ssl.conf_flatmeta` instead.
+3. **Check** (expect `text/plain` and a 200, even with no `llms.txt` in `public_html`):
+   ```bash
+   curl -sI https://www.flatmeta.io/llms.txt | head -n 5
+   ```
 
 ## Usercontent origin (custom HTML)
 

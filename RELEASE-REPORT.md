@@ -8,7 +8,147 @@ Branch `v2`, commits `9a5fe4d`…`9dcc782` on top of G1–G6. Every task in `tas
 
 
 
-## Automatic production deploys (12 Nov 2026)
+## Auto-deploy from cron, staging and production (12 Nov 2026)
+
+Both checkouts on cp2 now deploy themselves, like SiteRoll. A cron job runs `scripts/auto-deploy.sh --cron` every 2 minutes as `najamussaqib`. When `v2` moves:
+- **Staging** deploys the new commit once its GitHub checks pass.
+- **Production** deploys the same commit once it has also been **live and healthy on staging for 10 minutes with a passing smoke test**.
+
+Nothing deploys until `AUTO_DEPLOY=true` is in that checkout's `.env`. The full guide is `docs/deploy/auto-deploy.md`.
+
+**What a tick does:**
+1. Takes a `flock` lock. CI's staging SSH job uses the same lock, so the two never deploy at once.
+2. Runs a daily database backup if the last one is older than 24 h; 7 days are kept.
+3. Stops if `AUTO_DEPLOY` isn't `true`.
+4. `git fetch`; stops if the tip is already live.
+5. Skips a commit listed in `logs/failed-shas`; failed commits are never retried automatically.
+6. Checks the commit's GitHub checks through the unauthenticated API (the repo is public):
+   - pending: waits for the next tick;
+   - failed: records the commit as failed.
+7. Production only: needs `~/flatmeta-deploy-state/staging-ok-<sha>` (smoke passed, healthy, live for at least 10 min).
+8. Runs `scripts/deploy.sh <env> --auto`:
+   - `pg_dump` first (no backup, no deploy);
+   - build, expand-only migrations, switch, `pm2 reload`;
+   - health checks on web `/` and API `/v1/me` (200 JSON, local ports, up to 60 s);
+   - HTTP smoke test.
+9. **On any failure:** switches back to the previous release and reloads, records the commit in `logs/failed-shas`, and logs why, with the backup path and the `pg_restore` command. The database is not rolled back.
+10. **Emails the admins** about every production deploy (commit, subject, duration) and every rollback on either environment (failing step, last 40 log lines). No secrets go into emails or logs.
+
+**By hand** (in the checkout; production still asks you to type `production`):
+- `bash scripts/auto-deploy.sh`: deploys the tip now, even a commit that failed before.
+- `--sha <commit>`: deploys one commit.
+- `rollback [sha]`: goes back to the previous release, or to one of the 5 kept releases.
+- `status`: shows what is live, the tip, failed commits and the staging verdicts.
+
+**Logs:**
+- `logs/deploy.log`: timestamped, build output included.
+- `logs/runs/`: one file per deploy.
+
+**Also fixed: static `.txt` files in `public_html`.** Hestia serves `.txt` and `.xml` from `public_html` before the app, so a deleted `llms.txt` gave nginx's 404. `deploy/hestia/nodejs-app.conf` now proxies these to the app:
+- `/llms.txt`
+- `/llms-full.txt`
+- `/robots.txt`
+- `/sitemap-*.xml`
+
+`/sitemap.xml` stays the insights automation's static file, which robots.txt lists. Installing the change needs root (step 6 below).
+
+**Tests:**
+- `apps/api/test/auto-deploy.test.ts` (13 tests). Each runs a real git origin in a temp dir with a fake deploy, health check, `pg_dump` and GitHub API, and covers:
+  - `AUTO_DEPLOY=false`;
+  - the branch not moving;
+  - the lock;
+  - `failed-shas` skip, and the manual override of it;
+  - CI pending, failed and success;
+  - our own deploy jobs ignored;
+  - staging verdicts;
+  - the production gate (no verdict, under 10 min, staging failed, smoke off, stale);
+  - rollback.
+- `apps/api/test/deploy-guard.test.ts` (7 tests).
+
+**What changed for the earlier CI production job:** it still exists, but cron is now the production path. **Leave the `PROD_DEPLOY_*` secrets unset**, because that job doesn't wait for the 10-minute staging gate. The section below is kept for reference only.
+
+### One-time setup on cp2
+
+Run these as **najamussaqib**, except step 6.
+
+1. **Get the new scripts onto both checkouts.**
+   - Staging gets them with the next CI deploy of `v2`.
+   - Production needs one manual deploy (you type `production`):
+     ```bash
+     cd /home/flatmeta/web/flatmeta.io/private/flatmeta && bash scripts/deploy.sh production
+     ```
+2. **Check `pg_dump`, and create the shared state folder:**
+   ```bash
+   pg_dump --version && mkdir -p ~/flatmeta-deploy-state && chmod 700 ~/flatmeta-deploy-state
+   ```
+3. **Staging `.env`** (`/home/flatmeta/web/staging.flatmeta.io/private/flatmeta/.env`), add:
+   ```bash
+   AUTO_DEPLOY=true
+   DEPLOY_BRANCH=v2
+   REQUIRE_CI=true
+   HEALTH_URLS="http://127.0.0.1:3200/ http://127.0.0.1:3201/v1/me"
+   ```
+4. **Production `.env`** (`/home/flatmeta/web/flatmeta.io/private/flatmeta/.env`), add:
+   ```bash
+   AUTO_DEPLOY=true
+   DEPLOY_BRANCH=v2
+   REQUIRE_CI=true
+   HEALTH_URLS="http://127.0.0.1:3250/ http://127.0.0.1:3251/v1/me"
+   ADMIN_EMAILS=you@example.com
+   ```
+   `ADMIN_EMAILS` is optional; admin users in the database get the emails anyway.
+5. **Cron** (`crontab -e` as najamussaqib):
+   ```cron
+   */2 * * * * bash /home/flatmeta/web/staging.flatmeta.io/private/flatmeta/scripts/auto-deploy.sh --cron
+   */2 * * * * bash /home/flatmeta/web/flatmeta.io/private/flatmeta/scripts/auto-deploy.sh --cron
+   ```
+   Check:
+   ```bash
+   bash /home/flatmeta/web/flatmeta.io/private/flatmeta/scripts/auto-deploy.sh status
+   ```
+6. **nginx, as root**, so `/llms.txt`, `/robots.txt` and `/sitemap-*.xml` always reach the app:
+   1. As najamussaqib, render the include file for each checkout:
+      ```bash
+      cd /home/flatmeta/web/flatmeta.io/private/flatmeta && node scripts/new-instance.mjs production --nginx-only
+      ```
+      ```bash
+      cd /home/flatmeta/web/staging.flatmeta.io/private/flatmeta && node scripts/new-instance.mjs staging --nginx-only
+      ```
+   2. As root, confirm the include path:
+      ```bash
+      grep -rn "nodejs-app" /usr/local/hestia/data/templates/web/nginx/
+      ```
+   3. As root, compare. The diff should show only the new `location` lines at the end:
+      ```bash
+      diff /home/flatmeta/conf/web/flatmeta.io/nodejs/nodejs-app.conf /home/flatmeta/web/flatmeta.io/private/flatmeta/deploy/out/production/nodejs-app.conf
+      ```
+   4. As root, install both files:
+      ```bash
+      install -m 644 /home/flatmeta/web/flatmeta.io/private/flatmeta/deploy/out/production/nodejs-app.conf /home/flatmeta/conf/web/flatmeta.io/nodejs/nodejs-app.conf
+      ```
+      ```bash
+      install -m 644 /home/flatmeta/web/staging.flatmeta.io/private/flatmeta/deploy/out/staging/nodejs-app.conf /home/flatmeta/conf/web/staging.flatmeta.io/nodejs/nodejs-app.conf
+      ```
+   5. As root, re-apply the template and reload nginx:
+      ```bash
+      v-change-web-domain-proxy-tpl flatmeta flatmeta.io NodeJS && v-change-web-domain-proxy-tpl flatmeta staging.flatmeta.io NodeJS
+      ```
+      ```bash
+      nginx -t && systemctl reload nginx
+      ```
+   6. Check. Expect a 200 with `text/plain`, even with no `llms.txt` in `public_html`:
+      ```bash
+      curl -sI https://www.flatmeta.io/llms.txt | head -n 5
+      ```
+7. **If the staging CI key has a forced command** in `authorized_keys`, change it to:
+   ```text
+   cd … && bash scripts/deploy.sh staging --ci v2
+   ```
+   That form waits for a running cron deploy instead of failing.
+
+**Pause** either environment with `AUTO_DEPLOY=false` in its `.env`; the next tick only takes the daily backup.
+
+## Automatic production deploys by CI over SSH (12 Nov 2026, superseded by the cron section above)
 
 Production can now deploy itself after staging passes. It stays off until you do the one-time setup below.
 
