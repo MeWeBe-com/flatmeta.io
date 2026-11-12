@@ -289,6 +289,8 @@ export const plots = pgTable(
     likesCount: integer('likes_count').notNull().default(0),
     visitsCount: integer('visits_count').notNull().default(0),
     guestbookCount: integer('guestbook_count').notNull().default(0),
+    // H3: visitors may sign the guestbook only on owned land, and only while its owner keeps it open.
+    guestbookOpen: boolean('guestbook_open').notNull().default(true),
     spotlightUntil: ts('spotlight_until'),
     beaconUntil: ts('beacon_until'),
     brokenLinks: jsonb('broken_links').$type<string[]>().notNull().default([]),

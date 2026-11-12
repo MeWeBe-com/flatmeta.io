@@ -10,7 +10,7 @@ import type { GameResult, GuestbookEntry } from '@/lib/types';
 import { useGame, useSession } from '../providers';
 import { Avatar, Spinner } from '../ui';
 
-export function Guestbook({ plotId, canModerate }: { plotId: string; canModerate: boolean }) {
+export function Guestbook({ plotId, canModerate, open = true }: { plotId: string; canModerate: boolean; open?: boolean }) {
   const [entries, setEntries] = useState<GuestbookEntry[] | null>(null);
   const [next, setNext] = useState<number | null>(null);
   const [body, setBody] = useState('');
@@ -50,10 +50,14 @@ export function Guestbook({ plotId, canModerate }: { plotId: string; canModerate
   return (
     <section className="surface p-5" aria-labelledby="gb">
       <h2 id="gb" className="text-lg font-bold mb-3">{t('plot.guestbook')}</h2>
+      {!open ? (
+        <p className="text-sm muted mb-4" data-testid="guestbook-closed">This guestbook is closed.</p>
+      ) : (
       <div className="flex gap-2 mb-4">
         <input className="input" maxLength={280} value={body} onChange={(e) => setBody(e.target.value)} placeholder={me.user ? 'Leave a friendly note…' : 'Sign in to leave a note'} onFocus={() => !me.user && openSignIn('Sign in to sign the guestbook.')} onKeyDown={(e) => e.key === 'Enter' && body.trim() && void submit()} />
         <button className="btn-primary" disabled={busy || !body.trim()} onClick={() => void submit()}>{busy ? <Spinner /> : 'Sign'}</button>
       </div>
+      )}
       {entries === null ? (
         <div className="skeleton h-16" />
       ) : entries.length === 0 ? (

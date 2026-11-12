@@ -1,3 +1,4 @@
+import { audit } from '../lib/audit.js';
 import { visibleLogo } from '../companies/logos.js';
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
 import { publicShowcase } from '../lib/visibility.js';
@@ -29,7 +30,7 @@ import { recordCustomHtmlVersion, reportCustomHtml, type SavedHtml } from '../se
 import { MAX_CUSTOM_HTML, screenCustomHtml } from '../lib/html.js';
 import { afterClaim, assertCanActForOrg, createPlot, ensureCover, neighbours, ownedCells, quoteFor, type QuoteResult } from '../services/plots.js';
 import { createCheckout } from '../services/billing.js';
-import { canEditPlot, ownersFor, plotView } from './views.js';
+import { assertCanEditPlot, canEditPlot, ownersFor, plotView } from './views.js';
 
 export const RectSchema = z.object({
   minGx: z.number().int(),
@@ -57,6 +58,7 @@ export const PlotPatch = z.object({
   galleryMediaIds: z.array(z.uuid()).max(6).optional(),
   /** Remove one image from the gallery by its URL. */
   galleryRemove: z.string().max(500).optional(),
+  guestbookOpen: z.boolean().optional(),
   business: z
     .object({
       phone: z.string().max(40).optional(),
@@ -159,6 +161,7 @@ export async function applyPlotPatch(plot: Plot, patch: PlotPatchInput, actor: {
     set.coverImageUrl = m.url;
     set.thumbUrl = m.thumbUrl;
   }
+  if (patch.guestbookOpen !== undefined) set.guestbookOpen = patch.guestbookOpen;
   if (patch.galleryRemove) set.gallery = (plot.gallery ?? []).filter((u) => u !== patch.galleryRemove);
   if (patch.galleryMediaIds) {
     const urls: string[] = [];
@@ -192,6 +195,8 @@ export async function applyPlotPatch(plot: Plot, patch: PlotPatchInput, actor: {
     customHtml = await recordCustomHtmlVersion(updated!, set.customHtml ?? null, actor, htmlNotes);
     [updated] = await db.select().from(schema.plots).where(eq(schema.plots.id, plot.id));
   }
+  // H3: every content change is recorded: who, which plot, which fields.
+  await audit(actor.id || null, 'plot.edit', 'plot', plot.id, { fields: Object.keys(patch).filter((k) => (patch as Record<string, unknown>)[k] !== undefined) });
   const game = actor.id ? await recordAction(actor.id, 'edit_plot', { ref: plot.id, noXp: true }) : null;
   return { plot: updated!, game, ...(customHtml ? { customHtml } : {}) };
 }
@@ -240,6 +245,7 @@ export async function claimFreeLand(user: User, q: QuoteResult, title: string, o
 }
 
 export async function publishPlot(plot: Plot, actorId: string): Promise<{ plot: Plot; game: GameResult | null; blocked?: string }> {
+  await audit(actorId, 'plot.publish', 'plot', plot.id);
   const text = [plot.title, plot.tagline, plot.descriptionMd, ...(plot.links ?? []).map((l) => `${l.label} ${l.url}`)].filter(Boolean).join('\n');
   const mod = await checkContent('plot', plot.id, text);
   if (mod.status === 'flagged') {
@@ -528,7 +534,7 @@ export default async function plotRoutes(app: App) {
       await dailyCap(user.id, 'plot-edit', 300, 'plot edits');
       const plot = await loadPlot(req.params.id);
       if (!plot) throw notFound('Plot');
-      if (!(await canEditPlot(user, plot))) throw forbidden('You can only edit your own plots');
+      await assertCanEditPlot(user, plot);
       const res = await applyPlotPatch(plot, req.body, user);
       return { plot: await viewFor(res.plot, user), game: res.game, customHtml: res.customHtml ?? null };
     },
@@ -541,7 +547,7 @@ export default async function plotRoutes(app: App) {
       const user = requireUser(req);
       const plot = await loadPlot(req.params.id);
       if (!plot) throw notFound('Plot');
-      if (!(await canEditPlot(user, plot))) throw forbidden();
+      await assertCanEditPlot(user, plot);
       if (plot.status !== 'active') throw badRequest('Only active plots can be published');
       const res = await publishPlot(plot, user.id);
       if (res.blocked) throw badRequest(res.blocked);
@@ -559,7 +565,7 @@ export default async function plotRoutes(app: App) {
       const user = requireUser(req);
       const plot = await loadPlot(req.params.id);
       if (!plot) throw notFound('Plot');
-      if (!(await canEditPlot(user, plot))) throw forbidden();
+      await assertCanEditPlot(user, plot);
       await dailyCap(user.id, 'upload', 60, 'image uploads');
       const file = await req.file();
       if (!file) throw badRequest('Attach an image in the "file" field');
@@ -574,6 +580,7 @@ export default async function plotRoutes(app: App) {
         const gallery = [...(plot.gallery ?? []), img.url].slice(-6);
         [updated] = (await db.update(schema.plots).set({ gallery, lastEditedAt: new Date() }).where(eq(schema.plots.id, plot.id)).returning()) as [Plot];
       }
+      await audit(user.id, 'plot.upload', 'plot', plot.id, { use: req.query.use, media: img.id });
       return { media: img, plot: await viewFor(updated, user) };
     },
   );
@@ -689,6 +696,9 @@ export default async function plotRoutes(app: App) {
       const user = requireUser(req);
       const plot = await loadPlot(req.params.id);
       if (!plot) throw notFound('Plot');
+      // H3: visitors can't place anything on land that isn't owned; owners can close their guestbook.
+      if (plot.kind === 'showcase' || plot.status !== 'active' || (!plot.ownerUserId && !plot.ownerOrgId)) throw forbidden('This land has no guestbook: it isn’t owned by anyone yet.');
+      if (!plot.guestbookOpen) throw forbidden('The owner has closed this guestbook.');
       const body = stripText(req.body.body, 280);
       if (!body) throw badRequest('Write something first');
       const [entry] = await db.insert(schema.guestbookEntries).values({ plotId: plot.id, userId: user.id, body }).returning();

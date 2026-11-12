@@ -1,3 +1,4 @@
+import { audit } from '../lib/audit.js';
 import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { App } from '../app.js';
@@ -9,7 +10,7 @@ import { stripText } from '../lib/markdown.js';
 import { heuristicModeration } from '../ai/moderation.js';
 import { OPEN_HOUSE_RULES, liveOpenHouses, peopleHereNow, rsvpState, upcomingFor } from '../services/open-houses.js';
 import { loadPlot } from './plots.js';
-import { canEditPlot } from './views.js';
+import { assertCanEditPlot } from './views.js';
 
 const tags = ['social'];
 
@@ -69,7 +70,7 @@ export default async function openHouseRoutes(app: App) {
       const user = requireUser(req);
       const plot = await loadPlot(req.params.id);
       if (!plot) throw notFound('Plot');
-      if (!(await canEditPlot(user, plot))) throw forbidden('Only the owner can schedule an open house');
+      await assertCanEditPlot(user, plot);
       if (plot.status !== 'active' || !plot.publishedAt) throw badRequest('Publish your plot before scheduling an open house.');
       await dailyCap(user.id, 'open-house', 10, 'open houses');
       const startsAt = new Date(req.body.startsAt);
@@ -83,6 +84,7 @@ export default async function openHouseRoutes(app: App) {
       if (upcoming.length >= OPEN_HOUSE_RULES.maxUpcomingPerPlot) throw conflict(`A plot can have ${OPEN_HOUSE_RULES.maxUpcomingPerPlot} upcoming open houses at most.`);
       if (upcoming.some((o) => o.startsAt < endsAt && o.endsAt > startsAt)) throw conflict('That overlaps another open house on this plot.');
       const [row] = await db.insert(schema.openHouses).values({ plotId: plot.id, title, startsAt, endsAt, createdBy: user.id }).returning();
+      await audit(user.id, 'plot.open_house', 'plot', plot.id, { openHouseId: row!.id });
       return reply.code(201).send({ openHouse: row });
     },
   );
@@ -95,8 +97,10 @@ export default async function openHouseRoutes(app: App) {
       const [oh] = await db.select().from(schema.openHouses).where(eq(schema.openHouses.id, req.params.id));
       if (!oh || oh.canceledAt) throw notFound('Open house');
       const plot = await loadPlot(oh.plotId);
-      if (!plot || !(await canEditPlot(user, plot))) throw forbidden();
+      if (!plot) throw forbidden();
+      await assertCanEditPlot(user, plot);
       await db.update(schema.openHouses).set({ canceledAt: new Date() }).where(eq(schema.openHouses.id, oh.id));
+      await audit(user.id, 'plot.open_house_cancel', 'plot', plot.id, { openHouseId: oh.id });
       return { ok: true };
     },
   );

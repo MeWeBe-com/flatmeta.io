@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { App } from '../app.js';
 import { db, schema } from '../db/client.js';
 import { requireUser } from '../lib/auth.js';
-import { badRequest, forbidden, notFound, paymentRequired } from '../lib/errors.js';
+import { badRequest, notFound, paymentRequired } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
 import { consumeAiCredit } from '../lib/users.js';
 import { plotIdeas, runDesign } from '../ai/designer.js';
@@ -11,7 +11,7 @@ import { suggestPlots } from '../ai/suggest.js';
 import { textProvider } from '../config.js';
 import { mergeResults, recordAction } from '../game/engine.js';
 import { applyPlotPatch, loadPlot, viewFor } from './plots.js';
-import { canEditPlot } from './views.js';
+import { assertCanEditPlot } from './views.js';
 
 export default async function aiRoutes(app: App) {
   const aiLimit = { rateLimit: { max: 20, timeWindow: '1 hour' } };
@@ -30,7 +30,7 @@ export default async function aiRoutes(app: App) {
       const user = requireUser(req);
       const plot = await loadPlot(req.body.plotId);
       if (!plot) throw notFound('Plot');
-      if (!(await canEditPlot(user, plot))) throw forbidden();
+      await assertCanEditPlot(user, plot);
       if (!(await consumeAiCredit(user))) throw paymentRequired('You are out of AI designs this month. Get a Design Pack or upgrade to Plus.', 'credits');
       const [job] = await db.insert(schema.aiJobs).values({ userId: user.id, kind: 'design', status: 'running', input: { ...req.body }, provider: textProvider() }).returning();
       const jobId = job!.id;
@@ -65,7 +65,7 @@ export default async function aiRoutes(app: App) {
       if (!job || job.status !== 'done') throw badRequest('This design is not ready');
       const plot = await loadPlot(String(job.input.plotId));
       if (!plot) throw notFound('Plot');
-      if (!(await canEditPlot(user, plot))) throw forbidden();
+      await assertCanEditPlot(user, plot);
       type V = { title: string; tagline: string; descriptionMd: string; category: string; tags: string[]; theme: { primary: string; accent: string }; cta: { label: string } | null; image?: { mediaId: string } };
       const v = ((job.output as { variations?: V[] } | null)?.variations ?? [])[req.body.index];
       if (!v) throw badRequest('Unknown variation');

@@ -15,7 +15,7 @@ import { suggestPlots } from '../ai/suggest.js';
 import { top, BOARDS } from '../game/leaderboards.js';
 import { quoteFor } from '../services/plots.js';
 import { applyPlotPatch, loadPlot, PlotPatch, visiblePlot } from '../routes/plots.js';
-import { canEditPlot, ownersFor, plotView, type PlotView } from '../routes/views.js';
+import { editRefusal, ownersFor, plotView, type PlotView } from '../routes/views.js';
 
 const web = (p: string) => `${config.APP_URL.replace(/\/$/, '')}${p}`;
 const text = (value: unknown) => ({ content: [{ type: 'text' as const, text: typeof value === 'string' ? value : JSON.stringify(value, null, 2) }] });
@@ -209,7 +209,8 @@ export function createMcpServer(getUser: () => User | null): McpServer {
       const user = requireUser();
       const plot = await loadPlot(id);
       if (!plot) return fail('Plot not found');
-      if (!(await canEditPlot(user, plot))) return fail('You can only edit your own plots');
+      const why = await editRefusal(user, plot);
+      if (why) return fail(why);
       const res = await applyPlotPatch(plot, fields, user);
       return text({ ok: true, url: web(`/p/${res.plot.slug}`), moderation: res.plot.moderationStatus });
     },

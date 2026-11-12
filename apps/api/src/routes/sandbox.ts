@@ -4,7 +4,7 @@ import { config } from '../config.js';
 import { db, schema } from '../db/client.js';
 import { requireAdmin, requireUser } from '../lib/auth.js';
 import { dailyCap } from '../lib/caps.js';
-import { forbidden, notFound } from '../lib/errors.js';
+import { notFound } from '../lib/errors.js';
 import { sandboxHeaders, screenCustomHtml, wrapCustomHtml, MAX_CUSTOM_HTML } from '../lib/html.js';
 import {
   customHtmlGloballyDisabled,
@@ -19,7 +19,7 @@ import {
   storePreview,
 } from '../services/custom-html.js';
 import { applyPlotPatch, loadPlot, viewFor } from './plots.js';
-import { canEditPlot } from './views.js';
+import { assertCanEditPlot } from './views.js';
 import { eq } from 'drizzle-orm';
 
 /** Our own site origins (apex and www): the only pages allowed to frame owner content. */
@@ -90,7 +90,7 @@ export default async function sandboxRoutes(app: App) {
     const user = requireUser(req);
     const plot = await loadPlot(id);
     if (!plot) throw notFound('Plot');
-    if (!(await canEditPlot(user, plot))) throw forbidden('You can only edit your own plots');
+    await assertCanEditPlot(user, plot);
     return { user, plot };
   };
 

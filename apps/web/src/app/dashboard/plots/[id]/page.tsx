@@ -171,6 +171,10 @@ function Editor() {
                 {draft.customHtml && <CustomHtmlPreview html={draft.customHtml} />}
                 {me.user?.plan === 'free' && !me.orgs?.some((o) => o.plan !== 'free') && <p className="text-xs mt-2 text-[var(--color-gold)]">Custom HTML needs <a className="underline" href="/pricing">Plus or a business plan</a>.</p>}
               </details>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" className="size-4 accent-[var(--color-teal)]" checked={plot.guestbookOpen !== false} onChange={(e) => void save({ guestbookOpen: e.target.checked }, e.target.checked ? 'Guestbook opened' : 'Guestbook closed')} />
+                Visitors can sign my guestbook
+              </label>
               <button className="btn-primary" disabled={saving}>{saving ? <Spinner /> : <Save size={16} />} Save</button>
               <Ideas plotId={plot.id} />
             </form>

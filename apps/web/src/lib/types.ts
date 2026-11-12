@@ -56,6 +56,8 @@ export interface Plot {
   showcase: { brand: string; website: string; sector: string; kind: string; city: string; useCase: string; highlights: string[]; approved: boolean; source?: string | null; sourceUrl?: string | null; license?: string | null; logo?: { url: string; source: string; sourceUrl: string; license: string | null; author: string | null } | null } | null;
   moderationStatus: string;
   owner: Owner | null;
+  /** H3: visitors can sign only on owned land whose owner keeps the guestbook open. */
+  guestbookOpen?: boolean;
   hasCustomHtml?: boolean;
   /** Approved version on the usercontent origin (G8). */
   customHtmlUrl?: string;

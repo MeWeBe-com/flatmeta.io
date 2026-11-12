@@ -1,3 +1,4 @@
+import { forbidden } from '../lib/errors.js';
 import { visibleLogo } from '../companies/logos.js';
 import { customHtmlGloballyDisabledCached, plotSandboxUrl } from '../services/custom-html.js';
 import { and, eq, inArray } from 'drizzle-orm';
@@ -108,6 +109,7 @@ export function plotView(p: Plot, owner: OwnerView | null, extra: { likedByMe?: 
     likesCount: p.likesCount,
     visitsCount: p.visitsCount,
     guestbookCount: p.guestbookCount,
+    guestbookOpen: p.guestbookOpen && p.status === 'active' && p.kind !== 'showcase' && !!(p.ownerUserId || p.ownerOrgId),
     spotlight: !!p.spotlightUntil && p.spotlightUntil.getTime() > now,
     beacon: !!p.beaconUntil && p.beaconUntil.getTime() > now,
     spotlightUntil: p.spotlightUntil,
@@ -154,11 +156,37 @@ export async function orgRole(userId: string, orgId: string): Promise<string | n
   return m?.role ?? null;
 }
 
+/** Organisation roles that may edit the organisation's land: each is an explicit invite by its owner or admin. */
+export const ORG_EDIT_ROLES = ['owner', 'admin', 'editor'];
+
+/**
+ * Who may change a plot's content (H3), and why not. Admins: any plot. Reserved, showcase, company and unclaimed
+ * land: admins only, until a verified claim completes. Unpaid or released land: nobody but admins. Otherwise the
+ * current owner, or a member of the owning organisation with an edit role. Nobody else, ever.
+ */
+export async function editRefusal(user: User | null, plot: Plot): Promise<string | null> {
+  if (!user) return 'Sign in to edit your land.';
+  if (user.role === 'admin') return null;
+  if (plot.kind === 'showcase' || plot.status === 'showcase') {
+    const brand = plot.showcase?.brand ?? plot.title;
+    return `This land is reserved for ${brand}. Only FlatMeta admins can change it until the company completes its claim.`;
+  }
+  if (!plot.ownerUserId && !plot.ownerOrgId) return 'This land has no owner yet. Claim it to add content.';
+  if (plot.status === 'pending_payment') return 'Finish paying for this land before adding content to it.';
+  if (plot.status === 'released') return 'This land is no longer yours.';
+  if (plot.ownerOrgId) {
+    const role = await orgRole(user.id, plot.ownerOrgId);
+    return role && ORG_EDIT_ROLES.includes(role) ? null : 'Only the owner of this land (or people its organisation invited as editors) can change it.';
+  }
+  return plot.ownerUserId === user.id ? null : 'Only the owner of this land can change it.';
+}
+
 export async function canEditPlot(user: User | null, plot: Plot): Promise<boolean> {
-  if (!user) return false;
-  if (user.role === 'admin') return true;
-  if (plot.kind === 'showcase') return false;
-  if (plot.ownerUserId === user.id && !plot.ownerOrgId) return true;
-  if (plot.ownerOrgId) return (await orgRole(user.id, plot.ownerOrgId)) !== null;
-  return false;
+  return (await editRefusal(user, plot)) === null;
+}
+
+/** Throws 403 with a clear reason unless `user` may change this plot's content. */
+export async function assertCanEditPlot(user: User | null, plot: Plot): Promise<void> {
+  const why = await editRefusal(user, plot);
+  if (why) throw forbidden(why);
 }

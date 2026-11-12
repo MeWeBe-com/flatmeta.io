@@ -78,6 +78,13 @@
       "when": 1794470289494,
       "tag": "0010_company_register",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794471118070,
+      "tag": "0011_guestbook_open",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "plots" ADD COLUMN "guestbook_open" boolean DEFAULT true NOT NULL;

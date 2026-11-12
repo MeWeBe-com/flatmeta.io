@@ -11,7 +11,7 @@ import { badRequest, forbidden, notFound } from '../lib/errors.js';
 import { DEFAULT_TIERS, LANDMARK_PRICE_CENTS, PLANS, SUBSCRIPTION_PRICES, UPGRADES } from '../lib/pricing.js';
 import { createCheckout, createSubscriptionCheckout, fulfilOrder, handleStripeEvent, mockSubscribe, portalUrl, stripe } from '../services/billing.js';
 import { getPrices } from '../services/plots.js';
-import { canEditPlot, orgRole } from './views.js';
+import { assertCanEditPlot, orgRole } from './views.js';
 import { loadPlot } from './plots.js';
 
 const PLAN_FEATURES = {
@@ -86,7 +86,7 @@ export default async function billingRoutes(app: App) {
       const user = requireUser(req);
       const plot = await loadPlot(req.params.id);
       if (!plot) throw notFound('Plot');
-      if (!(await canEditPlot(user, plot))) throw forbidden();
+      await assertCanEditPlot(user, plot);
       if (plot.status !== 'active') throw badRequest('Only active plots can be upgraded');
       const u = UPGRADES[req.body.kind];
       const checkout = await createCheckout({

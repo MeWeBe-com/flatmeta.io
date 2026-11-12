@@ -208,7 +208,7 @@ export default async function PlotPage({ params }: Params) {
               </section>
             )}
 
-            <Guestbook plotId={p.id} canModerate={p.canEdit} />
+            <Guestbook plotId={p.id} canModerate={!!p.canEdit} open={p.guestbookOpen !== false} />
           </div>
 
           <aside className="space-y-4">
