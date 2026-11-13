@@ -6,6 +6,7 @@ import { Search } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { Country, Plot } from '@/lib/types';
 import { EmptyState, PlotGrid, Spinner, clsx } from '@/components/ui';
+import { ChipStrip } from '@/components/chip-strip';
 
 const TABS = [
   { key: 'trending', label: 'Trending', q: 'sort=trending' },
@@ -68,12 +69,15 @@ export function ExploreClient({ initial, countries }: { initial: Plot[]; countri
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row gap-3 md:items-center">
-        <div className="flex gap-1 overflow-x-auto p-1 surface rounded-full">
-          {TABS.map((t) => (
-            <button key={t.key} onClick={() => set('tab', t.key === 'trending' ? '' : t.key)} className={clsx('px-4 h-9 rounded-full text-sm whitespace-nowrap transition', tab === t.key ? 'bg-[var(--color-teal)] text-[#04141a] font-semibold' : 'muted hover:text-[var(--text)]')}>
-              {t.label}
-            </button>
-          ))}
+        {/* M6: the sort tabs and the categories are sideways strips on phones (snap, faded edges, the active one in view). */}
+        <div className="min-w-0 p-1 surface rounded-full">
+          <ChipStrip label="Sort" wrapFrom="never" current={tab} className="gap-1">
+            {TABS.map((t) => (
+              <button key={t.key} aria-pressed={tab === t.key} onClick={() => set('tab', t.key === 'trending' ? '' : t.key)} className={clsx('tap justify-center px-4 h-9 rounded-full text-sm whitespace-nowrap transition', tab === t.key ? 'bg-[var(--color-teal)] text-[#04141a] font-semibold' : 'muted hover:text-[var(--text)]')}>
+                {t.label}
+              </button>
+            ))}
+          </ChipStrip>
         </div>
         <form className="relative md:ml-auto md:w-72" onSubmit={(e) => { e.preventDefault(); set('q', q); }}>
           <Search size={16} className="absolute left-3 top-3 muted" />
@@ -86,11 +90,13 @@ export function ExploreClient({ initial, countries }: { initial: Plot[]; countri
           ))}
         </select>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <ChipStrip label="Categories" current={category}>
         {CATEGORIES.map((c) => (
-          <button key={c} onClick={() => set('category', category === c ? '' : c)} className={clsx('chip h-8 px-3 normal-case tracking-normal text-xs', category === c && 'chip-teal')}>{c}</button>
+          <button key={c} aria-pressed={category === c} onClick={() => set('category', category === c ? '' : c)} className={clsx('chip tap h-8 px-3 normal-case tracking-normal text-xs', category === c && 'chip-teal')}>
+            {c.charAt(0).toUpperCase() + c.slice(1)}
+          </button>
         ))}
-      </div>
+      </ChipStrip>
       {loading && !plots.length ? (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="skeleton aspect-[3/4]" />)}</div>
       ) : (

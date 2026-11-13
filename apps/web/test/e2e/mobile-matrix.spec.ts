@@ -49,7 +49,6 @@ type Check = 'hscroll' | 'offscreen' | 'covered' | 'tap' | 'text';
 const KNOWN: { task: string; page: string; check: Check; devices?: RegExp }[] = [
   // Baseline of 13 Nov 2026 (production build before the fixes); the task that fixes each one removes it.
   // WebKit also scrolls sideways at 320 px, 844x390 and on the iPad (the header and card rows are wider there).
-  ...(['hscroll', 'offscreen', 'tap', 'text'] as const).map((check) => ({ task: 'M6', page: 'explore', check })),
   ...(['hscroll', 'offscreen', 'tap', 'text'] as const).map((check) => ({ task: 'M11', page: 'pricing', check })),
 ];
 
