@@ -15,7 +15,8 @@ import { assertCanEditPlot, orgRole } from './views.js';
 import { loadPlot } from './plots.js';
 
 const PLAN_FEATURES = {
-  free: ['Free Homestead plot', 'Mini-page with links', `${PLANS.free.aiCredits} AI designs / month`, 'Quests, badges & leaderboards'],
+  // M11: the plan is called Free and costs $0; its features don't say "Free" a third time.
+  free: ['Your first plot of land', 'Mini-page with links', `${PLANS.free.aiCredits} AI designs / month`, 'Quests, badges & leaderboards'],
   plus: [`${PLANS.plus.aiCredits} AI designs / month`, 'Custom slug & animated frames', 'Visit analytics', `Up to ${PLANS.plus.maxPlots} plots`, '10% off land', 'Plus badge'],
   business: ['Verified business badge', 'Hours, offers, contact & booking', '"Open now" marker on the map', '1 Spotlight every month', `${PLANS.business.aiCredits} AI designs / month`, 'Plots up to 20×20, 3 seats', 'LocalBusiness rich results'],
   brand: ['Everything in Business', `Portfolio of up to ${PLANS.brand.maxPlots} plots`, 'Claim your showcase Landmark', 'API & MCP access', '10 seats, priority support', 'Campaign tools (coming soon)'],

@@ -51,11 +51,12 @@ export function PricingClient({ data }: { data: Plans }) {
     <div className="space-y-16">
       <div className="flex justify-center">
         <div className="surface rounded-full p-1 flex text-sm">
-          <button className={clsx('px-5 h-9 rounded-full', !yearly && 'bg-white/10 font-semibold')} onClick={() => setYearly(false)}>Monthly</button>
-          <button className={clsx('px-5 h-9 rounded-full', yearly && 'bg-white/10 font-semibold')} onClick={() => setYearly(true)}>Yearly <span className="text-[var(--color-teal)]">· 2 months free</span></button>
+          <button className={clsx('tap justify-center px-5 h-9 rounded-full', !yearly && 'bg-white/10 font-semibold')} aria-pressed={!yearly} onClick={() => setYearly(false)}>Monthly</button>
+          <button className={clsx('tap justify-center px-5 h-9 rounded-full', yearly && 'bg-white/10 font-semibold')} aria-pressed={yearly} onClick={() => setYearly(true)}>Yearly <span className="text-[var(--color-teal)] ml-1">· 2 months free</span></button>
         </div>
       </div>
-      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+      {/* minmax(0, 1fr): a long button label wraps inside its card instead of widening the page (M11). */}
+      <div className="grid grid-cols-[minmax(0,1fr)] md:grid-cols-2 xl:grid-cols-4 gap-4">
         {data.plans.map((p) => {
           const price = yearly ? p.year / 12 : p.month;
           const highlight = p.key === 'business';
@@ -65,8 +66,9 @@ export function PricingClient({ data }: { data: Plans }) {
               <div className="text-sm muted">{p.for}</div>
               <h3 className="text-2xl font-bold mt-1">{p.name}</h3>
               <div className="mt-4 flex items-end gap-1">
-                <span className="font-display text-4xl font-bold">{p.month === 0 ? 'Free' : usd(Math.round(price))}</span>
-                {p.month > 0 && <span className="muted mb-1">/mo</span>}
+                {/* M11: the Free plan's heading already says "Free": its price reads "$0 forever", not "Free" again. */}
+                <span className="font-display text-4xl font-bold" data-testid="plan-price">{usd(p.month === 0 ? 0 : Math.round(price))}</span>
+                <span className="muted mb-1">{p.month === 0 ? 'forever' : '/mo'}</span>
               </div>
               {p.month > 0 && yearly && <div className="text-xs muted">billed {usd(p.year)} yearly</div>}
               <ul className="mt-6 space-y-2 text-sm flex-1">
@@ -75,11 +77,11 @@ export function PricingClient({ data }: { data: Plans }) {
                 ))}
               </ul>
               {p.key === 'free' ? (
-                <Link href="/?claim" className="btn-ghost mt-6">Claim your free plot</Link>
+                <Link href="/?claim" className="btn-ghost mt-6">Claim your first plot</Link>
               ) : !PAID_CHECKOUT ? (
                 <ComingSoon compact className="mt-6" text={`${p.name} is coming soon.`} />
               ) : (
-                <button className={clsx('mt-6', highlight ? 'btn-primary' : 'btn-ghost')} disabled={busy === p.key} onClick={() => void subscribe(p.key, p.org)}>
+                <button className={clsx('mt-6 whitespace-normal text-center h-auto min-h-11 py-2', highlight ? 'btn-primary' : 'btn-ghost')} disabled={busy === p.key} onClick={() => void subscribe(p.key, p.org)}>
                   {busy === p.key && <Spinner />} {p.org ? `Get ${p.name} for my organisation` : `Get ${p.name}`}
                 </button>
               )}
