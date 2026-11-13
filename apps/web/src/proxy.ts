@@ -7,6 +7,9 @@ const CONNECT = originsOf([
   process.env.NEXT_PUBLIC_MAP_GLYPHS_URL || 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
   process.env.NEXT_PUBLIC_MAP_STYLE_URL,
   process.env.NEXT_PUBLIC_WS_URL,
+  // M9: the live socket's own origin (wss://www.flatmeta.io). 'self' covers it in current browsers, but older Safari
+  // doesn't match ws:/wss: against 'self'.
+  process.env.NEXT_PUBLIC_APP_URL?.replace(/^http/, 'ws'),
   process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN ? 'https://plausible.io' : undefined,
 ]);
 const FRAMES = originsOf([

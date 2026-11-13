@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { liveSocket } from '@/lib/live-socket';
 import { EMOTE_ICONS, type Emote } from '@/lib/emotes';
 import { captureReferral } from '@/lib/referral';
 import { api, post } from '@/lib/api';
@@ -285,7 +286,7 @@ function LiveProvider({ children }: { children: ReactNode }) {
   const lastView = useRef<string | null>(null);
   const lastMove = useRef<string | null>(null);
   const [you, setYou] = useState<You | null>(null);
-  const { me, setUnread } = useSession();
+  const { me, setUnread, loading: sessionLoading } = useSession();
   const { toast } = useGame();
   const userId = me.user?.id;
   // The socket handler is created once per connection: read the latest callbacks through a ref.
@@ -308,62 +309,58 @@ function LiveProvider({ children }: { children: ReactNode }) {
       .catch(() => undefined);
   }, []);
 
+  // M9: one socket per tab (lib/live-socket.ts), opened once the session is known; a new identity (sign in / out)
+  // replaces it so notifications reach the right socket. Backoff with jitter, paused while the tab is hidden.
   useEffect(() => {
-    let ws: WebSocket | null = null;
-    let stop = false;
-    let retry = 1000;
-    let ping: ReturnType<typeof setInterval> | null = null;
+    if (sessionLoading) return;
     const url = WS_URL || `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/v1/live`;
-    const connect = () => {
-      if (stop) return;
-      ws = new WebSocket(url);
-      wsRef.current = ws;
-      ws.onopen = () => {
+    const sock = liveSocket(url);
+    let ping: ReturnType<typeof setInterval> | null = null;
+    sock.start(userId ?? 'guest', {
+      onOpen: (ws) => {
+        wsRef.current = ws;
         setConnected(true);
-        retry = 1000;
         // Re-announce where I am and what I'm looking at after every (re)connect.
-        if (lastMove.current) ws?.send(lastMove.current);
-        if (lastView.current) ws?.send(lastView.current);
-        ping = setInterval(() => ws?.readyState === 1 && ws.send('{"type":"ping"}'), 25_000);
-      };
-      ws.onmessage = (ev) => {
+        if (lastMove.current) ws.send(lastMove.current);
+        if (lastView.current) ws.send(lastView.current);
+        if (ping) clearInterval(ping);
+        ping = setInterval(() => sock.send('{"type":"ping"}'), 25_000);
+      },
+      onMessage: (data) => {
         try {
-          const msg = JSON.parse(ev.data as string) as { type: string; online?: number; activity?: Activity; you?: You; avatars?: Peer[]; message?: ChatMsg & { code?: string }; code?: string; notification?: AppNotification };
-          if ((msg.type === 'welcome' || msg.type === 'you') && msg.you) setYou(msg.you);
-          if (msg.type === 'notification' && msg.notification) onNote.current(msg.notification);
-          if (msg.type === 'avatars' && msg.avatars) {
-            for (const fn of peerListeners.current) fn(msg.avatars);
+            const msg = JSON.parse(data) as { type: string; online?: number; activity?: Activity; you?: You; avatars?: Peer[]; message?: ChatMsg & { code?: string }; code?: string; notification?: AppNotification };
+            if ((msg.type === 'welcome' || msg.type === 'you') && msg.you) setYou(msg.you);
+            if (msg.type === 'notification' && msg.notification) onNote.current(msg.notification);
+            if (msg.type === 'avatars' && msg.avatars) {
+              for (const fn of peerListeners.current) fn(msg.avatars);
+            }
+            if (msg.type === 'chat' && msg.message) for (const fn of chatListeners.current) fn(msg.message);
+            if (msg.type === 'emote') {
+              const e = msg as unknown as { id: string; userId: string | null; emote: Emote };
+              if (e.emote in EMOTE_ICONS) for (const fn of emoteListeners.current) fn(e);
+            }
+            if (msg.type === 'error') for (const fn of errorListeners.current) fn(String((msg as unknown as { message?: string }).message ?? 'Something went wrong'), msg.code ?? 'error');
+            if (msg.type === 'presence' && typeof msg.online === 'number') setOnline(msg.online);
+            if (msg.type === 'activity' && msg.activity) {
+              setActivity((list) => [msg.activity!, ...list.filter((a) => a.id !== msg.activity!.id)].slice(0, 30));
+              for (const fn of listeners.current) fn(msg.activity);
+            }
+          } catch {
+            /* ignore */
           }
-          if (msg.type === 'chat' && msg.message) for (const fn of chatListeners.current) fn(msg.message);
-          if (msg.type === 'emote') {
-            const e = msg as unknown as { id: string; userId: string | null; emote: Emote };
-            if (e.emote in EMOTE_ICONS) for (const fn of emoteListeners.current) fn(e);
-          }
-          if (msg.type === 'error') for (const fn of errorListeners.current) fn(String((msg as unknown as { message?: string }).message ?? 'Something went wrong'), msg.code ?? 'error');
-          if (msg.type === 'presence' && typeof msg.online === 'number') setOnline(msg.online);
-          if (msg.type === 'activity' && msg.activity) {
-            setActivity((list) => [msg.activity!, ...list.filter((a) => a.id !== msg.activity!.id)].slice(0, 30));
-            for (const fn of listeners.current) fn(msg.activity);
-          }
-        } catch {
-          /* ignore */
-        }
-      };
-      ws.onclose = () => {
+      },
+      onClose: () => {
+        wsRef.current = null;
         setConnected(false);
         if (ping) clearInterval(ping);
-        if (!stop) setTimeout(connect, (retry = Math.min(retry * 2, 30_000)));
-      };
-    };
-    connect();
+      },
+    });
     return () => {
-      stop = true;
       if (ping) clearInterval(ping);
+      sock.stop();
       wsRef.current = null;
-      ws?.close();
     };
-    // Reconnect when the user signs in/out so notifications reach the right socket.
-  }, [userId]);
+  }, [userId, sessionLoading]);
 
   const value = useMemo<LiveCtx>(() => {
     const sendRaw = (text: string) => {

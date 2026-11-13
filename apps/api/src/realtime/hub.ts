@@ -341,7 +341,10 @@ export function registerHub(app: App) {
     return h;
   });
 
-  app.get('/v1/live', { websocket: true, schema: { hide: true } }, (socket, req) => {
+  // M9: the handshake has its own counter. It used to share the global per-IP API budget with the page's own
+  // traffic (plots on every map move…), so a busy page's reconnects were refused with 429, every retry too. 60 per
+  // minute still stops a runaway reconnect loop.
+  app.get('/v1/live', { websocket: true, schema: { hide: true }, config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, (socket, req) => {
     const id = randomUUID();
     const n = 1000 + Math.floor(Math.random() * 9000);
     const conn: Conn = {
