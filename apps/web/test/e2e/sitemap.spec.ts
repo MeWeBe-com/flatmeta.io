@@ -48,7 +48,9 @@ test('the insights sitemap lists the articles from the insights folder, with the
   const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
   // CI and the local stack point INSIGHTS_DIR at test/fixtures/insights.
   test.skip(!urls.length, 'INSIGHTS_DIR is not set for this server');
-  expect(urls).toEqual(expect.arrayContaining(['/insights/', '/insights/2026-11-12-local-shops-on-a-world-map.html']));
+  // The hub is the app's /insights (S5); the automation's old /insights/ index redirects there and is not listed.
+  expect(urls).toEqual(expect.arrayContaining(['/insights', '/insights/2026-11-12-local-shops-on-a-world-map.html']));
+  expect(urls).not.toContain('/insights/');
   expect(xml).toMatch(/<lastmod>\d{4}-\d\d-\d\dT[^<]+<\/lastmod>/);
 });
 

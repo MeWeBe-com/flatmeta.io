@@ -18,7 +18,43 @@ export interface InsightArticle {
   ogImage: string | null;
   /** Links to FlatMeta's own pages (not other articles, not the home page alone). */
   internalLinks: number;
+  /** The article's date (from its file name, YYYY-MM-DD-…; else its modification time). */
+  date: string;
 }
+
+/**
+ * S5: the rules every article must follow (docs/positioning.md, "Rules for every insights article"). Returns what an
+ * article breaks, in plain words; empty when it follows them all. The admin Insights page lists these.
+ */
+export const INSIGHT_RULES = {
+  titleMax: 60,
+  descriptionMin: 50,
+  descriptionMax: 160,
+  lang: 'en',
+  minInternalLinks: 2,
+  offTopic: /\b(metaverse|virtual reality|vr|headsets?|nfts?|blockchain|crypto(currency)?|digital twin)\b/i,
+};
+export function articleProblems(a: Pick<InsightArticle, 'title' | 'description' | 'lang' | 'ogImage' | 'internalLinks'>): string[] {
+  const r = INSIGHT_RULES;
+  const out: string[] = [];
+  if (!a.title) out.push('no <title>');
+  else if (a.title.length > r.titleMax) out.push(`title is ${a.title.length} characters (at most ${r.titleMax})`);
+  if (!a.description) out.push('no meta description');
+  else if (a.description.length < r.descriptionMin || a.description.length > r.descriptionMax) out.push(`description is ${a.description.length} characters (${r.descriptionMin}–${r.descriptionMax})`);
+  if (a.lang !== r.lang) out.push(`<html lang> is ${a.lang ? `"${a.lang}"` : 'missing'} (must be "${r.lang}")`);
+  if (!a.ogImage) out.push('no og:image');
+  else if (!/^https:\/\//.test(a.ogImage)) out.push('og:image is not an absolute https URL');
+  if (a.internalLinks < r.minInternalLinks) out.push(`${a.internalLinks} link${a.internalLinks === 1 ? '' : 's'} to FlatMeta pages (at least ${r.minInternalLinks})`);
+  const topic = `${a.title ?? ''} ${a.description ?? ''}`.match(r.offTopic);
+  if (topic) out.push(`off-topic for FlatMeta ("${topic[0]}")`);
+  return out;
+}
+
+/** S5: the articles for the /insights hub: every article (not the automation's own index page), newest first. */
+export async function insightList(dir?: string) {
+  return (await insightArticles(dir)).filter((a) => a.path !== '/insights/').sort((x, y) => (x.date < y.date ? 1 : x.date > y.date ? -1 : x.path < y.path ? 1 : -1));
+}
+export const INSIGHTS_PER_PAGE = 20;
 
 const TTL = 10 * 60_000;
 let cache: { at: number; dir: string; list: InsightArticle[] } | null = null;
@@ -61,7 +97,8 @@ export async function insightArticles(dir = process.env.INSIGHTS_DIR ?? ''): Pro
     try {
       const [st, html] = await Promise.all([stat(file), readFile(file, 'utf8')]);
       if (!st.isFile()) continue;
-      list.push({ path: name === 'index.html' ? '/insights/' : `/insights/${name}`, lastmod: st.mtime.toISOString(), ...parseArticle(html) });
+      const date = /^(\d{4}-\d{2}-\d{2})-/.exec(name)?.[1] ?? st.mtime.toISOString().slice(0, 10);
+      list.push({ path: name === 'index.html' ? '/insights/' : `/insights/${name}`, lastmod: st.mtime.toISOString(), date, ...parseArticle(html) });
     } catch {
       /* unreadable file: skip it */
     }

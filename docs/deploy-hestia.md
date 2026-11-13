@@ -142,6 +142,8 @@ Hestia's NodeJS template serves `.txt` and `.xml` straight from `public_html`, s
 - `/robots.txt`
 - `/sitemap.xml` (the app's sitemap index: pages, plots, companies, insights)
 - `/sitemap-*.xml` (including `/sitemap-insights.xml`)
+- `/insights` (the insights hub is the app's page, S5; `/insights/` redirects to it; the articles under `/insights/*.html` stay static)
+- `/indexnow-key.txt` (S2) and `/api/v1/live` (M9, the live socket with a 1-hour read timeout)
 
 The insights articles stay static files in `public_html/insights/`; the app lists them in `/sitemap-insights.xml` by reading that folder (`INSIGHTS_DIR` in the production `.env`, e.g. `INSIGHTS_DIR=/home/flatmeta/web/flatmeta.io/public_html/insights`; the folder must be readable by the app user). A `public_html/sitemap.xml` written by the insights automation is never served once the include is installed; move it aside (step 3).
 

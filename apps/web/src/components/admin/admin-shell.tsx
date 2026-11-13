@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, Flag, Gavel, Map, Receipt, ScrollText, Star, Store, Tags, Users, MapPin, Code2, LineChart, Building2 } from 'lucide-react';
+import { BarChart3, Flag, Gavel, Map, Receipt, ScrollText, Star, Store, Tags, Users, MapPin, Code2, LineChart, Building2, Newspaper } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useSession } from '../providers';
@@ -23,6 +23,7 @@ const NAV = [
   { href: '/admin/orders', label: 'Orders', icon: Receipt },
   { href: '/admin/marketplace', label: 'Marketplace', icon: Store },
   { href: '/admin/pricing', label: 'Pricing', icon: Tags },
+  { href: '/admin/insights', label: 'Insights check', icon: Newspaper },
   { href: '/admin/audit', label: 'Audit log', icon: ScrollText },
 ];
 
