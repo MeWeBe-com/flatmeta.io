@@ -15,7 +15,7 @@ import { Modal, NamedIcon, Spinner, clsx } from './ui';
 function Toasts() {
   const { toasts, dismiss } = useGame();
   return (
-    <div className="fixed z-[70] top-20 right-4 left-4 sm:left-auto sm:w-80 flex flex-col gap-2 pointer-events-none" aria-live="polite">
+    <div className="fixed z-[var(--z-toast)] top-20 right-4 left-4 sm:left-auto sm:w-80 max-w-[calc(100vw-32px)] flex flex-col gap-2 pointer-events-none" aria-live="polite">
       {toasts.map((x) => {
         const color = x.kind === 'achievement' ? RARITY_COLOR[x.rarity ?? 'common'] : x.kind === 'error' ? 'var(--color-coral)' : x.kind === 'xp' ? 'var(--color-teal)' : 'var(--color-violet)';
         return (

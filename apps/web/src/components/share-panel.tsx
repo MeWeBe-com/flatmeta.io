@@ -51,19 +51,20 @@ export function SharePanel({ url, text, plotId, compact = false }: { url: string
   return (
     <div className="space-y-2" aria-label="Share">
       <div className="flex gap-2">
-        <input className="input h-9 flex-1 text-xs font-mono" value={url} readOnly aria-label="Link to share" onFocus={(e) => e.currentTarget.select()} />
+        <input className="input flex-1 min-w-0 text-xs font-mono" value={url} readOnly aria-label="Link to share" onFocus={(e) => e.currentTarget.select()} />
         <button className="btn-ghost btn-sm" onClick={() => void copy()} aria-label="Copy link">
           {copied ? <Check size={14} /> : <Copy size={14} />} {compact ? '' : copied ? 'Copied' : 'Copy link'}
         </button>
+      </div>
+      {/* M5: real buttons (44 px on touch screens), the phone's own share sheet first. */}
+      <div className="flex flex-wrap gap-2">
         {canShare && (
-          <button className="btn-ghost btn-sm" onClick={() => void native()} aria-label="Share…">
-            <Share2 size={14} />
+          <button className="btn-primary btn-sm" onClick={() => void native()} aria-label="Share…">
+            <Share2 size={14} /> Share
           </button>
         )}
-      </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs muted">
         {([['WhatsApp', links.whatsapp, 'whatsapp'], ['X', links.x, 'x'], ['Facebook', links.facebook, 'facebook'], ['LinkedIn', links.linkedin, 'linkedin']] as const).map(([label, href, ch]) => (
-          <a key={ch} href={href} target="_blank" rel="noopener noreferrer" className="hover:text-[var(--text)]" onClick={() => record(ch)}>
+          <a key={ch} href={href} target="_blank" rel="noopener noreferrer" className="btn-ghost btn-sm" aria-label={`Share on ${label}`} onClick={() => record(ch)}>
             {label}
           </a>
         ))}

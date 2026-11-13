@@ -144,7 +144,7 @@ h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0
 /* A text link that is also a tap target on its own (footer, breadcrumb, lists of links). */
 @utility tap {
   @apply inline-flex items-center min-h-8;
-  @media (pointer: coarse) { min-height: 2.75rem; }
+  @media (pointer: coarse) { min-height: 2.75rem; min-width: 2.75rem; }
 }
 @utility chip {
   @apply inline-flex items-center gap-1 rounded-full px-2.5 h-6 text-xs font-semibold tracking-wide uppercase;

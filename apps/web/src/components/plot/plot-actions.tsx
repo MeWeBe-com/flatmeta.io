@@ -99,7 +99,7 @@ export function PlotActions({ plot: initial }: { plot: Plot }) {
           <Link href={`/dashboard/plots/${plot.id}?tab=boost`} className="btn-ghost col-span-2"><Megaphone size={16} /> Spotlight this plot</Link>
         </div>
       )}
-      <button className="text-xs muted inline-flex items-center gap-1 hover:text-[var(--text)]" onClick={() => setReport(true)}>
+      <button className="tap px-1 text-xs muted gap-1 hover:text-[var(--text)]" onClick={() => setReport(true)}>
         <Flag size={12} /> {t('plot.report')}
       </button>
       <Modal open={report} onClose={() => setReport(false)} title="Report this plot">

@@ -19,7 +19,7 @@ export function ReportCustomHtml({ plotId }: { plotId: string }) {
   };
   return (
     <>
-      <button type="button" className="text-xs muted inline-flex items-center gap-1 hover:text-[var(--text)] shrink-0" onClick={() => setOpen(true)}>
+      <button type="button" className="tap px-1 text-xs muted gap-1 hover:text-[var(--text)] shrink-0" onClick={() => setOpen(true)}>
         <Flag size={11} /> Report this content
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title="Report this custom content">

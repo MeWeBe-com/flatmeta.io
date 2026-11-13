@@ -50,7 +50,7 @@ test('@handle links, share panel and Visit', async ({ browser }) => {
   const wa = await page.getByRole('link', { name: 'WhatsApp' }).getAttribute('href');
   expect(wa).toMatch(/^https:\/\/wa\.me\/\?text=/);
   expect(decodeURIComponent(wa!)).toContain(`/@${handle}/${plot.slug}`);
-  for (const name of ['X', 'Facebook', 'LinkedIn']) await expect(page.getByRole('link', { name, exact: true })).toHaveAttribute('rel', /noopener/);
+  for (const name of ['X', 'Facebook', 'LinkedIn']) await expect(page.getByRole('link', { name: `Share on ${name}`, exact: true })).toHaveAttribute('rel', /noopener/);
 
   // Visit: the map flies to the plot and my avatar starts right next to it.
   await page.getByRole('link', { name: 'Visit on the map' }).click();

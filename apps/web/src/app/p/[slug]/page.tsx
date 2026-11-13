@@ -62,18 +62,18 @@ export default async function PlotPage({ params }: Params) {
     <PageShell wide>
       <JsonLd data={plotJsonLd(p)} />
       <article className="space-y-8" id="main">
-        <nav className="text-xs muted flex gap-2" aria-label="Breadcrumb">
-          <Link href="/" className="hover:text-[var(--text)]">World</Link>
+        <nav className="text-xs muted flex flex-wrap items-center gap-x-2" aria-label="Breadcrumb">
+          <Link href="/" className="tap hover:text-[var(--text)]">World</Link>
           {p.countryCode && (
             <>
               <span>/</span>
-              <Link href={`/c/${p.countryCode.toLowerCase()}`} className="hover:text-[var(--text)]">{flag(p.countryCode)} {p.countryName}</Link>
+              <Link href={`/c/${p.countryCode.toLowerCase()}`} className="tap hover:text-[var(--text)]">{flag(p.countryCode)} {p.countryName}</Link>
             </>
           )}
           {p.regionSlug && (
             <>
               <span>/</span>
-              <Link href={`/r/${p.regionSlug}`} className="hover:text-[var(--text)] capitalize">{p.regionSlug.replace(/-/g, ' ')}</Link>
+              <Link href={`/r/${p.regionSlug}`} className="tap hover:text-[var(--text)] capitalize">{p.regionSlug.replace(/-/g, ' ')}</Link>
             </>
           )}
         </nav>
@@ -130,9 +130,10 @@ export default async function PlotPage({ params }: Params) {
                 </p>
               )}
             </div>
-            <div className="flex gap-2 shrink-0">
-              <Link href={`/claim/${p.slug}`} className="btn-gold">{t('plot.claimIt')}</Link>
-              <Link href={`/claim/${p.slug}?takedown=1`} className="btn-ghost">{t('plot.requestRemoval')}</Link>
+            {/* M5: wraps (and fills the row) on phones; it used to widen the page to 448 px at 375. */}
+            <div className="flex flex-wrap gap-2 md:shrink-0">
+              <Link href={`/claim/${p.slug}`} className="btn-gold flex-1 sm:flex-none">{t('plot.claimIt')}</Link>
+              <Link href={`/claim/${p.slug}?takedown=1`} className="btn-ghost flex-1 sm:flex-none">{t('plot.requestRemoval')}</Link>
             </div>
           </div>
         )}
@@ -146,7 +147,7 @@ export default async function PlotPage({ params }: Params) {
                 {p.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-4">
                     {p.tags.map((tg) => (
-                      <Link key={tg} href={`/explore?q=${encodeURIComponent(tg)}`} className="chip normal-case tracking-normal text-xs"><Tag size={11} /> {tg}</Link>
+                      <Link key={tg} href={`/explore?q=${encodeURIComponent(tg)}`} className="chip tap normal-case tracking-normal text-xs"><Tag size={12} /> {tg}</Link>
                     ))}
                   </div>
                 )}
