@@ -384,7 +384,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
           <Search size={16} className="shrink-0" />
           <span className="truncate min-w-0">{t('hud.search')}</span>
           <span className="ml-auto shrink-0 chip chip-violet h-6"><Sparkles size={11} /> AI</span>
-          <kbd className="hidden md:inline text-xs border border-[var(--line-strong)] rounded px-1.5 py-0.5">⌘K</kbd>
+          <kbd className="kbd-only text-xs border border-[var(--line-strong)] rounded px-1.5 py-0.5">⌘K</kbd>
         </button>
         <nav className="hidden lg:flex pointer-events-auto glass rounded-full h-11 items-center px-2 text-sm">
           <Link href="/explore" className="tap px-3 rounded-full hover:bg-white/5">{t('nav.explore')}</Link>

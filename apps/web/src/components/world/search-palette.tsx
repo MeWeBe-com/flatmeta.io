@@ -142,7 +142,7 @@ export function SearchPalette({ open, onClose, onFlyTo, onPlot }: { open: boolea
           ))}</Group>}
         </div>
         <div className="px-4 h-9 border-t border-[var(--line)] text-xs muted flex items-center gap-3">
-          <Globe2 size={12} /> Search covers plots, brands, places, cities and explorers <span className="ml-auto">Esc to close</span>
+          <Globe2 size={12} /> Search covers plots, brands, places, cities and explorers <span className="ml-auto kbd-only" data-testid="esc-hint">Esc to close</span>
         </div>
       </div>
     </div>

@@ -141,6 +141,12 @@ h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0
   &:hover { background: rgb(255 255 255 / 0.1); }
   @media (pointer: coarse) { min-height: 2.75rem; min-width: 2.75rem; }
 }
+/* M10: keyboard hints ("Esc to close", ⌘K) only where there is a keyboard and a mouse: not on phones or tablets,
+   whatever their width. */
+@utility kbd-only {
+  display: none;
+  @media (hover: hover) and (pointer: fine) { display: inline; }
+}
 /* A text link that is also a tap target on its own (footer, breadcrumb, lists of links). */
 @utility tap {
   @apply inline-flex items-center min-h-8;
