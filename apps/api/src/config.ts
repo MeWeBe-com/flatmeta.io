@@ -143,6 +143,10 @@ const schema = z.object({
   PAYOUT_MIN_CENTS: z.coerce.number().int().min(0).default(500),
 
   RATE_LIMIT_PER_MINUTE: z.coerce.number().default(300),
+  // S2: IndexNow (Bing, Yandex, Seznam…) is told when public plots appear, change or go. The key is generated on the
+  // server (openssl rand -hex 16) and served at /indexnow-key.txt by the web app; unset = no pings.
+  INDEXNOW_KEY: z.string().regex(/^[A-Za-z0-9-]{8,128}$/).optional().or(z.literal('').transform(() => undefined)),
+  INDEXNOW_ENDPOINT: z.string().url().default('https://api.indexnow.org/indexnow'),
   // Sign-in endpoints per IP per minute. Keep the default in production; the CI test stack signs in many players from one IP.
   AUTH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(1000).default(10),
 });

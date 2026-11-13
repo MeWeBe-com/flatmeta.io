@@ -28,6 +28,8 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_NAME: env.APP_NAME ?? 'FlatMeta',
     NEXT_PUBLIC_APP_URL: canonicalUrl(env),
     NEXT_PUBLIC_APP_ENV: env.APP_ENV ?? 'development',
+    // S2: lastmod for static pages in the sitemap = when this build was made (deploy.sh may pass BUILD_TIME).
+    BUILD_TIME: env.BUILD_TIME || new Date().toISOString(),
     NEXT_PUBLIC_PRODUCTION_DOMAIN: env.PRODUCTION_DOMAIN ?? 'flatmeta.io',
     NEXT_PUBLIC_STAGING_DOMAIN: env.STAGING_DOMAIN ?? 'staging.flatmeta.io',
     // Same rule as the API (apps/api/src/config.ts paidCheckoutFor): auto = off in production, on elsewhere.

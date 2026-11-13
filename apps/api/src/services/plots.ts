@@ -1,4 +1,5 @@
 import { freeLimitFor, rewardReferral } from './referrals.js';
+import { plotIndexChanged } from '../lib/indexing.js';
 import { and, count, eq, gte, inArray, lte, ne, or, sql } from 'drizzle-orm';
 import { publicShowcase, publicShowcaseRaw } from '../lib/visibility.js';
 import { db, schema, type Tx } from '../db/client.js';
@@ -285,6 +286,7 @@ export async function activatePlot(plotId: string): Promise<Plot | null> {
     .set({ status: 'active', holdExpiresAt: null, updatedAt: sql`now()` })
     .where(and(eq(schema.plots.id, plotId), eq(schema.plots.status, 'pending_payment')))
     .returning();
+  if (plot) plotIndexChanged(plot.slug, 'publish');
   return plot ?? null;
 }
 
@@ -297,6 +299,7 @@ export async function releasePlot(plotId: string, tx?: Tx) {
   };
   const p = tx ? await run(tx) : await db.transaction(run);
   if (p) await recountCountry(p.countryCode);
+  if (p) plotIndexChanged(p.slug, 'remove');
   return p;
 }
 

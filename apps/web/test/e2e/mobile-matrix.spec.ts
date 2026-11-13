@@ -172,7 +172,7 @@ test.describe('device matrix', () => {
   test.describe.configure({ mode: 'parallel' });
   for (const d of devicesToRun()) {
     test(`${d.id}`, async ({ browser, request, baseURL }) => {
-      test.setTimeout(240_000);
+      test.setTimeout(420_000); // 8 pages; WebKit draws the map in software and is slow under a full parallel run
       const engine = browser.browserType().name();
       const plot = await plotPath(request);
       const touch = !!d.base.hasTouch;

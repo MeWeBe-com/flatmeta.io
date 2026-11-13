@@ -10,14 +10,21 @@ export interface SitemapFeed {
   orgs: { slug: string; updatedAt: string }[];
   /** G12: countries with reserved company land (/brands/<cc>). */
   brandCountries?: string[];
+  /** S2: the newest content change among each hub page's plots. */
+  lastmod?: { countries: Record<string, string | null>; regions: Record<string, string | null>; brands: Record<string, string | null> };
 }
 
+/** S2: lastmod for pages that don't come from data = the build time. */
+export const BUILD_TIME = process.env.BUILD_TIME || new Date(0).toISOString();
+
+/** Sitemaps hold at most 50,000 URLs and 50 MB: split at 40,000 (plot entries are well under 1 KB each). */
 export const PLOTS_PER_SITEMAP = 40_000;
 export const STATIC_PAGES = ['', '/explore', '/leaderboards', '/marketplace', '/clans', '/pricing', '/business', '/brands', '/about', '/about/facts', '/legal/terms', '/legal/privacy', '/legal/refunds'];
 
 /** The API's list of public URLs (plots visible on the map, countries, cities, owners, organisations). */
 export async function sitemapFeed(): Promise<SitemapFeed | null> {
-  return serverApi<SitemapFeed>('/sitemap', { auth: false, revalidate: 3600 }).catch(() => null);
+  // S2: no copy kept here; the API caches the feed for 10 minutes and drops it on every publish / edit / hide / remove.
+  return serverApi<SitemapFeed>('/sitemap', { auth: false, revalidate: 0 }).catch(() => null);
 }
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
@@ -25,7 +32,7 @@ export const xmlEscape = esc;
 
 export function xmlResponse(body: string): Response {
   return new Response(`<?xml version="1.0" encoding="UTF-8"?>\n${body}`, {
-    headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=900, s-maxage=3600' },
+    headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=600' },
   });
 }
 

@@ -1,5 +1,7 @@
 import { and, asc, desc, eq, gte, isNotNull, lte, sql } from 'drizzle-orm';
-import { publicShowcase } from '../lib/visibility.js';
+import { indexablePlot, publicShowcase } from '../lib/visibility.js';
+import { sitemapVersion } from '../lib/indexing.js';
+import { key, redis } from '../lib/redis.js';
 import { z } from 'zod';
 import type { App } from '../app.js';
 import { db, schema } from '../db/client.js';
@@ -103,28 +105,58 @@ export default async function regionRoutes(app: App) {
 
 }
 
-/** Everything public worth indexing, for the web app's sitemap.xml (cached by the web app). */
+/**
+ * Everything public worth indexing, for the web app's sitemaps (S1/S2). Plots follow the one indexing rule
+ * (lib/visibility.ts: indexablePlot) with lastmod = the last content change; countries, regions and /brands/<cc> get
+ * the newest change among their indexable plots. Cached in Redis for 10 minutes under the sitemap version, which
+ * every publish / edit / hide / remove bumps (lib/indexing.ts), so new and changed content shows up at once.
+ */
 export async function sitemapRoutes(app: App) {
   app.get('/v1/sitemap', { schema: { tags: ['regions'], summary: 'Public URLs for the sitemap' } }, async () => {
-    const [plots, countries, regions, users, orgs] = await Promise.all([
-      db.select({ slug: schema.plots.slug, title: schema.plots.title, hasCover: sql<boolean>`${schema.plots.coverImageUrl} is not null`, updatedAt: schema.plots.updatedAt, company: sql<boolean>`${schema.plots.kind} = 'showcase'` }).from(schema.plots).where(visiblePlot()).orderBy(desc(schema.plots.updatedAt)).limit(45000),
-      db.select({ code: schema.countries.code }).from(schema.countries).where(sql`${schema.countries.plotCount} > 0`),
-      db.select({ slug: schema.regions.slug }).from(schema.regions),
+    const cacheKey = key('sitemap', 'feed', await sitemapVersion());
+    const cached = await redis.get(cacheKey).catch(() => null);
+    if (cached) return JSON.parse(cached) as unknown;
+    const lastmod = sql<string>`max(coalesce(${schema.plots.lastEditedAt}, ${schema.plots.publishedAt}, ${schema.plots.createdAt}))`;
+    const [plots, countries, regions, users, orgs, brandCountries] = await Promise.all([
+      db
+        .select({
+          slug: schema.plots.slug,
+          title: schema.plots.title,
+          hasCover: sql<boolean>`${schema.plots.coverImageUrl} is not null`,
+          updatedAt: sql<string>`coalesce(${schema.plots.lastEditedAt}, ${schema.plots.publishedAt}, ${schema.plots.createdAt})`,
+          company: sql<boolean>`${schema.plots.kind} = 'showcase'`,
+        })
+        .from(schema.plots)
+        .where(indexablePlot())
+        .orderBy(desc(sql`coalesce(${schema.plots.lastEditedAt}, ${schema.plots.publishedAt}, ${schema.plots.createdAt})`))
+        .limit(200_000),
+      db.select({ code: schema.plots.countryCode, lastmod }).from(schema.plots).where(and(indexablePlot(), sql`${schema.plots.countryCode} is not null`)).groupBy(schema.plots.countryCode),
+      db.select({ slug: schema.regions.slug, lastmod: sql<string | null>`(select ${lastmod} from plots where plots.region_slug = ${schema.regions.slug} and ${indexablePlot()})` }).from(schema.regions),
       db
         .select({ username: schema.users.username, updatedAt: schema.users.updatedAt })
         .from(schema.users)
         .where(sql`${schema.users.bannedAt} is null and exists (select 1 from plots p where p.owner_user_id = ${schema.users.id} and p.status = 'active')`)
         .limit(20000),
       db.select({ slug: schema.organizations.slug, updatedAt: schema.organizations.updatedAt }).from(schema.organizations).limit(10000),
+      // G12: /brands/<cc> pages for countries with reserved company land.
+      db.select({ code: schema.plots.countryCode, lastmod }).from(schema.plots).where(and(publicShowcase(), sql`${schema.plots.countryCode} is not null`)).groupBy(schema.plots.countryCode),
     ]);
-    return {
-      plots,
-      countries: countries.map((c) => c.code),
+    const iso = (d: string | Date | null) => (d ? new Date(d).toISOString() : null);
+    const feed = {
+      plots: plots.map((p) => ({ ...p, updatedAt: iso(p.updatedAt)! })),
+      countries: countries.map((c) => c.code!),
       regions: regions.map((r) => r.slug),
       users,
       orgs,
-      // G12: /brands/<cc> pages for countries with reserved company land.
-      brandCountries: (await db.select({ code: schema.plots.countryCode }).from(schema.plots).where(publicShowcase()).groupBy(schema.plots.countryCode)).map((r) => r.code).filter(Boolean),
+      brandCountries: brandCountries.map((c) => c.code!),
+      // S2: lastmod per hub page (newest change among its plots).
+      lastmod: {
+        countries: Object.fromEntries(countries.map((c) => [c.code!, iso(c.lastmod)])),
+        regions: Object.fromEntries(regions.filter((r) => r.lastmod).map((r) => [r.slug, iso(r.lastmod)])),
+        brands: Object.fromEntries(brandCountries.map((c) => [c.code!, iso(c.lastmod)])),
+      },
     };
+    await redis.set(cacheKey, JSON.stringify(feed), 'EX', 600).catch(() => undefined);
+    return feed;
   });
 }

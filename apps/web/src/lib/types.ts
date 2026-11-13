@@ -55,6 +55,9 @@ export interface Plot {
   business: BusinessInfo | null;
   showcase: { brand: string; website: string; sector: string; kind: string; city: string; useCase: string; highlights: string[]; approved: boolean; source?: string | null; sourceUrl?: string | null; license?: string | null; logo?: { url: string; source: string; sourceUrl: string; license: string | null; author: string | null } | null } | null;
   moderationStatus: string;
+  /** S2: may search engines index this page; when its content last changed. */
+  indexable?: boolean;
+  contentModifiedAt?: string;
   owner: Owner | null;
   /** H3: visitors can sign only on owned land whose owner keeps the guestbook open. */
   guestbookOpen?: boolean;

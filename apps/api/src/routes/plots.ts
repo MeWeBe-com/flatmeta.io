@@ -1,13 +1,14 @@
 import { audit } from '../lib/audit.js';
 import { visibleLogo } from '../companies/logos.js';
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
-import { publicShowcase } from '../lib/visibility.js';
+import { plotIndexChanged } from '../lib/indexing.js';
+import { isGone, publicShowcase } from '../lib/visibility.js';
 import { z } from 'zod';
 import type { App } from '../app.js';
 import { db, schema } from '../db/client.js';
 import type { Plot, User } from '../db/schema.js';
 import { requireUser } from '../lib/auth.js';
-import { badRequest, forbidden, notFound, paymentRequired } from '../lib/errors.js';
+import { badRequest, forbidden, gone, notFound, paymentRequired } from '../lib/errors.js';
 import { bboxToRect, rectBounds } from '../lib/grid.js';
 import { haversineKm } from '../lib/geo.js';
 import { countUniqueVisit, isBot, uniqueVisitors, visitorHash } from '../lib/visitors.js';
@@ -80,6 +81,18 @@ export const visiblePlot = (): SQL =>
     or(eq(schema.plots.status, 'active'), publicShowcase()),
     sql`${schema.plots.moderationStatus} <> 'flagged'`,
   )!;
+
+/** Removed for good: released, rejected by moderation, or taken down after a removal request (S2: 410 Gone). */
+export async function plotGone(plot: Plot) {
+  if (isGone(plot)) return true;
+  if (plot.kind !== 'showcase' || plot.status !== 'hidden') return false;
+  const [t] = await db.select({ id: schema.takedownRequests.id }).from(schema.takedownRequests).where(and(eq(schema.takedownRequests.plotId, plot.id), eq(schema.takedownRequests.status, 'removed'))).limit(1);
+  return !!t;
+}
+async function takedownOpen(plotId: string) {
+  const [t] = await db.select({ id: schema.takedownRequests.id }).from(schema.takedownRequests).where(and(eq(schema.takedownRequests.plotId, plotId), eq(schema.takedownRequests.status, 'open'))).limit(1);
+  return !!t;
+}
 
 export async function loadPlot(idOrSlug: string): Promise<Plot | null> {
   const isUuid = /^[0-9a-f-]{36}$/i.test(idOrSlug);
@@ -198,6 +211,7 @@ export async function applyPlotPatch(plot: Plot, patch: PlotPatchInput, actor: {
   // H3: every content change is recorded: who, which plot, which fields.
   await audit(actor.id || null, 'plot.edit', 'plot', plot.id, { fields: Object.keys(patch).filter((k) => (patch as Record<string, unknown>)[k] !== undefined) });
   const game = actor.id ? await recordAction(actor.id, 'edit_plot', { ref: plot.id, noXp: true }) : null;
+  plotIndexChanged(updated!.slug, 'edit');
   return { plot: updated!, game, ...(customHtml ? { customHtml } : {}) };
 }
 
@@ -250,6 +264,7 @@ export async function publishPlot(plot: Plot, actorId: string): Promise<{ plot: 
   const mod = await checkContent('plot', plot.id, text);
   if (mod.status === 'flagged') {
     await db.update(schema.plots).set({ moderationStatus: 'flagged' }).where(eq(schema.plots.id, plot.id));
+    plotIndexChanged(plot.slug, 'hide');
     return { plot, game: null, blocked: 'Our moderator flagged this content. Please edit it and try again, or contact support if you think this is a mistake.' };
   }
   const first = !plot.publishedAt;
@@ -263,6 +278,7 @@ export async function publishPlot(plot: Plot, actorId: string): Promise<{ plot: 
     game = await recordAction(actorId, 'publish', { ref: plot.id, countryCode: plot.countryCode });
     await publishActivity({ kind: 'plot_published', actorUserId: actorId, plotId: plot.id, countryCode: plot.countryCode, lat: plot.centerLat, lng: plot.centerLng, payload: { title: plot.title, slug: plot.slug } });
   }
+  plotIndexChanged(updated!.slug, 'publish');
   return { plot: updated!, game };
 }
 
@@ -419,13 +435,26 @@ export default async function plotRoutes(app: App) {
     { schema: { tags: ['plots'], summary: 'Get a plot (mini-page data)', params: z.object({ idOrSlug: z.string().max(80) }) } },
     async (req) => {
       const plot = await loadPlot(req.params.idOrSlug);
-      if (!plot || plot.status === 'released') throw notFound('Plot');
+      if (!plot) throw notFound('Plot');
+      if (await plotGone(plot)) throw gone('This plot was removed.');
       const view = await viewFor(plot, req.user);
+      // S2: an open removal request keeps the page out of search engines until it is decided.
+      if (view.indexable && (await takedownOpen(plot.id))) view.indexable = false;
       const showcaseOk = plot.status === 'showcase' && !!plot.showcase?.approved && (!showcaseLocationCheck() || !!plot.showcase.locationVerified);
       const publicOk = (plot.status === 'active' || showcaseOk) && plot.moderationStatus !== 'flagged';
       const staff = req.user?.role === 'admin' || req.user?.role === 'moderator';
       if (!publicOk && !view.canEdit && !staff) throw notFound('Plot');
       return { plot: view };
+    },
+  );
+
+  // S2: what the web app's proxy needs to answer 410 Gone for removed plots (and nothing else).
+  app.get(
+    '/v1/plots/:idOrSlug/state',
+    { config: { rateLimit: { max: 600, timeWindow: '1 minute' } }, schema: { hide: true, params: z.object({ idOrSlug: z.string().max(80) }) } },
+    async (req) => {
+      const plot = await loadPlot(req.params.idOrSlug);
+      return { state: !plot ? 'missing' : (await plotGone(plot)) ? 'gone' : 'present' };
     },
   );
 
@@ -581,6 +610,7 @@ export default async function plotRoutes(app: App) {
         [updated] = (await db.update(schema.plots).set({ gallery, lastEditedAt: new Date() }).where(eq(schema.plots.id, plot.id)).returning()) as [Plot];
       }
       await audit(user.id, 'plot.upload', 'plot', plot.id, { use: req.query.use, media: img.id });
+      if (req.query.use === 'cover' || req.query.use === 'gallery') plotIndexChanged(plot.slug, 'edit');
       return { media: img, plot: await viewFor(updated, user) };
     },
   );

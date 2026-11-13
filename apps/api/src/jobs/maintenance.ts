@@ -1,4 +1,5 @@
 import { and, eq, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import { plotIndexChangedById } from '../lib/indexing.js';
 import { db, schema } from '../db/client.js';
 import { logger } from '../lib/logger.js';
 import { notify } from '../game/activity.js';
@@ -102,6 +103,7 @@ export async function takedownSla(now = new Date()) {
   for (const t of due) {
     await db.update(schema.plots).set({ status: 'hidden', updatedAt: now }).where(and(eq(schema.plots.id, t.plotId), eq(schema.plots.kind, 'showcase')));
     await db.update(schema.takedownRequests).set({ status: 'removed' }).where(eq(schema.takedownRequests.id, t.id));
+    await plotIndexChangedById(t.plotId, 'remove');
     await db.insert(schema.auditLog).values({ actorId: null, action: 'takedown.auto_hidden_48h', targetType: 'plot', targetId: t.plotId, meta: { takedownId: t.id } });
   }
   return { hidden: due.length };

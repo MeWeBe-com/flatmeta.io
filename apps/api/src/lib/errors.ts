@@ -22,3 +22,4 @@ export const paymentRequired = (message: string, upsell: 'plus' | 'business' | '
 export const tooMany = (message = 'Too many requests, slow down a little') => new HttpError(429, 'rate_limited', message);
 
 export const comingSoon = (what = COMING_SOON) => new HttpError(403, 'coming_soon', what);
+export const gone = (message = 'Gone') => new HttpError(410, 'gone', message);

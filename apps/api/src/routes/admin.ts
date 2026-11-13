@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { plotIndexChanged, plotIndexChangedById, sitemapChanged } from '../lib/indexing.js';
 import { and, count, desc, eq, gte, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import type { App } from '../app.js';
@@ -200,6 +201,7 @@ export default async function adminRoutes(app: App) {
       if (req.body.banned) {
         await db.delete(schema.sessions).where(eq(schema.sessions.userId, u.id));
         await db.update(schema.plots).set({ status: 'hidden' }).where(and(eq(schema.plots.ownerUserId, u.id), eq(schema.plots.status, 'active')));
+        sitemapChanged();
       }
       await audit(admin.id, 'user.update', 'user', u.id, req.body);
       return { user: privateUser(u) };
@@ -244,6 +246,7 @@ export default async function adminRoutes(app: App) {
       if (!p) throw notFound('Plot');
       await recountCountry(p.countryCode);
       await audit(admin.id, 'plot.update', 'plot', p.id, req.body);
+      plotIndexChanged(p.slug, p.status === 'hidden' || p.moderationStatus !== 'ok' ? 'hide' : 'show');
       return { plot: plotView(p, null, { canEdit: true }) };
     },
   );
@@ -293,6 +296,7 @@ export default async function adminRoutes(app: App) {
       if (f.targetType === 'plot') {
         if (a === 'approve' || a === 'dismiss') await db.update(schema.plots).set({ moderationStatus: 'ok' }).where(eq(schema.plots.id, f.targetId));
         if (a === 'hide' || a === 'remove' || a === 'ban') await db.update(schema.plots).set({ moderationStatus: 'rejected', status: 'hidden' }).where(eq(schema.plots.id, f.targetId));
+        await plotIndexChangedById(f.targetId, a === 'approve' || a === 'dismiss' ? 'show' : 'remove');
       } else if (f.targetType === 'guestbook') {
         if (a === 'approve' || a === 'dismiss') await db.update(schema.guestbookEntries).set({ moderationStatus: 'ok' }).where(eq(schema.guestbookEntries.id, f.targetId));
         else await db.update(schema.guestbookEntries).set({ moderationStatus: 'rejected', deletedAt: new Date() }).where(eq(schema.guestbookEntries.id, f.targetId));
@@ -641,6 +645,7 @@ export default async function adminRoutes(app: App) {
       const [p] = await db.select({ c: schema.plots.countryCode }).from(schema.plots).where(eq(schema.plots.id, t.plotId));
       await recountCountry(p?.c ?? null);
     }
+    await plotIndexChangedById(t.plotId, req.body.action === 'remove' ? 'remove' : 'show');
     await db.update(schema.takedownRequests).set({ status: req.body.action === 'remove' ? 'removed' : 'rejected' }).where(eq(schema.takedownRequests.id, t.id));
     await sendEmail(t.email, templates.takedownResult(req.body.action === 'remove'));
     await audit(admin.id, `takedown.${req.body.action}`, 'plot', t.plotId);

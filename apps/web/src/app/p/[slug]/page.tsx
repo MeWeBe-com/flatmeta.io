@@ -40,7 +40,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     alternates: { canonical: plotUrl(p.slug) },
     openGraph: { title, description, url: plotUrl(p.slug), type: 'website' },
     twitter: { card: 'summary_large_image', title, description },
-    robots: p.status === 'active' || p.status === 'showcase' ? undefined : { index: false },
+    // S2: one rule with the sitemap (API lib/visibility.ts): drafts, hidden, moderated, takedown-pending and empty
+    // mini-pages are noindex (follow, so their links still count).
+    robots: p.indexable ? undefined : { index: false, follow: true },
     other: p.coverImageUrl ? { 'og:image:alt': p.title } : undefined,
   };
 }

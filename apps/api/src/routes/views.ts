@@ -1,4 +1,5 @@
 import { forbidden } from '../lib/errors.js';
+import { contentModifiedAt, isIndexable } from '../lib/visibility.js';
 import { visibleLogo } from '../companies/logos.js';
 import { customHtmlGloballyDisabledCached, plotSandboxUrl } from '../services/custom-html.js';
 import { and, eq, inArray } from 'drizzle-orm';
@@ -105,6 +106,9 @@ export function plotView(p: Plot, owner: OwnerView | null, extra: { likedByMe?: 
       ? { brand: sc.brand, website: sc.website, sector: sc.sector, kind: sc.kind, city: sc.city, useCase: sc.useCase, highlights: sc.highlights, approved: sc.approved, source: sc.source ?? null, sourceUrl: sc.sourceUrl ?? null, license: sc.license ?? null, logo: visibleLogo(p) }
       : null,
     moderationStatus: p.moderationStatus,
+    // S2: may search engines index this page (the one rule in lib/visibility.ts), and when its content last changed.
+    indexable: isIndexable(p),
+    contentModifiedAt: contentModifiedAt(p).toISOString(),
     owner,
     likesCount: p.likesCount,
     visitsCount: p.visitsCount,

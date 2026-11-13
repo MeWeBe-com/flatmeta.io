@@ -1,4 +1,5 @@
 import { setPlotLogoHidden } from '../companies/logos.js';
+import { plotIndexChanged } from '../lib/indexing.js';
 import { desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { emailAdmins, quietly, templates } from '../email/index.js';
@@ -164,6 +165,7 @@ export default async function showcaseRoutes(app: App) {
         organisation: req.body.organisation ? stripText(req.body.organisation, 120) : null,
         message: stripText(req.body.message, 2000),
       });
+      plotIndexChanged(plot.slug, 'hide'); // takedown pending: out of the sitemap and noindex at once (S2)
       await quietly(emailAdmins(templates.adminTakedown(stripText(req.body.name, 100), req.body.email, plot.title, stripText(req.body.message, 2000))));
       return { ok: true, message: 'Thanks. We handle removal requests within 48 hours; if we haven’t by then, the plot is hidden automatically until we have.' };
     },
