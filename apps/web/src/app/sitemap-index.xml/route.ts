@@ -1,10 +1,6 @@
-import { APP_ENV } from '@/lib/config';
-import { sitemapIndex } from '@/lib/sitemaps/feed';
+import { abs } from '@/lib/sitemaps/feed';
 
-/**
- * Sitemap index (G4). Lists the app's own sitemaps, and in production the insights sitemap that is published as a
- * static /sitemap.xml next to the app (elsewhere /sitemap.xml is this index itself). robots.txt points here.
- */
-export async function GET() {
-  return sitemapIndex(APP_ENV === 'production');
+/** The old index URL (G4): moved permanently to /sitemap.xml (S1). */
+export function GET() {
+  return new Response(null, { status: 301, headers: { location: abs('/sitemap.xml'), 'cache-control': 'public, max-age=86400' } });
 }

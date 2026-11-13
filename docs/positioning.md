@@ -28,3 +28,7 @@ VR headsets. To fix it (manual, see RELEASE-REPORT.md):
 2. Replace the static `public_html/llms.txt` with the app's version, either by deleting it (the app serves
    `/llms.txt` and `/llms-full.txt`) or by copying `https://www.flatmeta.io/llms.txt` over it on each deploy.
 3. Re-check: `curl -s https://www.flatmeta.io/llms.txt | head -5` should start with "# FlatMeta" and the one line above.
+4. **Sitemaps (S1, 13 Nov 2026):** the automation must **not** write `public_html/sitemap.xml` (nor
+   `sitemap-insights.xml`). `/sitemap.xml` is the app's sitemap index; the app lists every article in
+   `/sitemap-insights.xml` by reading the articles folder (`INSIGHTS_DIR`), with each file's modification time as
+   `lastmod`. The automation only writes the article HTML files into `public_html/insights/` (and its index page).

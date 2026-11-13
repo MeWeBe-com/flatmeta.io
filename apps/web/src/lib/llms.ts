@@ -33,7 +33,7 @@ Key facts:
 
 ## Optional
 - [Full list for AI: countries, companies and popular places](${s}/llms-full.txt)
-- [Sitemap](${s}/sitemap-index.xml)
+- [Sitemap](${s}/sitemap.xml)
 - [Terms](${s}/legal/terms) · [Privacy](${s}/legal/privacy)
 `;
 }

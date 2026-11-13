@@ -10,13 +10,10 @@ export default function robots(): MetadataRoute.Robots {
   // Keep staging and dev out of search engines entirely.
   if (APP_ENV !== 'production') return { rules: { userAgent: '*', disallow: '/' } };
   return {
-    rules: [
-      { userAgent: '*', allow: ['/', ...PUBLIC_API], disallow: PRIVATE },
-      // G15b: AI search and assistant crawlers are welcome on public pages (answers that cite FlatMeta bring visitors).
-      { userAgent: AI_CRAWLERS, allow: ['/', '/llms.txt', '/llms-full.txt', '/about/facts', ...PUBLIC_API], disallow: PRIVATE },
-    ],
-    // The app's sitemap index (pages + every public plot), plus the insights sitemap published as /sitemap.xml.
-    sitemap: [`${SITE_URL}/sitemap-index.xml`, `${SITE_URL}/sitemap.xml`],
-    host: SITE_URL,
+    // One group (S1): every crawler, with the AI search and assistant crawlers named so they know they are welcome
+    // (G15b), and the private areas listed once.
+    rules: [{ userAgent: ['*', ...AI_CRAWLERS], allow: ['/', '/llms.txt', '/llms-full.txt', ...PUBLIC_API], disallow: PRIVATE }],
+    // Exactly one sitemap: the index, which lists pages, plots, companies and insights. No Host: line (not a standard).
+    sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

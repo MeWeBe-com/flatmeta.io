@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Validates a urlset that may contain image:image entries (the sitemap XSD checks ##other content strictly). -->
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:import namespace="http://www.sitemaps.org/schemas/sitemap/0.9" schemaLocation="sitemap.xsd"/>
+  <xsd:import namespace="http://www.google.com/schemas/sitemap-image/1.1" schemaLocation="sitemap-image.xsd"/>
+</xsd:schema>

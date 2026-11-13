@@ -5,16 +5,18 @@ describe('robots.txt (G15b)', () => {
     vi.unstubAllEnvs();
     vi.resetModules();
   });
-  it('production: welcomes AI search crawlers on public pages and keeps private areas out', async () => {
+  it('production: one group for every crawler (AI search crawlers named), private areas once, one sitemap, no Host', async () => {
     vi.stubEnv('NEXT_PUBLIC_APP_ENV', 'production');
     vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://www.flatmeta.io');
     const robots = (await import('@/app/robots')).default();
     const rules = Array.isArray(robots.rules) ? robots.rules : [robots.rules];
-    const ai = rules.find((r) => Array.isArray(r.userAgent) && r.userAgent.includes('GPTBot'))!;
-    expect(ai.userAgent).toEqual(expect.arrayContaining(['ClaudeBot', 'PerplexityBot', 'Google-Extended', 'OAI-SearchBot']));
-    expect(ai.allow).toEqual(expect.arrayContaining(['/', '/llms.txt', '/about/facts']));
-    expect(ai.disallow).toEqual(expect.arrayContaining(['/dashboard', '/admin', '/api/']));
-    expect(robots.sitemap).toContain('https://www.flatmeta.io/sitemap-index.xml');
+    expect(rules).toHaveLength(1);
+    const g = rules[0]!;
+    expect(g.userAgent).toEqual(expect.arrayContaining(['*', 'GPTBot', 'ClaudeBot', 'PerplexityBot', 'Google-Extended', 'OAI-SearchBot']));
+    expect(g.allow).toEqual(expect.arrayContaining(['/', '/llms.txt']));
+    expect(g.disallow).toEqual(expect.arrayContaining(['/dashboard', '/admin', '/api/']));
+    expect(robots.sitemap).toBe('https://www.flatmeta.io/sitemap.xml');
+    expect(robots.host).toBeUndefined();
   });
   it('staging and development stay out of every index', async () => {
     vi.stubEnv('NEXT_PUBLIC_APP_ENV', 'staging');

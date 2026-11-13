@@ -107,7 +107,7 @@ export default async function regionRoutes(app: App) {
 export async function sitemapRoutes(app: App) {
   app.get('/v1/sitemap', { schema: { tags: ['regions'], summary: 'Public URLs for the sitemap' } }, async () => {
     const [plots, countries, regions, users, orgs] = await Promise.all([
-      db.select({ slug: schema.plots.slug, title: schema.plots.title, hasCover: sql<boolean>`${schema.plots.coverImageUrl} is not null`, updatedAt: schema.plots.updatedAt }).from(schema.plots).where(visiblePlot()).orderBy(desc(schema.plots.updatedAt)).limit(45000),
+      db.select({ slug: schema.plots.slug, title: schema.plots.title, hasCover: sql<boolean>`${schema.plots.coverImageUrl} is not null`, updatedAt: schema.plots.updatedAt, company: sql<boolean>`${schema.plots.kind} = 'showcase'` }).from(schema.plots).where(visiblePlot()).orderBy(desc(schema.plots.updatedAt)).limit(45000),
       db.select({ code: schema.countries.code }).from(schema.countries).where(sql`${schema.countries.plotCount} > 0`),
       db.select({ slug: schema.regions.slug }).from(schema.regions),
       db

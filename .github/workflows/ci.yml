@@ -74,6 +74,8 @@ jobs:
           AUTH_RATE_LIMIT_PER_MINUTE: '200'
           # One IP runs every e2e project in parallel (the device matrix alone opens ~200 pages): lift the general limit too.
           RATE_LIMIT_PER_MINUTE: '6000'
+          # S1: the insights articles the app lists in /sitemap-insights.xml (production: public_html/insights).
+          INSIGHTS_DIR: ${{ github.workspace }}/apps/web/test/fixtures/insights
         run: |
           NODE_ENV=development npm run db:migrate
           NODE_ENV=development npm run db:seed
@@ -103,6 +105,9 @@ jobs:
         timeout-minutes: 20
         run: |
           for i in 1 2 3; do timeout 600 npx playwright install --with-deps webkit && exit 0; echo "webkit install failed (attempt $i), retrying"; sleep 20; done; exit 1
+      # S1: the sitemap tests validate every sitemap against the official XSDs with xmllint.
+      - name: xmllint
+        run: command -v xmllint || (sudo apt-get update -qq && sudo apt-get install -y -qq libxml2-utils)
       - name: End-to-end smoke tests
         run: npm run test:e2e
         env:

@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 test.skip(({ isMobile }) => !!isMobile, 'same on mobile');
 
 test('the sitemap index lists the plot sitemap, which lists public plot pages with their images', async ({ request }) => {
-  const index = await request.get('/sitemap-index.xml');
+  const index = await request.get('/sitemap.xml');
   expect(index.status()).toBe(200);
   expect(index.headers()['content-type']).toMatch(/xml/);
   const ix = await index.text();

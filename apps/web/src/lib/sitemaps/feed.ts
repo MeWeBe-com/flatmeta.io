@@ -2,7 +2,8 @@ import { serverApi } from '@/lib/server-api';
 import { SITE_URL } from '@/lib/config';
 
 export interface SitemapFeed {
-  plots: { slug: string; title: string; hasCover: boolean; updatedAt: string }[];
+  /** company: a company (showcase) plot, listed in sitemap-companies.xml instead of sitemap-plots.xml. */
+  plots: { slug: string; title: string; hasCover: boolean; updatedAt: string; company?: boolean }[];
   countries: string[];
   regions: string[];
   users: { username: string; updatedAt: string }[];
@@ -30,13 +31,31 @@ export function xmlResponse(body: string): Response {
 
 export const abs = (path: string) => `${SITE_URL}${path}`;
 
-/** The sitemap index: the app's pages and plots sitemaps, plus the insights sitemap when asked (production). */
-export async function sitemapIndex(withInsights: boolean) {
+/** Plot pages split into people's land and company land (S1); each list is paged by PLOTS_PER_SITEMAP. */
+export const plotsOf = (feed: SitemapFeed | null, company: boolean) => (feed?.plots ?? []).filter((p) => !!p.company === company);
+export const pageCount = (n: number) => Math.max(1, Math.ceil(n / PLOTS_PER_SITEMAP));
+
+/**
+ * The sitemap index at /sitemap.xml (S1): the site's pages, its plots, its companies and the insights articles.
+ * It never lists itself. /sitemap-index.xml redirects here.
+ */
+export async function sitemapIndex() {
   const feed = await sitemapFeed();
-  const pages = Math.max(1, Math.ceil((feed?.plots.length ?? 0) / PLOTS_PER_SITEMAP));
-  const maps = [...(withInsights ? [abs('/sitemap.xml')] : []), abs('/sitemap-pages.xml'), ...Array.from({ length: pages }, (_, i) => abs(i === 0 ? '/sitemap-plots.xml' : `/sitemap-plots.xml?page=${i + 1}`))];
-  const now = new Date().toISOString();
-  return xmlResponse(
-    `<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${maps.map((m) => `  <sitemap><loc>${xmlEscape(m)}</loc><lastmod>${now}</lastmod></sitemap>`).join('\n')}\n</sitemapindex>`,
-  );
+  const paged = (file: string, n: number) => Array.from({ length: pageCount(n) }, (_, i) => abs(i === 0 ? file : `${file}?page=${i + 1}`));
+  const maps = [abs('/sitemap-pages.xml'), ...paged('/sitemap-plots.xml', plotsOf(feed, false).length), ...paged('/sitemap-companies.xml', plotsOf(feed, true).length), abs('/sitemap-insights.xml')];
+  return xmlResponse(`<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${maps.map((m) => `  <sitemap><loc>${xmlEscape(m)}</loc></sitemap>`).join('\n')}\n</sitemapindex>`);
 }
+
+/** One urlset of plot pages with their share images (plots and companies alike). */
+export function plotUrlset(plots: SitemapFeed['plots'], page: number) {
+  const body = plots
+    .slice((page - 1) * PLOTS_PER_SITEMAP, page * PLOTS_PER_SITEMAP)
+    .map((p) => {
+      const image = p.hasCover ? `<image:image><image:loc>${xmlEscape(abs(`/api/v1/plots/${p.slug}/cover.jpg?w=1200`))}</image:loc><image:title>${xmlEscape(p.title)}</image:title></image:image>` : '';
+      return `  <url><loc>${xmlEscape(abs(`/p/${p.slug}`))}</loc><lastmod>${new Date(p.updatedAt).toISOString()}</lastmod>${image}</url>`;
+    })
+    .join('\n');
+  return xmlResponse(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${body}\n</urlset>`);
+}
+
+export const pageParam = (req: Request) => Math.max(1, Math.floor(Number(new URL(req.url).searchParams.get('page') ?? 1)) || 1);

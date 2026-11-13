@@ -140,9 +140,10 @@ Hestia's NodeJS template serves `.txt` and `.xml` straight from `public_html`, s
 - `/llms.txt`
 - `/llms-full.txt`
 - `/robots.txt`
-- `/sitemap-*.xml`
+- `/sitemap.xml` (the app's sitemap index: pages, plots, companies, insights)
+- `/sitemap-*.xml` (including `/sitemap-insights.xml`)
 
-`/sitemap.xml` stays static on purpose: in production it is the insights sitemap from the insights automation, listed in robots.txt.
+The insights articles stay static files in `public_html/insights/`; the app lists them in `/sitemap-insights.xml` by reading that folder (`INSIGHTS_DIR` in the production `.env`, e.g. `INSIGHTS_DIR=/home/flatmeta/web/flatmeta.io/public_html/insights`; the folder must be readable by the app user). A `public_html/sitemap.xml` written by the insights automation is never served once the include is installed; move it aside (step 3).
 
 1. **As `najamussaqib`, render the file for each checkout** (it has the ports and `MEDIA_DIR` from that `.env`):
    ```bash
@@ -169,6 +170,10 @@ Hestia's NodeJS template serves `.txt` and `.xml` straight from `public_html`, s
    ```
    ```bash
    nginx -t && systemctl reload nginx
+   ```
+   Then move the old static sitemap aside (it is never served any more; keep it for reference):
+   ```bash
+   mv /home/flatmeta/web/flatmeta.io/public_html/sitemap.xml /home/flatmeta/web/flatmeta.io/public_html/sitemap.xml.insights-old
    ```
    The `diff` should show only the new `location` lines at the end. If it shows more, keep your installed file and paste just those lines at its end. On Hestia versions without the include, put the lines in `/home/flatmeta/conf/web/<domain>/nginx.conf_flatmeta` and `nginx.ssl.conf_flatmeta` instead.
 3. **Check** (expect `text/plain` and a 200, even with no `llms.txt` in `public_html`):

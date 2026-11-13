@@ -32,6 +32,8 @@ describe('health and docs', () => {
     const body = json(res);
     expect(Array.isArray(body.plots)).toBe(true);
     expect(Array.isArray(body.regions)).toBe(true);
+    // S1: company (showcase) plots are flagged so the web app lists them in sitemap-companies.xml.
+    for (const p of body.plots as { company: unknown }[]) expect(typeof p.company).toBe('boolean');
   });
 });
 
