@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sectorLabel } from '../lib/sector.js';
 import { plotIndexChanged, plotIndexChangedById, sitemapChanged } from '../lib/indexing.js';
 import { and, count, desc, eq, gte, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
@@ -447,7 +448,7 @@ export default async function adminRoutes(app: App) {
       const res = await applyPlotPatch(plot, patch, admin);
       let updated = res.plot;
       if (showcase) {
-        const merged = { ...plot.showcase!, ...showcase } as ShowcaseInfo;
+        const merged = { ...plot.showcase!, ...showcase, ...(showcase.sector !== undefined ? { sector: sectorLabel(showcase.sector) ?? '' } : {}) } as ShowcaseInfo;
         [updated] = (await db.update(schema.plots).set({ showcase: merged }).where(eq(schema.plots.id, plot.id)).returning()) as [typeof plot];
         await recountCountry(plot.countryCode);
       }
@@ -560,7 +561,7 @@ export default async function adminRoutes(app: App) {
         brand: p.showcase?.brand ?? p.title,
         slug: p.slug,
         kind: p.showcase?.kind ?? 'company',
-        sector: p.showcase?.sector ?? p.category ?? 'other',
+        sector: sectorLabel(p.showcase?.sector ?? p.category) ?? 'Other',
         city: p.showcase?.city ?? '',
         lat: Number(p.centerLat.toFixed(4)),
         lng: Number(p.centerLng.toFixed(4)),

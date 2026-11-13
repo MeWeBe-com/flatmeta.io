@@ -117,7 +117,7 @@ export default async function PlotPage({ params }: Params) {
           <div className="rounded-2xl p-5 border border-[rgb(255_201_77/.35)] bg-[rgb(255_201_77/.07)] flex flex-col md:flex-row gap-4 md:items-center">
             {p.showcase.logo && (
               // H1: a small official logo to identify the company for claiming: a badge, never the main artwork.
-              <img src={p.showcase.logo.url} alt={`${p.showcase.brand} logo`} width={56} height={56} className="size-14 rounded-xl bg-white p-1.5 object-contain shrink-0" data-testid="company-logo" />
+              <img src={p.showcase.logo.url} alt={`${p.showcase.brand} logo`} width={56} height={56} className="size-14 rounded-xl bg-[#f4f5f8] ring-1 ring-black/10 p-1.5 object-contain shrink-0" data-testid="company-logo" />
             )}
             <div className="flex-1">
               <div className="font-semibold text-[var(--color-gold)]">{t('plot.showcaseTitle')}</div>

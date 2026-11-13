@@ -93,7 +93,10 @@ export function pngFromIco(b: Buffer): Buffer | null {
   return best;
 }
 
-/** Checks and converts a downloaded file into the stored logo: PNG, at most 128×128, transparent padding. */
+/**
+ * Checks and converts a downloaded file into the stored logo: PNG, at most 128 px on its long side. Empty margins
+ * (transparent, or a flat background colour) are trimmed first, so the mark itself fills the badge (M7).
+ */
 export async function normalizeLogo(body: Buffer, contentType: string): Promise<Buffer> {
   if (body.length > LOGO_MAX_BYTES) throw new BlockedUrlError('larger than 1 MB');
   const kind = sniff(body);
@@ -113,7 +116,34 @@ export async function normalizeLogo(body: Buffer, contentType: string): Promise<
   const meta = await img.metadata();
   if (!meta.width || !meta.height) throw new BlockedUrlError('no size');
   if (Math.max(meta.width, meta.height) < 32 && kind !== 'svg') throw new BlockedUrlError('too small');
-  return img.resize(LOGO_SIZE, LOGO_SIZE, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 }, withoutEnlargement: kind !== 'svg' }).png({ compressionLevel: 9 }).toBuffer();
+  const flat = await img.png().toBuffer();
+  // trim() throws on an image that is all one colour; such a file keeps its size (and fails the fill check later).
+  const trimmed = await sharp(flat).trim({ threshold: 12 }).png().toBuffer().catch(() => flat);
+  // Kept at its own aspect ratio (no square padding): the page's badge fits it with object-fit: contain.
+  return sharp(trimmed).resize(LOGO_SIZE, LOGO_SIZE, { fit: 'inside', withoutEnlargement: kind !== 'svg' }).png({ compressionLevel: 9 }).toBuffer();
+}
+
+/**
+ * M7: the share of the square badge the visible pixels of a stored logo cover (their bounding box over the square that
+ * contains the image). A square mark is ~1; a 5:1 wordmark is ~0.2, too thin to read at badge size, so pages show the
+ * company's initials instead.
+ */
+export async function logoFill(png: Buffer): Promise<number> {
+  const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  let x0 = info.width, y0 = info.height, x1 = -1, y1 = -1;
+  for (let y = 0; y < info.height; y++) {
+    for (let x = 0; x < info.width; x++) {
+      if (data[(y * info.width + x) * 4 + 3]! > 24) {
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+  }
+  if (x1 < 0) return 0;
+  const side = Math.max(info.width, info.height);
+  return Math.round((((x1 - x0 + 1) * (y1 - y0 + 1)) / (side * side)) * 100) / 100;
 }
 
 // ── 1. Wikidata P154 through the Commons API ──
@@ -291,7 +321,7 @@ export async function setLogosGloballyDisabled(disabled: boolean, by: string) {
 }
 
 /** The logo a page may show for this plot, or null (kill-switch, per-plot hide, takedown, or none). */
-export function visibleLogo(p: Pick<Plot, 'showcase'>): { url: string; source: string; sourceUrl: string; license: string | null; author: string | null } | null {
+export function visibleLogo(p: Pick<Plot, 'showcase'>): { url: string; source: string; sourceUrl: string; license: string | null; author: string | null; fill?: number } | null {
   const l = p.showcase?.logo;
   if (!l?.url || p.showcase?.logoHidden || logosGloballyDisabledCached()) return null;
   return l;
@@ -375,7 +405,7 @@ export async function backfillLogos(opts: { apply: boolean; country?: string; pl
       opts.onProgress?.(`  ✓ ${plot.showcase.brand}: ${logo.source} ${logo.sourceUrl}`);
       if (!opts.apply) continue;
       const url = await putFile(`logos/${plot.slug}-${Date.now().toString(36)}.png`, logo.png, 'image/png');
-      const entry = { url, source: logo.source, sourceUrl: logo.sourceUrl, license: logo.license, author: logo.author };
+      const entry = { url, source: logo.source, sourceUrl: logo.sourceUrl, license: logo.license, author: logo.author, fill: await logoFill(logo.png) };
       await db
         .update(P)
         .set({ showcase: sql`coalesce(${P.showcase}, '{}'::jsonb) || ${JSON.stringify({ logo: entry, ...(found && !plot.showcase.sourceId ? { wikidataId: found } : {}) })}::jsonb` })

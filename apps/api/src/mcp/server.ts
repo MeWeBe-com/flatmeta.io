@@ -3,6 +3,7 @@
  * The same tools are served over Streamable HTTP (/mcp) and stdio.
  */
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { sectorLabel } from '../lib/sector.js';
 import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { config } from '../config.js';
@@ -300,7 +301,7 @@ export function createMcpServer(getUser: () => User | null): McpServer {
       if (country) where.push(eq(P.countryCode, country.toUpperCase()));
       if (query) where.push(sql`${P.title} ilike ${'%' + query.replace(/[%_\\]/g, '') + '%'}`);
       const rows = await db.select().from(P).where(and(...where)).orderBy(P.title).limit(limit);
-      return text(rows.map((p) => ({ company: p.showcase?.brand ?? p.title, country: p.countryCode, city: p.showcase?.city, sector: p.showcase?.sector, label: `Reserved for ${p.showcase?.brand ?? p.title}, not affiliated with FlatMeta`, url: web(`/p/${p.slug}`), claimUrl: web(`/claim/${p.slug}`) })));
+      return text(rows.map((p) => ({ company: p.showcase?.brand ?? p.title, country: p.countryCode, city: p.showcase?.city, sector: sectorLabel(p.showcase?.sector), label: `Reserved for ${p.showcase?.brand ?? p.title}, not affiliated with FlatMeta`, url: web(`/p/${p.slug}`), claimUrl: web(`/claim/${p.slug}`) })));
     },
   );
 

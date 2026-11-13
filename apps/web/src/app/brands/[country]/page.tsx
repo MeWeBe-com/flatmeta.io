@@ -9,15 +9,17 @@ type Props = { params: Promise<{ country: string }>; searchParams: Promise<{ q?:
 
 const load = (cc: string, qs = '') => serverApi<BrandsRes>(`/brands?country=${cc}${qs}`, { auth: false, revalidate: 300 }).catch(() => null);
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { country } = await params;
+  const page = Math.max(1, Math.min(500, Number((await searchParams).page) || 1));
   if (!/^[a-z]{2}$/i.test(country)) return { title: 'Not found' };
   const data = await load(country.toUpperCase());
   const name = data?.countries.find((c) => c.code === country.toUpperCase())?.name ?? country.toUpperCase();
   return {
-    title: `Companies in ${name} on FlatMeta`,
+    title: `Companies in ${name} on FlatMeta${page > 1 ? ` · page ${page}` : ''}`,
     description: `Companies in ${name} with land reserved next to their headquarters on the FlatMeta world map.`,
-    alternates: { canonical: `${SITE_URL}/brands/${country.toLowerCase()}` },
+    // M7: each page of the list is its own canonical URL (page 2 is not a copy of page 1), so every company is crawlable.
+    alternates: { canonical: `${SITE_URL}/brands/${country.toLowerCase()}${page > 1 ? `?page=${page}` : ''}` },
   };
 }
 

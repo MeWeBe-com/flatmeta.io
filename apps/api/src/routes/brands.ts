@@ -8,6 +8,7 @@ import { publicShowcase } from '../lib/visibility.js';
 import { runCompanyLand, processCountry } from '../companies/land.js';
 import { logosGloballyDisabled, setLogosGloballyDisabled, setPlotLogoHidden, visibleLogo } from '../companies/logos.js';
 import { config } from '../config.js';
+import { sectorLabel } from '../lib/sector.js';
 import { OUTREACH, REGISTER_STATUSES, findContactPages, registerCsv, registerRows } from '../companies/register.js';
 import { onDomain } from '../companies/safe-fetch.js';
 import { registrableDomain } from '../services/showcase-claim.js';
@@ -46,7 +47,11 @@ export default async function brandRoutes(app: App) {
         .groupBy(P.countryCode)
         .orderBy(desc(sql`count(*)`));
       return {
-        brands: rows.slice(0, per).map(({ showcase, ...b }) => ({ ...b, logoUrl: visibleLogo({ showcase })?.url ?? null })),
+        brands: rows.slice(0, per).map(({ showcase, sector, ...b }) => {
+          const logo = visibleLogo({ showcase });
+          // M7: one spelling per sector; the logo's fill lets the page show initials for marks too thin for a badge.
+          return { ...b, sector: sectorLabel(sector), logoUrl: logo?.url ?? null, logoFill: logo?.fill ?? null };
+        }),
         hasMore: rows.length > per,
         countries: countries.filter((c) => c.code).map((c) => ({ code: c.code!, name: countryName(c.code!), count: c.n })),
       };

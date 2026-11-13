@@ -69,7 +69,7 @@ export type ShowcaseInfo = {
   /** H1: Wikidata item found for a curated company (by name, confirmed by its official website). */
   wikidataId?: string;
   /** H1: the small official logo (badge only), where it came from, and whether it is hidden. */
-  logo?: { url: string; source: 'wikidata' | 'website'; sourceUrl: string; license: string | null; author: string | null };
+  logo?: { url: string; source: 'wikidata' | 'website'; sourceUrl: string; license: string | null; author: string | null; fill?: number };
   logoHidden?: boolean;
   logoHiddenReason?: string | null;
 };

@@ -1,4 +1,5 @@
 import { readdir, readFile } from 'node:fs/promises';
+import { sectorLabel } from '../lib/sector.js';
 import path from 'node:path';
 import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -133,7 +134,7 @@ export async function upsertShowcase(e: ShowcaseEntry, country: string, opts: Ge
   const showcase: ShowcaseInfo = {
     brand: e.brand,
     website,
-    sector: e.sector,
+    sector: sectorLabel(e.sector) ?? e.sector,
     kind: e.kind,
     city: e.city,
     useCase: e.useCase,

@@ -4,7 +4,7 @@ import sharp from 'sharp';
 import { db, pool, schema } from '../src/db/client.js';
 import { closeRedis } from '../src/lib/redis.js';
 import { BlockedUrlError, checkUrl, guardedLookup, isPrivateAddress, onDomain, safeFetch, setHop, type Hop } from '../src/companies/safe-fetch.js';
-import { backfillLogos, iconCandidates, normalizeLogo, pngFromIco, sanitizeSvg, setLogosGloballyDisabled, setWikimediaGap } from '../src/companies/logos.js';
+import { backfillLogos, iconCandidates, logoFill, normalizeLogo, pngFromIco, sanitizeSvg, setLogosGloballyDisabled, setWikimediaGap } from '../src/companies/logos.js';
 import type { App } from '../src/app.js';
 import { freeRect, getApp, login } from './helpers.js';
 
@@ -72,6 +72,23 @@ describe('logo files (H1)', () => {
     await expect(normalizeLogo(Buffer.alloc(1_000_001), 'image/png')).rejects.toThrow(/1 MB/);
     const tiny = await sharp({ create: { width: 16, height: 16, channels: 3, background: '#000' } }).png().toBuffer();
     await expect(normalizeLogo(tiny, 'image/png')).rejects.toThrow(/too small/);
+  });
+
+  it('M7: trims empty margins (transparent or a flat background) so the mark fills the badge, and measures its fill', async () => {
+    const mark = await sharp({ create: { width: 60, height: 60, channels: 4, background: { r: 20, g: 90, b: 200, alpha: 1 } } }).png().toBuffer();
+    // A 60×60 mark in the middle of a 200×200 transparent canvas.
+    const padded = await sharp({ create: { width: 200, height: 200, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).composite([{ input: mark, left: 70, top: 70 }]).png().toBuffer();
+    const out = await normalizeLogo(padded, 'image/png');
+    expect(await sharp(out).metadata()).toMatchObject({ width: 60, height: 60 });
+    expect(await logoFill(out)).toBe(1);
+    // The same on a white JPEG-style background.
+    const onWhite = await sharp({ create: { width: 200, height: 200, channels: 3, background: '#ffffff' } }).composite([{ input: mark, left: 30, top: 100 }]).png().toBuffer();
+    expect(await sharp(await normalizeLogo(onWhite, 'image/png')).metadata()).toMatchObject({ width: 60, height: 60 });
+    // A 5:1 wordmark covers a fifth of the square badge: too thin to read, so pages show initials.
+    const word = await sharp({ create: { width: 250, height: 50, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 1 } } }).png().toBuffer();
+    expect(await logoFill(await normalizeLogo(word, 'image/png'))).toBeLessThan(0.3);
+    // A one-colour file is not trimmed away to nothing.
+    expect(await sharp(await normalizeLogo(png64, 'image/png')).metadata()).toMatchObject({ width: 64, height: 64 });
   });
 
   it('sanitises SVG: no scripts, handlers, foreign content or external references; DOCTYPE/entities refused', async () => {
@@ -162,7 +179,11 @@ describe('finding, storing and showing logos (H1)', () => {
     const view = json(await app.inject({ url: `/v1/plots/${a.slug}` })).plot;
     expect(view.showcase.logo).toMatchObject({ source: 'wikidata', license: 'Public domain' });
     expect(view.coverImageUrl).not.toBe(view.showcase.logo.url);
-    expect(json(await app.inject({ url: `/v1/brands?q=${encodeURIComponent('Acme Widgets')}` })).brands[0]?.logoUrl ?? null).toBe(srcA!.logoUrl);
+    const listed = json(await app.inject({ url: `/v1/brands?q=${encodeURIComponent('Acme Widgets')}` })).brands[0];
+    expect(listed?.logoUrl ?? null).toBe(srcA!.logoUrl);
+    // M7: the fill is stored with the logo and listed, so /brands can choose logo or initials without loading it.
+    expect(listed?.logoFill).toBe(1);
+    expect(listed?.sector).toBe('Retail');
     setHop(null);
   });
 

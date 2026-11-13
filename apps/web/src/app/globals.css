@@ -246,3 +246,19 @@ h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0
 /* H1: company logo badge on the map (small; never the plot's main visual) */
 .fm-plot-logo { width: 26px; height: 26px; border-radius: 8px; background: #fff; padding: 2px; box-shadow: 0 2px 8px rgb(0 0 0 / .45); pointer-events: none; }
 .fm-plot-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* M6/M7: a sideways-scrolling chip row; the edges fade where there are more chips (data-start / data-end set by ChipStrip). */
+/* In the components layer, so md:/lg: utilities (wrap, no mask) win from those widths up. */
+@layer components {
+  .chip-strip {
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    --fade-l: 0px;
+    --fade-r: 24px;
+    mask-image: linear-gradient(to right, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent);
+  }
+  .chip-strip::-webkit-scrollbar { display: none; }
+  .chip-strip[data-start='false'] { --fade-l: 24px; }
+  .chip-strip[data-end='true'] { --fade-r: 0px; }
+  .chip-strip > * { flex-shrink: 0; scroll-snap-align: start; }
+}

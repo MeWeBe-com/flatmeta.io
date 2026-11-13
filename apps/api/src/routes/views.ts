@@ -1,4 +1,5 @@
 import { forbidden } from '../lib/errors.js';
+import { sectorLabel } from '../lib/sector.js';
 import { contentModifiedAt, isIndexable } from '../lib/visibility.js';
 import { visibleLogo } from '../companies/logos.js';
 import { customHtmlGloballyDisabledCached, plotSandboxUrl } from '../services/custom-html.js';
@@ -103,7 +104,7 @@ export function plotView(p: Plot, owner: OwnerView | null, extra: { likedByMe?: 
     frame: p.frame,
     business: p.business,
     showcase: sc
-      ? { brand: sc.brand, website: sc.website, sector: sc.sector, kind: sc.kind, city: sc.city, useCase: sc.useCase, highlights: sc.highlights, approved: sc.approved, source: sc.source ?? null, sourceUrl: sc.sourceUrl ?? null, license: sc.license ?? null, logo: visibleLogo(p) }
+      ? { brand: sc.brand, website: sc.website, sector: sectorLabel(sc.sector), kind: sc.kind, city: sc.city, useCase: sc.useCase, highlights: sc.highlights, approved: sc.approved, source: sc.source ?? null, sourceUrl: sc.sourceUrl ?? null, license: sc.license ?? null, logo: visibleLogo(p) }
       : null,
     moderationStatus: p.moderationStatus,
     // S2: may search engines index this page (the one rule in lib/visibility.ts), and when its content last changed.
