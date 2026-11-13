@@ -33,7 +33,9 @@ test('an unknown page is a real 404 with its own title, noindex, and ways back',
 test('one language, no hreflang; canonicals absolute, on the site host, without query strings', async ({ request, baseURL }) => {
   const plots = await (await request.get('/sitemap-plots.xml')).text();
   const plot = new URL([...plots.matchAll(/<loc>([^<]+\/p\/[^<]+)<\/loc>/g)][0]![1]!).pathname;
-  const site = new URL(await (await request.get('/robots.txt')).text().then((t) => t.match(/Sitemap: (\S+)/)?.[1] ?? `${baseURL}/sitemap.xml`)).origin;
+  // The site's canonical origin, as the sitemap index states it (APP_URL; may differ from the test's base URL).
+  const index = await (await request.get('/sitemap.xml')).text();
+  const site = new URL(index.match(/<loc>([^<]+)<\/loc>/)?.[1] ?? `${baseURL}/sitemap.xml`).origin;
   const cases: [string, string][] = [
     ['/', '/'],
     ['/?at=51.5,-0.12,12&utm_source=x', '/'],
