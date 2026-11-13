@@ -175,8 +175,11 @@ test('private messages arrive live with an unread badge', async () => {
   await a.page.getByLabel('Message').press('Enter');
   await expect(a.page.getByRole('region', { name: 'Chat' }).getByText(text)).toBeVisible();
 
-  await expect(chatButton(b)).toHaveAccessibleName(/1 unread/, { timeout: 10_000 });
-  await expect(b.page.getByRole('status').filter({ hasText: /message from Ana/i })).toBeVisible();
+  // The toast lives 3.8 s: wait for it alongside the badge, not after it (under load the badge can take longer).
+  await Promise.all([
+    expect(chatButton(b)).toHaveAccessibleName(/1 unread/, { timeout: 10_000 }),
+    expect(b.page.getByRole('status').filter({ hasText: /message from Ana/i })).toBeVisible({ timeout: 10_000 }),
+  ]);
   await openThread(b, a);
   await expect(b.page.getByRole('region', { name: 'Chat' }).getByText(text)).toBeVisible();
   await b.page.getByRole('button', { name: 'Close chat' }).click();
@@ -196,8 +199,11 @@ test('a private chat opened from a profile page reaches the other player live', 
   await expect(chatB.getByText(text)).toBeVisible();
 
   // A (chat closed) gets it live: unread badge on the chat button, a toast and the thread.
-  await expect(chatButton(a)).toHaveAccessibleName(/1 unread/, { timeout: 10_000 });
-  await expect(a.page.getByRole('status').filter({ hasText: /message from Ben/i })).toBeVisible();
+  // The toast lives 3.8 s: wait for it alongside the badge, not after it (under load the badge can take longer).
+  await Promise.all([
+    expect(chatButton(a)).toHaveAccessibleName(/1 unread/, { timeout: 10_000 }),
+    expect(a.page.getByRole('status').filter({ hasText: /message from Ben/i })).toBeVisible({ timeout: 10_000 }),
+  ]);
   await openThread(a, b);
   await expect(a.page.getByRole('region', { name: 'Chat' }).getByText(text)).toBeVisible();
   await a.page.getByRole('button', { name: 'Close chat' }).click();
