@@ -405,7 +405,7 @@ export default async function plotRoutes(app: App) {
   app.get(
     '/v1/plots/nearest',
     {
-      config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+      config: { rateLimit: { max: 60 * config.RATE_LIMIT_SCALE, timeWindow: '1 minute' } },
       schema: { tags: ['plots'], summary: 'Nearest public plots (landmarks, showcase, published) to a point', querystring: z.object({ lat: z.coerce.number().min(-85).max(85), lng: z.coerce.number().min(-180).max(180), limit: z.coerce.number().int().min(1).max(12).default(5) }) },
     },
     async (req) => {

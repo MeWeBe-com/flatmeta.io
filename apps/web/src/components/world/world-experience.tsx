@@ -31,6 +31,7 @@ import { QuestTracker } from './quest-tracker';
 import { useTourState } from './tour-state';
 import { HelpMenu } from './help-menu';
 import { NavMenu } from '../nav-menu';
+import { MapAttribution } from '../map/attribution';
 
 // M2: panels that start closed load when they open, so a phone's first screen hydrates with less JavaScript.
 const ClaimPanel = dynamic(() => import('./claim-panel').then((m) => m.ClaimPanel), { ssr: false });
@@ -346,10 +347,10 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
           <Logo size={26} withText={false} />
           <span className="hidden sm:inline font-display font-bold ml-2">FlatMeta</span>
         </Link>
-        <button data-tour="search" onClick={() => setSearchOpen(true)} className="pointer-events-auto glass rounded-full h-11 flex-1 max-w-xl flex items-center gap-2 px-4 text-left text-sm muted hover:text-[var(--text)]">
-          <Search size={16} />
-          <span className="truncate">{t('hud.search')}</span>
-          <span className="ml-auto chip chip-violet h-6"><Sparkles size={11} /> AI</span>
+        <button data-tour="search" onClick={() => setSearchOpen(true)} className="pointer-events-auto glass rounded-full h-11 flex-1 min-w-0 max-w-xl flex items-center gap-2 px-3 sm:px-4 text-left text-sm muted hover:text-[var(--text)]">
+          <Search size={16} className="shrink-0" />
+          <span className="truncate min-w-0">{t('hud.search')}</span>
+          <span className="ml-auto shrink-0 chip chip-violet h-6"><Sparkles size={11} /> AI</span>
           <kbd className="hidden md:inline text-xs border border-[var(--line-strong)] rounded px-1.5 py-0.5">⌘K</kbd>
         </button>
         <nav className="hidden lg:flex pointer-events-auto glass rounded-full h-11 items-center px-2 text-sm">
@@ -364,21 +365,10 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
 
       {/* Right rail: quests + live */}
       {!openPlot && !claimMode && (
-        <div className="absolute z-20 right-3 top-[72px] w-80 space-y-3 hidden md:block">
+        <div className="absolute z-20 right-3 top-[72px] w-80 space-y-3 hidden md:block max-h-[calc(100dvh-200px)] overflow-y-auto overscroll-contain rounded-2xl">
           <QuestTracker />
           <LiveTicker onSelect={onActivity} />
         </div>
-      )}
-      {!openPlot && !claimMode && (
-        <button
-          data-tour="quests"
-          className={clsx('absolute z-20 right-3 bottom-24 md:hidden glass rounded-full size-11 grid place-items-center', mobilePanel && 'text-[var(--color-teal)]')}
-          onClick={() => setMobilePanel((p) => !p)}
-          aria-label="Quests and live activity"
-          aria-expanded={mobilePanel}
-        >
-          {mobilePanel ? <X size={18} /> : <Flag size={18} />}
-        </button>
       )}
       {mobilePanel && !openPlot && !claimMode && (
         <div className="md:hidden absolute z-20 inset-x-3 top-[72px] bottom-40 space-y-3 overflow-y-auto animate-rise">
@@ -422,33 +412,6 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
         </div>
       )}
 
-      {/* Left controls: one column, so nothing in it can cover anything else. In walk mode on a touch screen the
-          joystick joins it and the zoom buttons step aside (pinch zooms). */}
-      <div className="absolute z-20 left-3 bottom-[calc(env(safe-area-inset-bottom)+96px)] md:bottom-6 flex flex-col items-start gap-2">
-        <div className={clsx('glass rounded-2xl flex flex-col', walking && 'hidden')}>
-          <button className="icon-btn" onClick={() => map.current?.zoomBy(1)} aria-label={t('hud.zoomIn')}><Plus size={18} /></button>
-          <button className="icon-btn" onClick={() => map.current?.zoomBy(-1)} aria-label={t('hud.zoomOut')}><Minus size={18} /></button>
-        </div>
-        <button
-          className="glass rounded-2xl icon-btn"
-          aria-label={t('hud.locate')}
-          onClick={() => void goPrecise(true)}
-          disabled={locating}
-        >
-          {locating ? <Spinner /> : <LocateFixed size={18} />}
-        </button>
-        <HelpMenu onReplayTour={tour.start} />
-        {walking && <Joystick onStick={(x, y) => map.current?.setJoystick(x, y)} />}
-      </div>
-
-      {/* The three levels */}
-      {!claimMode && (
-        <div className="absolute z-20 left-1/2 -translate-x-1/2 bottom-[84px] sm:bottom-auto sm:top-[108px]">
-          <LevelSwitch zoom={zoom} onPick={pickLevel} />
-        </div>
-      )}
-
-      <WalkControls visible={!claimMode && zoom >= AVATAR_MIN_ZOOM} onEmote={(e) => live.sendEmote(e)} />
 
       {peer && !claimMode && !openPlot && (
         <ErrorBoundary name="PeerCard">
@@ -462,14 +425,64 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
         />
         </ErrorBoundary>
       )}
-      {!claimMode && (
-        <ErrorBoundary
-          name="ChatPanel"
-          fallback={<p role="alert" className="absolute z-20 right-3 bottom-[152px] md:bottom-6 glass rounded-2xl px-3 py-2 text-xs">Chat is unavailable. <button className="underline" onClick={() => location.reload()}>Reload</button></p>}
-        >
-          <ChatPanel position={() => map.current?.myPosition() ?? { ...center.current }} openWith={chatWith} onOpenedWith={() => setChatWith(null)} />
-        </ErrorBoundary>
-      )}
+
+      {/* M4: one bottom control bar. Everything in it is in normal flow, inside the safe areas, so no control can
+          cover another at any screen size: on phones the left and right columns sit above a centre row (levels, then
+          Claim land); on wide or short (landscape) screens the three share one row. */}
+      <div
+        className="absolute z-20 inset-x-0 bottom-0 px-3 pb-[calc(env(safe-area-inset-bottom)+12px)] pl-[calc(env(safe-area-inset-left)+12px)] pr-[calc(env(safe-area-inset-right)+12px)] pointer-events-none flex flex-col gap-2 sm:flex-row sm:items-end [@media(max-height:500px)]:flex-row [@media(max-height:500px)]:items-end"
+        data-testid="map-controls"
+      >
+        <div className="flex items-end justify-between gap-2 sm:contents [@media(max-height:500px)]:contents">
+          {/* Left: zoom (hidden in walk mode on touch screens: pinch zooms), locate, help, the joystick in walk mode. */}
+          <div className="pointer-events-auto flex flex-col items-start gap-2 sm:order-1 [@media(max-height:500px)]:order-1">
+            <div className={clsx('glass rounded-2xl flex flex-col', walking && 'hidden')}>
+              <button className="icon-btn" onClick={() => map.current?.zoomBy(1)} aria-label={t('hud.zoomIn')}><Plus size={18} /></button>
+              <button className="icon-btn" onClick={() => map.current?.zoomBy(-1)} aria-label={t('hud.zoomOut')}><Minus size={18} /></button>
+            </div>
+            <button className="glass rounded-2xl icon-btn" aria-label={t('hud.locate')} onClick={() => void goPrecise(true)} disabled={locating}>
+              {locating ? <Spinner /> : <LocateFixed size={18} />}
+            </button>
+            <HelpMenu onReplayTour={tour.start} />
+            {walking && <Joystick onStick={(x, y) => map.current?.setJoystick(x, y)} />}
+          </div>
+          {/* Right: emotes (walk mode), quests (phones), chat, map attribution. */}
+          <div className="pointer-events-auto flex flex-col items-end gap-2 sm:order-3 [@media(max-height:500px)]:order-3">
+            <WalkControls visible={!claimMode && zoom >= AVATAR_MIN_ZOOM} onEmote={(e) => live.sendEmote(e)} />
+            {!openPlot && !claimMode && (
+              <button
+                data-tour="quests"
+                className={clsx('md:hidden glass rounded-full size-11 grid place-items-center', mobilePanel && 'text-[var(--color-teal)]')}
+                onClick={() => setMobilePanel((p) => !p)}
+                aria-label="Quests and live activity"
+                aria-expanded={mobilePanel}
+              >
+                {mobilePanel ? <X size={18} /> : <Flag size={18} />}
+              </button>
+            )}
+            {!claimMode && (
+              <ErrorBoundary
+                name="ChatPanel"
+                fallback={<p role="alert" className="glass rounded-2xl px-3 py-2 text-xs">Chat is unavailable. <button className="underline min-h-11" onClick={() => location.reload()}>Reload</button></p>}
+              >
+                <ChatPanel inline position={() => map.current?.myPosition() ?? { ...center.current }} openWith={chatWith} onOpenedWith={() => setChatWith(null)} />
+              </ErrorBoundary>
+            )}
+            <MapAttribution />
+          </div>
+        </div>
+        {/* Centre: the three levels, then the primary action. */}
+        {!claimMode && (
+          <div className="pointer-events-auto flex flex-col items-center gap-2 sm:order-2 sm:flex-1 [@media(max-height:500px)]:order-2 [@media(max-height:500px)]:flex-1">
+            <LevelSwitch zoom={zoom} onPick={pickLevel} />
+            {!openPlot && (
+              <button data-tour="claim" className="btn-primary btn-lg shadow-2xl animate-pulse-ring" onClick={startClaim}>
+                <Compass size={18} /> {t('hud.claimLand')}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Bottom stats pill */}
       <div className="absolute z-10 left-1/2 -translate-x-1/2 top-[70px] hidden sm:flex glass rounded-full h-8 px-3 items-center gap-3 text-xs pointer-events-none">
@@ -477,14 +490,6 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
         {stats && <span className="muted">{compact(stats.plots + stats.showcase)} plots · {stats.countries} countries</span>}
       </div>
 
-      {/* Primary action */}
-      {!claimMode && !openPlot && (
-        <div className="absolute z-20 bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2">
-          <button data-tour="claim" className="btn-primary btn-lg shadow-2xl animate-pulse-ring" onClick={startClaim}>
-            <Compass size={18} /> {t('hud.claimLand')}
-          </button>
-        </div>
-      )}
 
       {claimMode && (
         <ClaimPanel

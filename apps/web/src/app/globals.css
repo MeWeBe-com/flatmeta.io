@@ -221,7 +221,7 @@ h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0
 .fm-avatar .fm-name, .fm-avatar .fm-acc { pointer-events: none; }
 .fm-avatar .fm-face { width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center; font-size: 19px; line-height: 1; background: color-mix(in srgb, var(--av) 35%, #0b1020); border: 2px solid var(--av); box-shadow: 0 4px 14px rgb(0 0 0 / .45), 0 0 0 3px rgb(11 16 32 / .35); position: relative; }
 .fm-avatar .fm-acc { position: absolute; top: -9px; right: -6px; font-size: 13px; }
-.fm-avatar .fm-name { margin-top: 3px; font: 600 10px/1 var(--font-sans, system-ui); color: #fff; background: rgb(11 16 32 / .75); padding: 2px 6px; border-radius: 999px; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fm-avatar .fm-name { margin-top: 3px; font: 600 12px/1 var(--font-sans, system-ui); color: #fff; background: rgb(11 16 32 / .75); padding: 2px 6px; border-radius: 999px; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fm-avatar-me .fm-face { border-color: #fff; box-shadow: 0 0 0 3px var(--av), 0 6px 18px rgb(0 0 0 / .5); width: 38px; height: 38px; font-size: 21px; }
 .fm-avatar-me .fm-name { background: var(--av); color: #0b1020; }
 .fm-avatar:focus-visible .fm-face { outline: 3px solid var(--color-teal); outline-offset: 2px; }

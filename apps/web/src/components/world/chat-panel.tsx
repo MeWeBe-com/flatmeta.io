@@ -12,7 +12,8 @@ type Tab = 'nearby' | 'clan' | 'friends';
 const MAX_KEPT = 120;
 
 /** Nearby, clan and private chat plus connections, in one collapsible panel. */
-export function ChatPanel({ position, openWith, onOpenedWith }: { position: () => { lat: number; lng: number } | null; openWith: string | null; onOpenedWith: () => void }) {
+/** `inline`: the closed chat button sits in the map's bottom control bar (M4) instead of placing itself. */
+export function ChatPanel({ position, openWith, onOpenedWith, inline = false }: { position: () => { lat: number; lng: number } | null; openWith: string | null; onOpenedWith: () => void; inline?: boolean }) {
   const live = useLive();
   const { me, openSignIn } = useSession();
   const { toast } = useGame();
@@ -142,7 +143,7 @@ export function ChatPanel({ position, openWith, onOpenedWith }: { position: () =
 
   if (!open) {
     return (
-      <div className="absolute z-20 right-3 bottom-[152px] md:bottom-6">
+      <div className={inline ? 'relative' : 'absolute z-20 right-3 bottom-[152px] md:bottom-6'}>
         <button className="glass rounded-2xl icon-btn relative" onClick={() => setOpen(true)} aria-label={`Chat${unread ? `, ${unread} unread` : ''}`}>
           <MessageCircle size={18} />
           {unread > 0 && <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--color-coral)] text-xs font-bold grid place-items-center text-white">{unread > 9 ? '9+' : unread}</span>}
@@ -155,7 +156,7 @@ export function ChatPanel({ position, openWith, onOpenedWith }: { position: () =
   const hint = tab === 'nearby' ? 'Say hi to people within 2 km' : tab === 'clan' ? 'Message your clan' : dm ? `Message @${dm}` : '';
 
   return (
-    <section className="absolute z-30 left-3 bottom-24 md:bottom-6 w-[min(22rem,calc(100vw-1.5rem))] h-[min(26rem,60vh)] glass rounded-2xl flex flex-col overflow-hidden animate-rise" aria-label="Chat">
+    <section className="fixed z-[var(--z-sheet)] left-3 bottom-[calc(env(safe-area-inset-bottom)+12px)] w-[min(22rem,calc(100vw-1.5rem))] h-[min(26rem,60dvh)] glass rounded-2xl flex flex-col overflow-hidden animate-rise" aria-label="Chat">
       <header className="flex items-center gap-1 p-2 border-b border-[var(--line)]">
         {(['nearby', 'clan', 'friends'] as Tab[]).map((t2) => (
           <button key={t2} onClick={() => { setTab(t2); if (t2 !== 'friends') setDm(null); }} className={clsx('px-3 h-8 rounded-full text-xs font-semibold capitalize inline-flex items-center gap-1', tab === t2 ? 'bg-[var(--color-teal)] text-[#0b1020]' : 'hover:bg-white/10')}>

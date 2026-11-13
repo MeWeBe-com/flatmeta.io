@@ -143,6 +143,9 @@ const schema = z.object({
   PAYOUT_MIN_CENTS: z.coerce.number().int().min(0).default(500),
 
   RATE_LIMIT_PER_MINUTE: z.coerce.number().default(300),
+  // Multiplies the per-route limits (e.g. /plots/nearest's 60 a minute). 1 in production; the CI test stack, where one IP
+  // drives every e2e project in parallel, raises it.
+  RATE_LIMIT_SCALE: z.coerce.number().min(1).max(1000).default(1),
   // S2: IndexNow (Bing, Yandex, Seznam…) is told when public plots appear, change or go. The key is generated on the
   // server (openssl rand -hex 16) and served at /indexnow-key.txt by the web app; unset = no pings.
   INDEXNOW_KEY: z.string().regex(/^[A-Za-z0-9-]{8,128}$/).optional().or(z.literal('').transform(() => undefined)),

@@ -17,6 +17,7 @@ import path from 'node:path';
 export const PAGES = [
   { id: 'home-tour', path: '/' }, // first visit: the guided tour is open
   { id: 'home', path: '/' }, // the map once the tour is done
+  { id: 'home-walk', path: '/?at=51.5029,-0.1206,15' }, // walk mode (Land level): joystick and emotes on touch screens
   { id: 'plot', path: '/p/tesla' },
   { id: 'brands', path: '/brands' },
   { id: 'explore', path: '/explore' },
@@ -47,7 +48,6 @@ const TEXT_ALLOWLIST: { selector: string; reason: string }[] = [
 type Check = 'hscroll' | 'offscreen' | 'covered' | 'tap' | 'text';
 const KNOWN: { task: string; page: string; check: Check; devices?: RegExp }[] = [
   // Baseline of 13 Nov 2026 (production build before the fixes); the task that fixes each one removes it.
-  ...(['covered', 'offscreen', 'tap', 'text'] as const).map((check) => ({ task: 'M4', page: 'home', check })),
   // WebKit also scrolls sideways at 320 px, 844x390 and on the iPad (the header and card rows are wider there).
   ...(['hscroll', 'offscreen', 'tap', 'text'] as const).map((check) => ({ task: 'M5', page: 'plot', check })),
   ...(['hscroll', 'offscreen', 'tap', 'text'] as const).map((check) => ({ task: 'M6', page: 'explore', check })),
@@ -177,14 +177,14 @@ test.describe('device matrix', () => {
       const results: Record<string, Violation[]> = {};
       for (const p of PAGES) {
         const ctx = await openOn(browser, d, baseURL!);
-        if (p.id === 'home') await ctx.addInitScript(() => localStorage.setItem('fm-tour-done', '1'));
+        if (p.id === 'home' || p.id === 'home-walk') await ctx.addInitScript(() => localStorage.setItem('fm-tour-done', '1'));
         const page = await ctx.newPage();
         await page.goto(p.id === 'plot' ? plot : p.path, { waitUntil: 'domcontentloaded' });
         // The map keeps fetching tiles, so "network idle" never comes there: other pages wait for it (briefly).
-        if (p.path === '/') await page.waitForLoadState('load').catch(() => undefined);
+        if (p.path.startsWith('/') && p.path.split('?')[0] === '/') await page.waitForLoadState('load').catch(() => undefined);
         else await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
         if (p.id === 'home-tour') await page.getByRole('dialog', { name: 'Guided tour' }).waitFor({ timeout: 20_000 }); // slow under a full parallel run
-        if (p.id === 'home') await page.waitForTimeout(800);
+        if (p.id === 'home' || p.id === 'home-walk') await page.waitForTimeout(1500);
         const m = await measure(page, touch);
         const known = KNOWN.filter((k) => k.page === p.id && (!k.devices || k.devices.test(d.id)));
         results[p.id] = m.violations.filter((v) => !known.some((k) => k.check === v.check));

@@ -291,7 +291,7 @@ export function WorldMap(props: Props) {
       zoom: iv.zoom,
       minZoom: 1,
       maxZoom: 19,
-      attributionControl: { compact: true },
+      attributionControl: false, // the credits are in the bottom control bar (components/map/attribution.tsx, M4)
       dragRotate: false,
       pitchWithRotate: false,
       maxPitch: 0,

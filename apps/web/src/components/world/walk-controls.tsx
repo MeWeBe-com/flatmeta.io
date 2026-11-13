@@ -14,9 +14,9 @@ export function WalkControls({ onEmote, visible }: { onEmote: (e: Emote) => void
   if (!visible) return null;
   return (
     <>
-      <div className="absolute z-20 right-3 bottom-[calc(env(safe-area-inset-bottom)+208px)] md:bottom-24 flex flex-col items-end gap-2">
+      <div className="relative flex flex-col items-end gap-2">
         {open && (
-          <div role="toolbar" aria-label="Emotes" className="surface p-1.5 grid grid-cols-4 gap-1 shadow-xl">
+          <div role="toolbar" aria-label="Emotes" className="absolute bottom-full right-0 mb-2 w-max surface p-1.5 grid grid-cols-4 gap-1 shadow-xl">
             {(Object.keys(EMOTE_ICONS) as Emote[]).map((k) => (
               <button
                 key={k}
