@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Compass, LocateFixed, MapPin, Minus, Plus, Search, Sparkles, Users, Flag, X, HelpCircle } from 'lucide-react';
+import { Compass, LocateFixed, MapPin, Minus, Plus, Search, Sparkles, Users, Flag, X } from 'lucide-react';
 import type { Rect } from '@/lib/grid';
 import { rectCenter } from '@/lib/grid';
 import { geoConsent, geoPermission, pickSpawn, precisePosition, readDevicePos, setGeoConsent, SPAWN_ZOOM, wantsPrecise, type ServerStart, type Spawn } from '@/lib/spawn';
@@ -29,6 +29,7 @@ import { PlotSheet } from './plot-sheet';
 import { QuestTracker } from './quest-tracker';
 import { SearchPalette } from './search-palette';
 import { Tour, useTourState } from './tour';
+import { HelpMenu } from './help-menu';
 
 export function WorldExperience({ stats }: { stats: { plots: number; showcase: number; countries: number; explorers: number } | null }) {
   const map = useRef<WorldMapHandle>(null);
@@ -284,6 +285,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
       )}
       {!openPlot && !claimMode && (
         <button
+          data-tour="quests"
           className={clsx('absolute z-20 right-3 bottom-24 md:hidden glass rounded-full size-11 grid place-items-center', mobilePanel && 'text-[var(--color-teal)]')}
           onClick={() => setMobilePanel((p) => !p)}
           aria-label="Quests and live activity"
@@ -339,7 +341,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
         >
           {locating ? <Spinner /> : <LocateFixed size={18} />}
         </button>
-        <button className="glass rounded-2xl icon-btn" onClick={tour.start} aria-label="How FlatMeta works"><HelpCircle size={18} /></button>
+        <HelpMenu onReplayTour={tour.start} />
       </div>
 
       {/* The three levels */}

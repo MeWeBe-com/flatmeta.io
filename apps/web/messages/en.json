@@ -83,7 +83,12 @@
     "s3t": "Quests and XP",
     "s3b": "Explore, like, wave and claim to level up. Your quests live here.",
     "s4t": "Plant your flag",
-    "s4b": "Your first plot is free. Press Claim land, draw a square, done."
+    "s4b": "Your first plot is free. Press Claim land, draw a square, done.",
+    "back": "Back",
+    "step": "Step {n} of {total}",
+    "replay": "Replay tour",
+    "help": "Help",
+    "label": "Guided tour"
   },
   "game": {
     "xp": "+{xp} XP",

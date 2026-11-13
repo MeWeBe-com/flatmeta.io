@@ -47,7 +47,6 @@ const TEXT_ALLOWLIST: { selector: string; reason: string }[] = [
 type Check = 'hscroll' | 'offscreen' | 'covered' | 'tap' | 'text';
 const KNOWN: { task: string; page: string; check: Check; devices?: RegExp }[] = [
   // Baseline of 13 Nov 2026 (production build before the fixes); the task that fixes each one removes it.
-  ...(['covered', 'offscreen', 'tap', 'text'] as const).map((check) => ({ task: 'M1', page: 'home-tour', check })),
   ...(['covered', 'offscreen', 'tap', 'text'] as const).map((check) => ({ task: 'M4', page: 'home', check })),
   // WebKit also scrolls sideways at 320 px, 844x390 and on the iPad (the header and card rows are wider there).
   ...(['hscroll', 'offscreen', 'tap', 'text'] as const).map((check) => ({ task: 'M5', page: 'plot', check })),

@@ -22,9 +22,9 @@ export const MATRIX: Device[] = [
 export const ONLY = process.env.MATRIX_DEVICES?.split(',');
 export const devicesToRun = () => MATRIX.filter((x) => !ONLY || ONLY.some((o) => x.id.startsWith(o)));
 
-export async function openOn(browser: Browser, d: Device, baseURL: string) {
+export async function openOn(browser: Browser, d: Device, baseURL: string, extra: BrowserContextOptions = {}) {
   const { defaultBrowserType: _ignored, ...opts } = d.base as BrowserContextOptions & { defaultBrowserType?: string };
-  return browser.newContext({ ...opts, viewport: d.viewport, screen: d.viewport, baseURL });
+  return browser.newContext({ ...opts, viewport: d.viewport, screen: d.viewport, baseURL, ...extra });
 }
 
 /** Finish (or wait out) the first-visit tour so the map itself can be checked. */

@@ -72,6 +72,8 @@ jobs:
           API_INTERNAL_URL: http://127.0.0.1:3201
           # The e2e suite signs in dozens of players from one IP; production keeps the default (10/min).
           AUTH_RATE_LIMIT_PER_MINUTE: '200'
+          # One IP runs every e2e project in parallel (the device matrix alone opens ~200 pages): lift the general limit too.
+          RATE_LIMIT_PER_MINUTE: '6000'
         run: |
           NODE_ENV=development npm run db:migrate
           NODE_ENV=development npm run db:seed
