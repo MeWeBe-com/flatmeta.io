@@ -14,7 +14,8 @@ describe('robots.txt (G15b)', () => {
     const g = rules[0]!;
     expect(g.userAgent).toEqual(expect.arrayContaining(['*', 'GPTBot', 'ClaudeBot', 'PerplexityBot', 'Google-Extended', 'OAI-SearchBot']));
     expect(g.allow).toEqual(expect.arrayContaining(['/', '/llms.txt']));
-    expect(g.disallow).toEqual(expect.arrayContaining(['/dashboard', '/admin', '/api/']));
+    // S6: the real sign-in, account, checkout and claim routes (each page also sends noindex), and the API (auth included).
+    expect(g.disallow).toEqual(expect.arrayContaining(['/login', '/dashboard', '/admin', '/checkout', '/claim/', '/api/']));
     expect(robots.sitemap).toBe('https://www.flatmeta.io/sitemap.xml');
     expect(robots.host).toBeUndefined();
   });

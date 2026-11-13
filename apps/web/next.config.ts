@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { loadEnvConfig } from '@next/env';
 import type { NextConfig } from 'next';
 import { securityHeaders } from './src/lib/csp';
-import { canonicalUrl } from './src/lib/canonical';
+import { apexRedirects, canonicalUrl } from './src/lib/canonical';
 
 // One .env at the repo root configures both apps. Load it before reading any variable.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -37,14 +37,18 @@ const nextConfig: NextConfig = {
       env.PAID_CHECKOUT_ENABLED === 'true' || ((env.PAID_CHECKOUT_ENABLED ?? 'auto') === 'auto' && (env.APP_ENV ?? (env.NODE_ENV === 'production' ? 'production' : 'development')) !== 'production') ? 'true' : 'false',
     NEXT_PUBLIC_FREE_LAND_CELLS: env.FREE_LAND_CELLS ?? '100',
     NEXT_PUBLIC_COMPANY_NAME: env.COMPANY_NAME || 'MeWeBe',
+    // S4: FlatMeta's own profiles (comma-separated https URLs), the Organization JSON-LD's sameAs.
+    NEXT_PUBLIC_SAME_AS: env.SAME_AS ?? '',
     NEXT_PUBLIC_COMPANY_COUNTRY: env.COMPANY_COUNTRY || 'United Kingdom',
     NEXT_PUBLIC_CONTACT_EMAIL: env.CONTACT_EMAIL || 'hello@flatmeta.io',
     // Separate origin for owner custom HTML (G8). Empty in dev/tests: served from /api on the same origin.
-    // S4: FlatMeta's own profiles (comma-separated https URLs), the Organization JSON-LD's sameAs.
-    NEXT_PUBLIC_SAME_AS: env.SAME_AS ?? '',
     NEXT_PUBLIC_USERCONTENT_URL: env.USERCONTENT_URL ?? '',
   },
   // In production the Hestia nginx proxy routes /api and /media before they reach Next; these rewrites make dev (and a bare `next start`) work the same way.
+  // S6: flatmeta.io/<anything> → 301 → www.flatmeta.io/<anything>.
+  async redirects() {
+    return apexRedirects(env);
+  },
   async rewrites() {
     return [
       // Share links: flatmeta.io/@handle and /@handle/plot-slug (Next.js can't name a folder "@…": that's a parallel route).

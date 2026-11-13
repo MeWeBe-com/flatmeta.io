@@ -26,26 +26,34 @@ const DEV = process.env.NODE_ENV === 'development';
  * pages can only 404, so the proxy asks the API (cached for 30 s per slug) before the page renders.
  */
 const API = (process.env.API_INTERNAL_URL || 'http://127.0.0.1:3201').replace(/\/$/, '');
-const goneCache = new Map<string, { gone: boolean; at: number }>();
-async function plotGone(slug: string): Promise<boolean> {
-  const hit = goneCache.get(slug);
-  if (hit && Date.now() - hit.at < 30_000) return hit.gone;
+type PlotState = 'gone' | 'missing' | 'present' | 'unknown';
+const stateCache = new Map<string, { state: PlotState; at: number }>();
+async function plotState(slug: string): Promise<PlotState> {
+  const hit = stateCache.get(slug);
+  if (hit && Date.now() - hit.at < 30_000) return hit.state;
   try {
     const r = await fetch(`${API}/v1/plots/${encodeURIComponent(slug)}/state`, { signal: AbortSignal.timeout(1500), cache: 'no-store' });
-    const gone = r.ok && ((await r.json()) as { state?: string }).state === 'gone';
-    if (goneCache.size > 5000) goneCache.clear();
-    goneCache.set(slug, { gone, at: Date.now() });
-    return gone;
+    const s = r.ok ? ((await r.json()) as { state?: string }).state : undefined;
+    const state: PlotState = s === 'gone' || s === 'missing' || s === 'present' ? s : 'unknown';
+    if (stateCache.size > 5000) stateCache.clear();
+    stateCache.set(slug, { state, at: Date.now() });
+    return state;
   } catch {
-    return false; // the page itself decides (404 or the plot)
+    return 'unknown'; // the page itself decides (404 or the plot)
   }
 }
+/** S6: no route answers this path, so Next renders the site's 404 page, fully on the server, with a 404 status. */
+const NOT_FOUND_PATH = '/_fm/not-found';
 const GONE_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>This plot was removed · FlatMeta</title></head><body style="font:16px system-ui;background:#0b1020;color:#e8ecf8;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px;text-align:center"><main><h1>This plot was removed</h1><p>The land is no longer on FlatMeta.</p><p><a style="color:#2de2c4" href="/">Back to the map</a> · <a style="color:#2de2c4" href="/explore">Explore places</a></p></main></body></html>`;
+
+const PRIVATE_PAGE = /^\/(login|dashboard|admin|checkout|claim)(\/|$)/;
 
 /** A nonce-based CSP on every page (G2). Next.js reads the nonce from the request's CSP header and applies it to its scripts. */
 export async function proxy(request: NextRequest) {
-  const m = /^\/p\/([a-z0-9-]{1,80})$/.exec(request.nextUrl.pathname);
-  if (m && (await plotGone(m[1]!))) {
+  const pathname = request.nextUrl.pathname;
+  const m = /^\/p\/([a-z0-9-]{1,80})$/.exec(pathname);
+  const state = m ? await plotState(m[1]!) : 'unknown';
+  if (state === 'gone') {
     return new NextResponse(GONE_HTML, { status: 410, headers: { 'content-type': 'text/html; charset=utf-8', 'x-robots-tag': 'noindex', 'cache-control': 'public, max-age=300' } });
   }
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
@@ -55,8 +63,15 @@ export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('Content-Security-Policy', csp);
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  // S6: a plot that never existed gets the full 404 page from the server (a page that calls notFound() mid-render
+  // only sends a shell; the 404 page fills in in the browser).
+  const response =
+    state === 'missing'
+      ? NextResponse.rewrite(new URL(NOT_FOUND_PATH, request.url), { request: { headers: requestHeaders } })
+      : NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set('Content-Security-Policy', csp);
+  // S6: sign-in, account, admin, checkout and claim pages are never indexed (robots.txt also keeps crawlers out).
+  if (PRIVATE_PAGE.test(pathname)) response.headers.set('x-robots-tag', 'noindex, nofollow');
   return response;
 }
 

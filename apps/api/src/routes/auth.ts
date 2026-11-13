@@ -68,6 +68,10 @@ export async function consumeCode(email: string, code: string, purpose: 'login' 
 }
 
 export default async function authRoutes(app: App) {
+  // S6: sign-in endpoints (and the Google redirect hops) are never indexed, wherever a crawler finds a link to them.
+  app.addHook('onSend', async (req, reply) => {
+    if (req.url.startsWith('/v1/auth/')) reply.header('x-robots-tag', 'noindex, nofollow');
+  });
   const strict = { rateLimit: { max: config.AUTH_RATE_LIMIT_PER_MINUTE, timeWindow: '1 minute' } };
 
   app.post(

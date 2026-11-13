@@ -130,3 +130,15 @@ describe('canonical host', () => {
     expect(canonicalUrl({ APP_URL: 'http://localhost:3200' })).toBe('http://localhost:3200');
   });
 });
+
+describe('apex → www (S6)', () => {
+  it('sends every path on the bare production domain to www with a 301', async () => {
+    const { apexRedirects } = await import('../../src/lib/canonical');
+    expect(apexRedirects({ PRODUCTION_DOMAIN: 'flatmeta.io' })).toEqual([
+      { source: '/:path*', has: [{ type: 'host', value: 'flatmeta.io' }], destination: 'https://www.flatmeta.io/:path*', statusCode: 301 },
+    ]);
+    // Off when the site's canonical host is not www.
+    expect(apexRedirects({ CANONICAL_WWW: 'false' })).toEqual([]);
+    expect(apexRedirects({ CANONICAL_URL: 'https://flatmeta.io' })).toEqual([]);
+  });
+});
