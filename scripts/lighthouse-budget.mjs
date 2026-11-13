@@ -26,7 +26,18 @@ for (const p of pages) {
   const runs = [];
   for (let r = 1; r <= RUNS; r++) {
     const file = path.join(out, `${p === '/' ? 'home' : p.replace(/\W+/g, '-').replace(/^-|-$/g, '')}-${r}.json`);
-    execFileSync(process.env.LIGHTHOUSE_BIN ?? 'npx', [...(process.env.LIGHTHOUSE_BIN ? [] : ['-y', 'lighthouse@12.8.2']), base + p, '--quiet', '--only-categories=performance', '--throttling-method=devtools', `--chrome-flags=${flags.join(' ')}`, '--output=json', `--output-path=${file}`], { stdio: 'inherit' });
+    const args = [...(process.env.LIGHTHOUSE_BIN ? [] : ['-y', 'lighthouse@12.8.2']), base + p, '--quiet', '--only-categories=performance', '--throttling-method=devtools', `--chrome-flags=${flags.join(' ')}`, '--output=json', `--output-path=${file}`];
+    // Lighthouse itself sometimes fails to record a trace (NO_NAVSTART) on a busy machine: one more try for that run.
+    // A page that answers an error status fails both tries, so a real problem still fails the budget.
+    for (let attempt = 1; ; attempt++) {
+      try {
+        execFileSync(process.env.LIGHTHOUSE_BIN ?? 'npx', args, { stdio: 'inherit' });
+        break;
+      } catch (err) {
+        if (attempt >= 2) throw err;
+        console.log(`  Lighthouse run ${r} of ${p} failed; trying it once more`);
+      }
+    }
     runs.push(JSON.parse(readFileSync(file, 'utf8')).audits);
   }
   const lcp = Math.round(median(runs.map((a) => a['largest-contentful-paint'].numericValue)));
