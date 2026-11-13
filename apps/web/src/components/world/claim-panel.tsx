@@ -13,6 +13,7 @@ import type { GameResult, Plot, Quote } from '@/lib/types';
 import { useAfterSignIn, useGame, useSession } from '../providers';
 import { Spinner, clsx } from '../ui';
 import type { SelectionState } from '../map/world-map';
+import { useVisualViewport } from '@/lib/viewport';
 
 interface Suggestion { rect: Rect; center: { lat: number; lng: number }; near: string; neighbours: number; reason: string; quote: Quote }
 
@@ -25,6 +26,7 @@ export function ClaimPanel({
   onPick,
   onZoomIn,
   initialTitle,
+  onSheetMove,
 }: {
   selection: Rect | null;
   zoom: number;
@@ -34,6 +36,8 @@ export function ClaimPanel({
   onPick: (s: Suggestion) => void;
   onZoomIn: () => void;
   initialTitle?: string;
+  /** M8: the sheet's top edge moved (it mounted, grew, or the keyboard pushed it up). */
+  onSheetMove?: (top: number) => void;
 }) {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(false);
@@ -119,9 +123,52 @@ export function ClaimPanel({
   };
 
   const needZoom = zoom < 13.5;
+  // M8: on phones the keyboard covers the bottom of the page without resizing it; keep the sheet (and the name field
+  // in it) above the keyboard, and never taller than what is left of the screen.
+  const vv = useVisualViewport();
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const onSheetMoveRef = useRef(onSheetMove);
+  useEffect(() => {
+    onSheetMoveRef.current = onSheetMove;
+  }, [onSheetMove]);
+  useEffect(() => {
+    const el = sheetRef.current;
+    if (!el) return;
+    let last = -1;
+    const report = () => {
+      const top = Math.round(el.getBoundingClientRect().top);
+      if (Math.abs(top - last) < 4) return;
+      last = top;
+      onSheetMoveRef.current?.(top);
+    };
+    report();
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(report);
+    ro?.observe(el);
+    window.visualViewport?.addEventListener('resize', report);
+    return () => {
+      ro?.disconnect();
+      window.visualViewport?.removeEventListener('resize', report);
+    };
+  }, []);
+  // The keyboard moves the sheet without resizing it: report after the style follows the visual viewport.
+  useEffect(() => {
+    const el = sheetRef.current;
+    if (el) onSheetMoveRef.current?.(Math.round(el.getBoundingClientRect().top));
+  }, [vv.inset, vv.height]);
+  const keepInView = (e: React.FocusEvent<HTMLElement>) => {
+    const el = e.currentTarget;
+    setTimeout(() => el.scrollIntoView({ block: 'nearest' }), 300);
+  };
 
   return (
-    <div className="absolute z-30 inset-x-3 bottom-3 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[460px] glass rounded-3xl p-4 animate-rise" role="dialog" aria-label={t('claim.title')}>
+    <div
+      ref={sheetRef}
+      data-claim-panel
+      className="absolute z-30 inset-x-3 bottom-3 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[460px] glass rounded-3xl p-4 animate-rise overflow-y-auto overscroll-contain"
+      style={{ bottom: `calc(0.75rem + ${vv.inset}px)`, maxHeight: vv.height ? `${Math.max(160, vv.height - 88)}px` : undefined }}
+      role="dialog"
+      aria-label={t('claim.title')}
+    >
       <div className="flex items-center gap-2 mb-3">
         <span className="size-8 rounded-xl grid place-items-center bg-[rgb(45_226_196/.12)] text-[var(--color-teal)]">
           <MousePointer2 size={16} />
@@ -173,7 +220,7 @@ export function ClaimPanel({
             </p>
           )}
           {quote && quote.reasons.length > 0 && (quote.comingSoon && quote.reasons.length === 1 ? <ComingSoon compact className="w-full" text={quote.reasons[0]} /> : <p className="text-xs rounded-xl px-3 py-2 bg-[rgb(255_107_107/.1)] text-[var(--color-coral)]">{quote.reasons.join(' ')}</p>)}
-          <input className="input" placeholder="Name your plot (you can change it later)" value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)} />
+          <input className="input" placeholder="Name your plot (you can change it later)" aria-label="Plot name" value={title} maxLength={80} onFocus={keepInView} onChange={(e) => setTitle(e.target.value)} />
           {error && <p className="text-sm text-[var(--color-coral)]">{error}</p>}
           <button className={clsx('w-full btn-lg', quote?.free ? 'btn-gold' : 'btn-primary')} disabled={!quote || !quote.available || busy || loading} onClick={() => void claim()}>
             {busy ? <Spinner /> : quote?.free ? <Gift size={18} /> : <ShoppingCart size={18} />}
@@ -188,7 +235,7 @@ export function ClaimPanel({
         </summary>
         <div className="mt-2 space-y-2">
           <div className="flex gap-2">
-            <input className="input h-10" placeholder="e.g. a visible spot for my café in Lisbon" value={goal} onChange={(e) => setGoal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void suggest()} />
+            <input className="input h-10" placeholder="e.g. a visible spot for my café in Lisbon" aria-label="What is the spot for?" onFocus={keepInView} value={goal} onChange={(e) => setGoal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void suggest()} />
             <button className="btn-ghost h-10" onClick={() => void suggest()} disabled={suggesting}>
               {suggesting ? <Spinner /> : <Sparkles size={16} />}
             </button>

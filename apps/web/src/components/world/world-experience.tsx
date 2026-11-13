@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Compass, LocateFixed, MapPin, Minus, Plus, Search, Sparkles, Users, Flag, X } from 'lucide-react';
 import type { Rect } from '@/lib/grid';
-import { rectCenter } from '@/lib/grid';
+import { rectBounds, rectCenter } from '@/lib/grid';
+import { revealPadding } from '@/lib/viewport';
 import { geoConsent, geoPermission, pickSpawn, precisePosition, readDevicePos, setGeoConsent, SPAWN_ZOOM, wantsPrecise, type ServerStart, type Spawn } from '@/lib/spawn';
 import { compact } from '@/lib/format';
 import { t } from '@/lib/i18n';
@@ -30,8 +31,8 @@ import { LiveTicker } from './live-ticker';
 import { QuestTracker } from './quest-tracker';
 import { useTourState } from './tour-state';
 import { HelpMenu } from './help-menu';
-import { NavMenu } from '../nav-menu';
 import { MapAttribution } from '../map/attribution';
+import { NavMenu } from '../nav-menu';
 
 // M2: panels that start closed load when they open, so a phone's first screen hydrates with less JavaScript.
 const ClaimPanel = dynamic(() => import('./claim-panel').then((m) => m.ClaimPanel), { ssr: false });
@@ -85,6 +86,22 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
     if (pending.current === null && map.current) fn(map.current);
     else (pending.current ??= []).push(fn);
   }, []);
+  /**
+   * M8: keeps a selection in the part of the map the header and the claim sheet leave free (fits it there only when
+   * it is not already fully visible; never zooms in unless `maxZoom` asks to). Runs after the sheet has laid out.
+   */
+  const revealSelection = useCallback(
+    (rect: Rect, maxZoom?: number) => {
+      setTimeout(() => {
+        whenMap((m) => {
+          const header = document.querySelector('[data-map-header]')?.getBoundingClientRect().bottom ?? 64;
+          const sheet = document.querySelector('[data-claim-panel]')?.getBoundingClientRect().top ?? null;
+          m.revealBounds(rectBounds(rect), revealPadding({ width: window.innerWidth, height: window.innerHeight }, header, sheet), maxZoom);
+        });
+      }, 80);
+    },
+    [whenMap],
+  );
   const onMapReady = useCallback(() => {
     const queue = pending.current ?? [];
     pending.current = null;
@@ -110,6 +127,19 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
   });
   // Walk mode on a touch screen: avatars are drawn (City level and up) and the joystick is shown.
   const walking = touch && !claimMode && zoom >= AVATAR_MIN_ZOOM;
+  // M8: the claim sheet reports where its top edge is (on mount, when its price loads, when the keyboard opens);
+  // keep the selection above it.
+  const sheetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const selectionRef = useRef(selection);
+  useEffect(() => {
+    selectionRef.current = selection;
+  }, [selection]);
+  const onSheetMove = useCallback(() => {
+    clearTimeout(sheetTimer.current);
+    sheetTimer.current = setTimeout(() => {
+      if (selectionRef.current) revealSelection(selectionRef.current);
+    }, 150);
+  }, [revealSelection]);
   const [mobilePanel, setMobilePanel] = useState(false);
   const [peer, setPeer] = useState<Peer | null>(null);
   const [chatWith, setChatWith] = useState<string | null>(() => params.get('dm'));
@@ -266,12 +296,12 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
     const claim = params.get('claim')?.split(',').map(Number);
     if (claim && claim.length === 4 && claim.every(Number.isFinite)) {
       const rect = { minGx: claim[0]!, minGy: claim[1]!, maxGx: claim[2]!, maxGy: claim[3]! };
-      const c = rectCenter(rect);
       setClaimMode(true);
       setSelection(rect);
-      setTimeout(() => whenMap((m) => m.flyTo(c.lng, c.lat, 16)), 400);
+      // M8: fly to the selection so that all of it sits above the claim sheet (not under it).
+      setTimeout(() => revealSelection(rect, 16), 400);
     }
-  }, [params, whenMap]);
+  }, [params, whenMap, revealSelection]);
 
   // Keyboard: / or ⌘K search, c claim, Esc close
   useEffect(() => {
@@ -325,7 +355,10 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
         maxSide={me.orgs?.some((o) => o.plan === 'business' || o.plan === 'brand') ? 20 : 10}
         focusPlotId={openPlot}
         initialView={initialView}
-        onSelect={setSelection}
+        onSelect={(rect, done) => {
+          setSelection(rect);
+          if (rect && done) revealSelection(rect);
+        }}
         onPlotClick={onPlotClick}
         identity={identity}
         onAvatarMove={live.sendMove}
@@ -340,7 +373,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
       )}
 
       {/* Top bar */}
-      <header className="absolute top-0 inset-x-0 z-40 p-3 flex items-center gap-2 pointer-events-none">
+      <header data-map-header className="absolute top-0 inset-x-0 z-40 p-3 flex items-center gap-2 pointer-events-none">
         {/* M3: the site menu (Sign in, every section, Replay tour) on phones and tablets, next to the logo. */}
         <NavMenu className="pointer-events-auto lg:hidden shrink-0" onReplayTour={tour.start} />
         <Link href="/" className="pointer-events-auto glass rounded-full h-11 min-w-11 px-2.5 flex items-center shrink-0" aria-label="FlatMeta home">
@@ -494,6 +527,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
       {claimMode && (
         <ClaimPanel
           selection={selection}
+          onSheetMove={onSheetMove}
           zoom={zoom}
           initialTitle={params.get('title') ?? undefined}
           onClose={() => {
@@ -508,7 +542,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
           }}
           onPick={(s) => {
             setSelection(s.rect);
-            map.current?.flyTo(s.center.lng, s.center.lat, 16);
+            revealSelection(s.rect, 16);
           }}
           onZoomIn={() => {
             const c = selection ? rectCenter(selection) : null;

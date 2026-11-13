@@ -18,6 +18,12 @@ export interface WorldMapHandle {
   /** Moves the camera at once, without an animated flight (the first view: no frames to draw while the page loads). */
   jumpTo: (lng: number, lat: number, zoom: number) => void;
   fitBounds: (b: { west: number; south: number; east: number; north: number }, maxZoom?: number) => void;
+  /**
+   * M8: makes sure the bounds are on screen inside `pad` (the part of the map the header and the claim sheet leave
+   * free): does nothing when they already are, else fits them there, never zooming in past `maxZoom` (default: the
+   * current zoom, but at least where cells show). Waits for a camera move in progress to end.
+   */
+  revealBounds: (b: { west: number; south: number; east: number; north: number }, pad: Pad, maxZoom?: number) => void;
   zoomBy: (delta: number) => void;
   getZoom: () => number;
   reload: () => void;
@@ -45,7 +51,8 @@ interface Props {
   maxSide: number;
   focusPlotId?: string | null;
   initialView?: { lng: number; lat: number; zoom: number };
-  onSelect: (rect: Rect | null) => void;
+  /** A new selection; `done` once the finger or button is lifted (not on every move of a drag). */
+  onSelect: (rect: Rect | null, done?: boolean) => void;
   onPlotClick: (plot: WorldPlot) => void;
   identity?: { look: AvatarLook | null; name: string };
   onAvatarMove?: (lat: number, lng: number) => void;
@@ -58,6 +65,7 @@ interface Props {
 
 import { webglAvailable } from './constants';
 import { NoWebglNotice } from './no-webgl';
+import { insidePadded, type Pad } from '@/lib/viewport';
 
 // MapLibre's worker module is copied to /vendor by scripts/copy-maplibre-worker.mjs.
 if (typeof window !== 'undefined') setWorkerUrl('/vendor/maplibre-gl-worker.mjs');
@@ -147,6 +155,21 @@ export function WorldMap(props: Props) {
     flyTo: (lng, lat, zoom) => mapRef.current?.flyTo({ center: [lng, lat], zoom: zoom ?? Math.max(mapRef.current.getZoom(), 15), speed: 1.4, curve: 1.5, essential: true }),
     jumpTo: (lng, lat, zoom) => mapRef.current?.jumpTo({ center: [lng, lat], zoom }),
     fitBounds: (b, maxZoom = 16.5) => mapRef.current?.fitBounds([[b.west, b.south], [b.east, b.north]], { padding: 120, maxZoom, duration: 1600 }),
+    revealBounds: (b, pad, maxZoom) => {
+      const map = mapRef.current;
+      if (!map) return;
+      const run = () => {
+        const c = map.getContainer();
+        const view = { width: c.clientWidth, height: c.clientHeight };
+        const corners = [map.project([b.west, b.north]), map.project([b.east, b.south])];
+        if (insidePadded(corners, view, pad) && map.getZoom() >= Math.min(maxZoom ?? GRID_MIN_ZOOM, GRID_MIN_ZOOM)) return;
+        // Never zooms in past where the player is (or `maxZoom`), and never leaves the zoom where cells show.
+        map.fitBounds([[b.west, b.south], [b.east, b.north]], { padding: pad, maxZoom: maxZoom ?? Math.max(map.getZoom(), GRID_MIN_ZOOM), duration: 600 });
+      };
+      // A flight already on its way (a deep link, a suggestion) is not interrupted: check again where it lands.
+      if (map.isMoving()) map.once('moveend', run);
+      else run();
+    },
     zoomBy: (d) => mapRef.current?.easeTo({ zoom: mapRef.current.getZoom() + d, duration: 300 }),
     getZoom: () => mapRef.current?.getZoom() ?? 0,
     reload: () => void loadPlots(true),
@@ -561,14 +584,14 @@ export function WorldMap(props: Props) {
       if (!start) return;
       const c = cellOf(e.lngLat);
       if (moved) {
-        propsRef.current.onSelect(clamp(start, c));
+        propsRef.current.onSelect(clamp(start, c), true);
         anchor = null;
       } else if (anchor && (anchor.gx !== c.gx || anchor.gy !== c.gy)) {
-        propsRef.current.onSelect(clamp(anchor, c));
+        propsRef.current.onSelect(clamp(anchor, c), true);
         anchor = null;
       } else {
         anchor = c;
-        propsRef.current.onSelect({ minGx: c.gx, minGy: c.gy, maxGx: c.gx, maxGy: c.gy });
+        propsRef.current.onSelect({ minGx: c.gx, minGy: c.gy, maxGx: c.gx, maxGy: c.gy }, true);
       }
       start = null;
     };
