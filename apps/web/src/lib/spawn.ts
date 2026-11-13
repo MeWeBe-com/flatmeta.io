@@ -33,7 +33,12 @@ export interface ServerStart {
 
 /** Next to the FlatMeta HQ landmark (same point as the API's HOME_PLAZA). */
 export const HOME_PLAZA = { lat: 51.5029, lng: -0.1206 } as const;
-export const SPAWN_ZOOM = { saved: 16, device: 16, ip: 12, country: 7, home: 15, precise: 16 } as const;
+/**
+ * Returning players (saved / this device) come back to their own land. New visitors (M2) never start at Land zoom,
+ * which is an empty navy square in most places: City zoom when we know roughly where they are (streets and labels),
+ * the whole World when we don't. world-experience.tsx then flies to the nearest plots if none are in view.
+ */
+export const SPAWN_ZOOM = { saved: 16, device: 16, ip: 10.5, country: 6.5, home: 2.2, precise: 13 } as const;
 
 const valid = (p: { lat: number; lng: number } | null | undefined): p is { lat: number; lng: number } =>
   !!p && Number.isFinite(p.lat) && Number.isFinite(p.lng) && Math.abs(p.lat) <= 85 && Math.abs(p.lng) <= 180 && !(p.lat === 0 && p.lng === 0);

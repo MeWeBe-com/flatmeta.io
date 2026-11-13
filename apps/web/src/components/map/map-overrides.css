@@ -1,0 +1,6 @@
+/* Our tweaks to MapLibre's controls; imported right after maplibre-gl.css so they win. */
+.maplibregl-ctrl-attrib { background: rgb(11 16 32 / 0.6) !important; color: var(--color-muted) !important; font-size: 10px; }
+.maplibregl-ctrl-attrib a { color: var(--color-muted) !important; }
+.maplibregl-canvas:focus-visible { outline: none; }
+.maplibregl-popup-content { background: transparent; box-shadow: none; padding: 0; }
+.maplibregl-popup-tip { display: none; }

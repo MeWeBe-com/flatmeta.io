@@ -10,30 +10,86 @@ import { geoConsent, geoPermission, pickSpawn, precisePosition, readDevicePos, s
 import { compact } from '@/lib/format';
 import { t } from '@/lib/i18n';
 import type { Activity, Peer, Plot, WorldPlot } from '@/lib/types';
-import { WorldMap, type SelectionState, type WorldMapHandle } from '../map/world-map';
+import dynamic from 'next/dynamic';
+import type { SelectionState, WorldMapHandle } from '../map/world-map';
+import { HomeFirstPaint } from './home-first-paint';
+import { nearestPlots } from '@/lib/nearest';
 import { useGame, useLive, useSession, useTheme } from '../providers';
 import { UserMenu } from '../site-chrome';
 import { Logo, Spinner, clsx } from '../ui';
 import { ChatPanel } from './chat-panel';
 import { Joystick, WalkControls, useTouch } from './walk-controls';
 import { EMOTE_ICONS } from '@/lib/emotes';
-import { AVATAR_MIN_ZOOM } from '../map/avatars';
+import { AVATAR_MIN_ZOOM, webglAvailable } from '../map/constants';
+import { NoWebglNotice } from '../map/no-webgl';
 import { NearbyCard } from './nearby-card';
 import { HappeningNow } from './happening-now';
 import { ErrorBoundary } from '../error-boundary';
-import { ClaimPanel } from './claim-panel';
 import { LEVEL_ZOOM, LevelSwitch, type Level } from './level-switch';
-import { PeerCard } from './peer-card';
 import { LiveTicker } from './live-ticker';
-import { PlotSheet } from './plot-sheet';
 import { QuestTracker } from './quest-tracker';
-import { SearchPalette } from './search-palette';
-import { Tour, useTourState } from './tour';
+import { useTourState } from './tour-state';
 import { HelpMenu } from './help-menu';
 import { NavMenu } from '../nav-menu';
 
+// M2: panels that start closed load when they open, so a phone's first screen hydrates with less JavaScript.
+const ClaimPanel = dynamic(() => import('./claim-panel').then((m) => m.ClaimPanel), { ssr: false });
+const PeerCard = dynamic(() => import('./peer-card').then((m) => m.PeerCard), { ssr: false });
+const PlotSheet = dynamic(() => import('./plot-sheet').then((m) => m.PlotSheet), { ssr: false });
+const SearchPalette = dynamic(() => import('./search-palette').then((m) => m.SearchPalette), { ssr: false });
+const Tour = dynamic(() => import('./tour').then((m) => m.Tour), { ssr: false });
+
+// M2: MapLibre (≈ 230 kB of JS plus its worker) loads after the first paint, not before the page can show anything.
+const WorldMap = dynamic(() => import('../map/world-map').then((m) => m.WorldMap), { ssr: false, loading: () => null });
+
+/** Distance in km between two points (great circle). */
+function km(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const r = Math.PI / 180;
+  const h = Math.sin(((b.lat - a.lat) * r) / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(((b.lng - a.lng) * r) / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
+}
+
+/**
+ * If no plot is within the first view around `at`, fly to the nearest group of plots (the closest plot and its
+ * neighbours within 50 km) at City zoom. Uses the same /plots/nearest data as the "Nearby" card.
+ */
+async function showNearestContent(
+  at: { lat: number; lng: number; zoom: number },
+  cam: (fn: (m: WorldMapHandle) => void) => void,
+): Promise<{ place: string; km: number } | null> {
+  const plots = await nearestPlots(at.lat, at.lng, 6);
+  const first = plots[0];
+  if (!first) return null;
+  // Half the shorter side of the screen, in km, at the start zoom.
+  const kmPerPx = (156.543 * Math.cos((at.lat * Math.PI) / 180)) / 2 ** at.zoom;
+  if (first.distanceKm <= (kmPerPx * Math.min(innerWidth, innerHeight)) / 2) return null;
+  const group = plots.filter((p) => km(p.center, first.center) <= 50);
+  if (group.length > 1) {
+    const b = { west: Math.min(...group.map((p) => p.bounds.west)), south: Math.min(...group.map((p) => p.bounds.south)), east: Math.max(...group.map((p) => p.bounds.east)), north: Math.max(...group.map((p) => p.bounds.north)) };
+    cam((m) => m.fitBounds(b, LEVEL_ZOOM.city + 1.5));
+  } else cam((m) => m.flyTo(first.center.lng, first.center.lat, LEVEL_ZOOM.city));
+  const place = first.showcase?.city ?? first.countryName ?? first.title;
+  return { place, km: first.distanceKm };
+}
+
 export function WorldExperience({ stats }: { stats: { plots: number; showcase: number; countries: number; explorers: number } | null }) {
   const map = useRef<WorldMapHandle>(null);
+  // Camera calls made before the (lazily loaded) map is ready wait here and run in order once it is.
+  const [mapReady, setMapReady] = useState(false);
+  // Decided in the browser before the map's code is requested: without WebGL it isn't downloaded at all.
+  const [webgl, setWebgl] = useState<boolean | null>(null);
+  useEffect(() => setWebgl(webglAvailable()), []);
+  const pending = useRef<((m: WorldMapHandle) => void)[] | null>([]);
+  const whenMap = useCallback((fn: (m: WorldMapHandle) => void) => {
+    if (pending.current === null && map.current) fn(map.current);
+    else (pending.current ??= []).push(fn);
+  }, []);
+  const onMapReady = useCallback(() => {
+    const queue = pending.current ?? [];
+    pending.current = null;
+    setMapReady(true);
+    if (map.current) for (const fn of queue) fn(map.current);
+  }, []);
   const params = useSearchParams();
   const router = useRouter();
   const { theme } = useTheme();
@@ -97,28 +153,37 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
   const [askGeo, setAskGeo] = useState(false);
   const [locating, setLocating] = useState(false);
   const spawnStarted = useRef(false);
+  const preciseMoved = useRef(false);
+  // "Nearest land: <place>, <distance>" after the camera moved from an empty start to the nearest plots (M2).
+  const [nearestNote, setNearestNote] = useState<{ place: string; km: number } | null>(null); // the player's own location took the camera: nothing else moves it
 
   const goPrecise = useCallback(
     async (fromButton: boolean) => {
       setAskGeo(false);
       setLocating(true);
+      preciseMoved.current = true;
       try {
         const p = await precisePosition();
         setGeoConsent('granted');
-        map.current?.glideMeTo(p.lng, p.lat);
-        map.current?.flyTo(p.lng, p.lat, Math.max(map.current.getZoom(), SPAWN_ZOOM.precise));
+        whenMap((m) => {
+          m.glideMeTo(p.lng, p.lat);
+          m.flyTo(p.lng, p.lat, Math.max(m.getZoom(), SPAWN_ZOOM.precise));
+        });
         setSpawn({ source: 'precise', lat: p.lat, lng: p.lng, zoom: SPAWN_ZOOM.precise, approximate: false });
       } catch (err) {
         if ((err as { code?: number }).code === 1) setGeoConsent('declined');
         if (fromButton) toast({ kind: 'info', title: (err as { code?: number }).code === 1 ? 'Location is blocked for this site. You can allow it in your browser settings.' : 'Couldn’t get your exact location. You’re at an approximate spot.' });
         // Without a precise fix, the Locate button brings me back to my start point.
-        const mine = map.current?.myPosition();
-        if (fromButton && mine) map.current?.flyTo(mine.lng, mine.lat, Math.max(map.current.getZoom(), SPAWN_ZOOM.ip));
+        if (fromButton)
+          whenMap((m) => {
+            const mine = m.myPosition();
+            if (mine) m.flyTo(mine.lng, mine.lat, Math.max(m.getZoom(), SPAWN_ZOOM.ip));
+          });
       } finally {
         setLocating(false);
       }
     },
-    [toast],
+    [toast, whenMap],
   );
 
   useEffect(() => {
@@ -133,8 +198,8 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
           if (!d) return;
           const b = d.plot.bounds;
           const beside = { lat: b.south - (b.north - b.south) * 0.35, lng: (b.west + b.east) / 2 };
-          map.current?.startMeAt(beside.lng, beside.lat);
-          map.current?.fitBounds(b, 17);
+          whenMap((m) => m.startMeAt(beside.lng, beside.lat));
+          whenMap((m) => m.fitBounds(b, 17));
           setOpenPlot(d.plot.id);
           setSpawn({ source: 'link', lat: beside.lat, lng: beside.lng, zoom: 17, approximate: false });
         })
@@ -143,7 +208,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
     }
     // An explicit ?at= link is a place to be: start me there and don't move me away.
     if (initialView) {
-      map.current?.startMeAt(initialView.lng, initialView.lat);
+      whenMap((m) => m.startMeAt(initialView.lng, initialView.lat));
       setSpawn({ source: 'link', lat: initialView.lat, lng: initialView.lng, zoom: initialView.zoom, approximate: false });
       return;
     }
@@ -160,20 +225,29 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
       if (cancelled) return;
       const s = pickSpawn({ server, device });
       // A deep link (?at=, ?plot=, ?claim=) decides the camera; I still start at my own spot, not the link's.
-      map.current?.startMeAt(s.lng, s.lat);
-      if (!deepLink && !params.get('dm')) map.current?.flyTo(s.lng, s.lat, s.zoom);
+      whenMap((m) => m.startMeAt(s.lng, s.lat));
+      const free = !deepLink && !params.get('dm');
+      // The first view is placed at once: a flight from the globe would draw hundreds of frames while the page loads.
+      if (free) whenMap((m) => m.jumpTo(s.lng, s.lat, s.zoom));
       setSpawn(s);
       if (!wantsPrecise(s)) return;
       const consent = geoConsent();
       const perm = await geoPermission();
-      if (cancelled || perm === 'denied') return;
-      if (consent === 'granted' || perm === 'granted') void goPrecise(false);
+      if (cancelled) return;
+      const autoPrecise = perm !== 'denied' && (consent === 'granted' || perm === 'granted');
+      // A new visitor somewhere without plots would look at an empty map: show the nearest group of plots (M2),
+      // unless their precise location is about to move the camera (or does so while this runs).
+      if (free && !autoPrecise && (s.source === 'ip' || s.source === 'country')) {
+        void showNearestContent(s, (fn) => !cancelled && !preciseMoved.current && whenMap(fn)).then((n) => !cancelled && n && setNearestNote(n));
+      }
+      if (perm === 'denied') return;
+      if (autoPrecise) void goPrecise(false);
       else if (consent !== 'declined') setAskGeo(true);
     })();
     return () => {
       cancelled = true;
     };
-  }, [initialView, params, goPrecise]);
+  }, [initialView, params, goPrecise, whenMap]);
 
   // Deep links: ?plot=slug, ?claim=minGx,minGy,maxGx,maxGy
   useEffect(() => {
@@ -184,7 +258,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
         .then((d: { plot: Plot } | null) => {
           if (!d) return;
           setOpenPlot(d.plot.id);
-          setTimeout(() => map.current?.fitBounds(d.plot.bounds, 16), 400);
+          setTimeout(() => whenMap((m) => m.fitBounds(d.plot.bounds, 16)), 400);
         })
         .catch(() => undefined);
     }
@@ -194,9 +268,9 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
       const c = rectCenter(rect);
       setClaimMode(true);
       setSelection(rect);
-      setTimeout(() => map.current?.flyTo(c.lng, c.lat, 16), 400);
+      setTimeout(() => whenMap((m) => m.flyTo(c.lng, c.lat, 16)), 400);
     }
-  }, [params]);
+  }, [params, whenMap]);
 
   // Keyboard: / or ⌘K search, c claim, Esc close
   useEffect(() => {
@@ -236,8 +310,13 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-[var(--bg)]">
+      {/* Until the map has drawn, the server-rendered first screen stays behind the controls (M2). */}
+      {!mapReady && <HomeFirstPaint stats={stats} behind />}
+      {webgl === false && <NoWebglNotice />}
+      {webgl && (
       <WorldMap
         ref={map}
+        onReady={onMapReady}
         theme={theme}
         claimMode={claimMode}
         selection={selection}
@@ -257,6 +336,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
           viewTimer.current = setTimeout(() => live.sendView(v.bounds), 300);
         }}
       />
+      )}
 
       {/* Top bar */}
       <header className="absolute top-0 inset-x-0 z-40 p-3 flex items-center gap-2 pointer-events-none">
@@ -323,14 +403,23 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
           </div>
         </div>
       )}
-      {spawn?.approximate && !askGeo && !claimMode && (
-        <button
-          className="absolute z-20 left-3 sm:left-1/2 sm:-translate-x-1/2 top-[64px] sm:top-[156px] glass rounded-full h-8 px-3 text-xs inline-flex items-center gap-1.5"
-          onClick={() => void goPrecise(true)}
-        >
-          <MapPin size={12} /> {spawn.source === 'home' ? 'Starting at FlatMeta Home' : `Approximate location${spawn.city ? ` · ${spawn.city}` : ''}`}
-          <span className="underline">Use precise</span>
-        </button>
+      {/* Status chips under the search bar, stacked so they never overlap. */}
+      {!askGeo && !claimMode && (spawn?.approximate || nearestNote) && (
+        <div className="absolute z-20 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 top-[64px] sm:top-[156px] flex flex-col items-start sm:items-center gap-2 pointer-events-none">
+          {spawn?.approximate && (
+            <button className="pointer-events-auto glass rounded-full min-h-11 px-3 text-xs inline-flex items-center gap-1.5 max-w-full" onClick={() => void goPrecise(true)}>
+              <MapPin size={12} className="shrink-0" /> <span className="truncate">{spawn.source === 'home' ? 'Starting at FlatMeta Home' : `Approximate location${spawn.city ? ` · ${spawn.city}` : ''}`}</span>
+              <span className="underline shrink-0">Use precise</span>
+            </button>
+          )}
+          {nearestNote && (
+            <p role="status" className="pointer-events-auto glass rounded-full min-h-11 pl-3 pr-1 text-xs inline-flex items-center gap-1.5 max-w-full" data-testid="nearest-land">
+              <MapPin size={12} className="shrink-0 text-[var(--color-teal)]" />
+              <span className="truncate">Nearest land: {nearestNote.place}, {nearestNote.km < 10 ? nearestNote.km.toFixed(1) : Math.round(nearestNote.km).toLocaleString('en')} km</span>
+              <button type="button" className="icon-btn size-9 shrink-0" aria-label="Dismiss" onClick={() => setNearestNote(null)}><X size={14} /></button>
+            </p>
+          )}
+        </div>
       )}
 
       {/* Left controls: one column, so nothing in it can cover anything else. In walk mode on a touch screen the
@@ -435,6 +524,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
         />
       )}
 
+      {searchOpen && (
       <SearchPalette
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
@@ -444,7 +534,8 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
           map.current?.fitBounds(p.bounds, 16);
         }}
       />
-      <Tour open={tour.open} onClose={tour.close} />
+      )}
+      {tour.open && <Tour open onClose={tour.close} />}
 
       {/* Left column (desktop): the welcome card for guests, then the nearest places to see (G3). */}
       {/* Capped in height so it never covers the map controls in the bottom-left corner. */}

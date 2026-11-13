@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { MapPin, X } from 'lucide-react';
-import type { Plot } from '@/lib/types';
+import { nearestPlots, type NearPlot } from '@/lib/nearest';
 
-type Near = Plot & { distanceKm: number };
+type Near = NearPlot;
 const km = (d: number) => (d < 1 ? `${Math.round(d * 1000)} m` : d < 100 ? `${d.toFixed(d < 10 ? 1 : 0)} km` : `${Math.round(d).toLocaleString()} km`);
 
 /**
@@ -14,17 +14,18 @@ const km = (d: number) => (d < 1 ? `${Math.round(d * 1000)} m` : d < 100 ? `${d.
 export function NearbyCard({ at, onOpen }: { at: { lat: number; lng: number } | null; onOpen: (p: Near) => void }) {
   const [list, setList] = useState<Near[] | null>(null);
   const [closed, setClosed] = useState(false);
+  // Keyed on the rounded position, not the object: the page passes a new object on every render (M2: this used
+  // to refetch /plots/nearest 8+ times per load).
+  const lat = at ? Number(at.lat.toFixed(2)) : null;
+  const lng = at ? Number(at.lng.toFixed(2)) : null;
   useEffect(() => {
-    if (!at) return;
-    let gone = false;
-    fetch(`/api/v1/plots/nearest?lat=${at.lat.toFixed(4)}&lng=${at.lng.toFixed(4)}&limit=4`)
-      .then((r) => (r.ok ? (r.json() as Promise<{ plots: Near[] }>) : { plots: [] }))
-      .then((r) => !gone && setList(r.plots))
+    if (lat === null || lng === null) return;
+    const ctl = new AbortController();
+    nearestPlots(lat, lng, 6, ctl.signal)
+      .then((plots) => setList(plots.slice(0, 4)))
       .catch(() => undefined);
-    return () => {
-      gone = true;
-    };
-  }, [at]);
+    return () => ctl.abort();
+  }, [lat, lng]);
   if (closed || !list?.length) return null;
   return (
     <section aria-label="Nearby on FlatMeta" className="glass rounded-2xl p-3 animate-rise">

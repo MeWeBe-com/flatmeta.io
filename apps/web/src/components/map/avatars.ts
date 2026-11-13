@@ -2,7 +2,8 @@ import { Marker, type Map as MLMap } from 'maplibre-gl';
 import type { AvatarLook, Peer } from '@/lib/types';
 
 /** Avatars are shown from the City level up (zoom 6.5), so the World level stays a clean globe. */
-export const AVATAR_MIN_ZOOM = 6.5;
+import { AVATAR_MIN_ZOOM } from './constants';
+export { AVATAR_MIN_ZOOM };
 // v2: positions saved before the spawn fix could be random map centres, so they are ignored.
 export const POS_KEY = 'fm-pos-v2';
 const GLIDE_MS = 1400;

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { API_INTERNAL_URL } from '@/lib/internal';
 import { Suspense } from 'react';
 import { WorldExperience } from '@/components/world/world-experience';
+import { HomeFirstPaint } from '@/components/world/home-first-paint';
 import { JsonLd } from '@/lib/seo';
 import { SITE_URL } from '@/lib/config';
 
@@ -32,7 +33,8 @@ export default async function Home() {
           potentialAction: { '@type': 'SearchAction', target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/explore?q={search_term_string}` }, 'query-input': 'required name=search_term_string' },
         }}
       />
-      <Suspense>
+      {/* The map reads its URL (?at=, ?plot=…), so it renders in the browser; the server sends a real first screen. */}
+      <Suspense fallback={<HomeFirstPaint stats={stats} />}>
         <WorldExperience stats={stats} />
       </Suspense>
     </main>

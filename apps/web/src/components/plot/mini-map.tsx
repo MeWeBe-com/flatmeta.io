@@ -1,5 +1,8 @@
 'use client';
 
+// MapLibre's own styles load with the map's code, not on every page (M2).
+import 'maplibre-gl/dist/maplibre-gl.css';
+import '../map/map-overrides.css';
 import { useEffect, useRef } from 'react';
 import { Map as MapLibreMap, setWorkerUrl } from 'maplibre-gl';
 import Link from 'next/link';

@@ -112,12 +112,18 @@ jobs:
         run: npm run test:e2e
         env:
           E2E_BASE_URL: http://localhost:8080
+      # M2: Lighthouse mobile budget on the home page and a plot page (LCP < 2.5 s, TBT < 300 ms, CLS < 0.1). CI has no GPU, so the budget runs
+      # without WebGL: see scripts/lighthouse-budget.mjs for why and what it covers.
+      - name: Lighthouse mobile budget
+        run: CHROME_PATH="$(node -e "console.log(require('@playwright/test').chromium.executablePath())")" LH_PAGES=/,/p/flatmeta-hq node scripts/lighthouse-budget.mjs http://localhost:8080 --out apps/web/test-results/lighthouse
       - name: Mobile matrix screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mobile-matrix
-          path: apps/web/test-results/mobile
+          path: |
+            apps/web/test-results/mobile
+            apps/web/test-results/lighthouse
           if-no-files-found: ignore
           retention-days: 14
       - name: Logs on failure

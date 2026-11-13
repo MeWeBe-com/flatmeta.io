@@ -74,8 +74,9 @@ describe('spawn order', () => {
   it('prefers the saved spot, then this device, then the approximate location, then home', () => {
     expect(pickSpawn({ server: { ...ip, source: 'saved', approximate: false }, device: { lat: 1, lng: 1 } })).toMatchObject({ source: 'saved', lat: 48.85 });
     expect(pickSpawn({ server: ip, device: { lat: 40.4, lng: -3.7 } })).toMatchObject({ source: 'device', lat: 40.4, approximate: false });
-    expect(pickSpawn({ server: ip, device: null })).toMatchObject({ source: 'ip', city: 'Paris', approximate: true, zoom: 12 });
-    expect(pickSpawn({ server: { ...ip, source: 'country', city: null }, device: null })).toMatchObject({ source: 'country', zoom: 7 });
+    expect(pickSpawn({ server: ip, device: null })).toMatchObject({ source: 'ip', city: 'Paris', approximate: true, zoom: 10.5 }); // City, never Land (M2)
+    expect(pickSpawn({ server: { ...ip, source: 'country', city: null }, device: null })).toMatchObject({ source: 'country', zoom: 6.5 });
+    expect(pickSpawn({ server: null, device: null })).toMatchObject({ source: 'home', zoom: 2.2 }); // no location: the World
     expect(pickSpawn({ server: null, device: null })).toMatchObject({ source: 'home', lat: HOME_PLAZA.lat, lng: HOME_PLAZA.lng });
   });
   it('ignores broken or empty positions instead of spawning somewhere random', () => {

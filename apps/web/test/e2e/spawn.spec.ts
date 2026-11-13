@@ -79,6 +79,10 @@ test('no Cloudflare headers: country centre, else FlatMeta Home, never a random 
 
   const none = await open(browser, info);
   await none.page.goto('/');
+  // M2: without any location the camera shows the whole World (avatars appear from City zoom), and my avatar
+  // waits at the Home plaza.
+  await expect.poll(() => none.page.evaluate(() => (window as unknown as { __fmMap?: { getZoom(): number } }).__fmMap?.getZoom() ?? 99), { timeout: 20_000 }).toBeLessThan(6.5);
+  await none.page.evaluate(([lng, lat]) => (window as unknown as { __fmMap: { jumpTo(o: object): void } }).__fmMap.jumpTo({ center: [lng, lat], zoom: 12 }), [HOME.lng, HOME.lat]);
   expect(near(await myPos(none.page), HOME)).toBe(true);
   await none.page.getByRole('dialog', { name: 'Start where you are?' }).getByRole('button', { name: 'Not now' }).click();
   await expect(none.page.getByRole('button', { name: /Starting at FlatMeta Home/ })).toBeVisible();

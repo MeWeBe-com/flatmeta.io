@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
+import localFont from 'next/font/local';
 import './globals.css';
 import { Providers } from '@/components/providers';
 import { GlobalOverlays } from '@/components/overlays';
@@ -8,6 +9,30 @@ import { ServiceWorkerRegister } from '@/components/sw-register';
 import { CookieNotice } from '@/components/cookie-notice';
 import { APP_ENV, PLAUSIBLE_DOMAIN, SITE_URL } from '@/lib/config';
 import { DEFAULT_LOCALE, t } from '@/lib/i18n';
+
+// M2: the fonts are self-hosted through next/font, with size-matched fallbacks (adjustFontFallback) so text paints at
+// once in the fallback and doesn't jump when the fonts arrive.
+const inter = localFont({
+  src: [
+    { path: './fonts/inter-latin-wght-normal.woff2', weight: '100 900', style: 'normal' },
+  ],
+  variable: '--font-inter',
+  display: 'swap',
+  // Not preloaded either: text paints at once in the size-matched fallback and the font swaps in without a shift,
+  // so no font download sits between a phone and its first readable screen.
+  preload: false,
+  adjustFontFallback: 'Arial',
+});
+const grotesk = localFont({
+  src: [
+    { path: './fonts/space-grotesk-latin-wght-normal.woff2', weight: '300 700', style: 'normal' },
+  ],
+  variable: '--font-grotesk',
+  display: 'swap',
+  // Headings only: not on the critical path (body text in Inter is), so it isn't preloaded.
+  preload: false,
+  adjustFontFallback: 'Arial',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -33,7 +58,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Per-request CSP nonce from src/proxy.ts (this also makes pages render per request, which nonces require).
   const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
-    <html lang={DEFAULT_LOCALE} data-theme="dark" suppressHydrationWarning>
+    <html lang={DEFAULT_LOCALE} data-theme="dark" className={`${inter.variable} ${grotesk.variable}`} suppressHydrationWarning>
       <head>
         {/* Apply the saved theme before paint to avoid a flash. */}
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('fm-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}` }} />

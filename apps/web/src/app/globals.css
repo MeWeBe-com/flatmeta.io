@@ -1,12 +1,14 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/inter';
-@import '@fontsource-variable/space-grotesk';
-@import 'maplibre-gl/dist/maplibre-gl.css';
+
+/* Latin Extended (Č, ł, ő, Ş …): only downloaded when a page uses those letters. The Latin fonts come from
+   next/font (layout.tsx), preloaded with every page. */
+@font-face { font-family: 'Inter Ext'; font-style: normal; font-display: swap; font-weight: 100 900; src: url('/fonts/inter-latin-ext-wght-normal.woff2') format('woff2-variations'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: 'Grotesk Ext'; font-style: normal; font-display: swap; font-weight: 300 700; src: url('/fonts/space-grotesk-latin-ext-wght-normal.woff2') format('woff2-variations'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
 
 /* ───────────── FlatMeta design tokens: "night-flight cartography" ───────────── */
 @theme {
-  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Space Grotesk Variable', 'Inter Variable', ui-sans-serif, sans-serif;
+  --font-sans: var(--font-inter), 'Inter Ext', ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-grotesk), 'Grotesk Ext', var(--font-inter), 'Inter Ext', ui-sans-serif, sans-serif;
 
   --color-night: #0b1020;
   --color-night-2: #111830;
@@ -200,12 +202,7 @@ h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0
 .frame-prism { box-shadow: 0 0 0 2px #ff6b6b, 3px 3px 0 2px #ffc94d, 6px 6px 0 2px #2de2c4; }
 .frame-holo { box-shadow: 0 0 0 2px #a5f3fc, 0 0 40px rgb(240 171 252 / .55); }
 
-/* MapLibre tweaks */
-.maplibregl-ctrl-attrib { background: rgb(11 16 32 / 0.6) !important; color: var(--color-muted) !important; font-size: 10px; }
-.maplibregl-ctrl-attrib a { color: var(--color-muted) !important; }
-.maplibregl-canvas:focus-visible { outline: none; }
-.maplibregl-popup-content { background: transparent; box-shadow: none; padding: 0; }
-.maplibregl-popup-tip { display: none; }
+/* MapLibre tweaks: components/map/map-overrides.css (loaded after MapLibre's own CSS, with the map) */
 
 /* Confetti */
 .confetti-piece { position: fixed; width: 8px; height: 14px; top: -20px; z-index: 100; pointer-events: none; animation: confetti-fall linear forwards; }

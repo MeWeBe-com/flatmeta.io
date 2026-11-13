@@ -1,5 +1,8 @@
 'use client';
 
+// MapLibre's own styles load with the map's code, not on every page (M2).
+import 'maplibre-gl/dist/maplibre-gl.css';
+import './map-overrides.css';
 import { Map as MapLibreMap, Marker, setWorkerUrl, type GeoJSONSource, type ImageSource, type LngLat, type Map as MLMap, type MapMouseEvent, type MapTouchEvent } from 'maplibre-gl';
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { MAP_STYLE_URL } from '@/lib/config';
@@ -12,6 +15,8 @@ export type SelectionState = 'idle' | 'checking' | 'ok' | 'free' | 'conflict' | 
 
 export interface WorldMapHandle {
   flyTo: (lng: number, lat: number, zoom?: number) => void;
+  /** Moves the camera at once, without an animated flight (the first view: no frames to draw while the page loads). */
+  jumpTo: (lng: number, lat: number, zoom: number) => void;
   fitBounds: (b: { west: number; south: number; east: number; north: number }, maxZoom?: number) => void;
   zoomBy: (delta: number) => void;
   getZoom: () => number;
@@ -47,7 +52,12 @@ interface Props {
   onPeerClick?: (peer: Peer, el: HTMLElement) => void;
   onViewChange?: (v: { lng: number; lat: number; zoom: number; bounds: { west: number; south: number; east: number; north: number } }) => void;
   onPlotsLoaded?: (count: number) => void;
+  /** The style is loaded and the camera can be moved (the page queues its camera calls until then). */
+  onReady?: () => void;
 }
+
+import { webglAvailable } from './constants';
+import { NoWebglNotice } from './no-webgl';
 
 // MapLibre's worker module is copied to /vendor by scripts/copy-maplibre-worker.mjs.
 if (typeof window !== 'undefined') setWorkerUrl('/vendor/maplibre-gl-worker.mjs');
@@ -128,11 +138,14 @@ export function WorldMap(props: Props) {
   propsRef.current = props;
   const [hover, setHover] = useState<{ x: number; y: number; plot: WorldPlot } | null>(null);
   const [ready, setReady] = useState(false);
+  const [noWebgl, setNoWebgl] = useState(false);
   const loadSeq = useRef(0);
   const avatarsRef = useRef<AvatarLayer | null>(null);
+  const kickBeaconsRef = useRef<() => void>(() => undefined);
 
   useImperativeHandle(props.ref, () => ({
     flyTo: (lng, lat, zoom) => mapRef.current?.flyTo({ center: [lng, lat], zoom: zoom ?? Math.max(mapRef.current.getZoom(), 15), speed: 1.4, curve: 1.5, essential: true }),
+    jumpTo: (lng, lat, zoom) => mapRef.current?.jumpTo({ center: [lng, lat], zoom }),
     fitBounds: (b, maxZoom = 16.5) => mapRef.current?.fitBounds([[b.west, b.south], [b.east, b.north]], { padding: 120, maxZoom, duration: 1600 }),
     zoomBy: (d) => mapRef.current?.easeTo({ zoom: mapRef.current.getZoom() + d, duration: 300 }),
     getZoom: () => mapRef.current?.getZoom() ?? 0,
@@ -173,6 +186,7 @@ export function WorldMap(props: Props) {
       (map.getSource('plots') as GeoJSONSource | undefined)?.setData(f.polys);
       (map.getSource('plot-points') as GeoJSONSource | undefined)?.setData(f.points);
       propsRef.current.onPlotsLoaded?.(data.plots.length);
+      kickBeaconsRef.current();
       syncArt();
     } catch {
       /* offline or aborted */
@@ -265,6 +279,11 @@ export function WorldMap(props: Props) {
   useEffect(() => {
     if (!container.current) return;
     const iv = propsRef.current.initialView ?? { lng: 8, lat: 28, zoom: 1.6 };
+    // Without WebGL (switched off, blocked, or a very old phone) MapLibre can't start: say so instead of a blank map.
+    if (!webglAvailable()) {
+      setNoWebgl(true);
+      return;
+    }
     const map = new MapLibreMap({
       container: container.current,
       style: MAP_STYLE_URL || buildStyle(propsRef.current.theme),
@@ -378,11 +397,15 @@ export function WorldMap(props: Props) {
       map.addLayer({ id: 'selection-line', type: 'line', source: 'selection', paint: { 'line-color': ['get', 'color'], 'line-width': 2.5 } });
     };
 
+    // Tests (navigator.webdriver only) read the camera and count redraws through this handle.
+    if (navigator.webdriver) (window as unknown as { __fmMap?: MLMap }).__fmMap = map;
+
     map.on('style.load', () => {
       addLayers();
       artRef.current.clear();
       setReady(true);
       void loadPlots();
+      propsRef.current.onReady?.();
     });
 
     let moveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -441,17 +464,30 @@ export function WorldMap(props: Props) {
       else if (map.getZoom() >= AVATAR_MIN_ZOOM) avatars.walkTo(e.lngLat.lng, e.lngLat.lat); // tap the ground to walk there
     });
 
-    // Beacon pulse animation (only runs while beacons exist)
+    // Beacon pulse animation. Changing a paint property redraws the whole map, so it runs only while a beacon plot
+    // is in view (it used to run on every frame forever: a full redraw 60 times a second on every phone, M2).
     let raf = 0;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const animate = (t: number) => {
-      if (map.getLayer('plots-beacon')) {
-        const phase = (t % 2000) / 2000;
-        map.setPaintProperty('plots-beacon', 'circle-radius', 8 + phase * 26);
-        map.setPaintProperty('plots-beacon', 'circle-stroke-opacity', 0.9 * (1 - phase));
-      }
+      raf = 0;
+      if (!map.getLayer('plots-beacon') || !beaconsInView()) return;
+      const phase = (t % 2000) / 2000;
+      map.setPaintProperty('plots-beacon', 'circle-radius', 8 + phase * 26);
+      map.setPaintProperty('plots-beacon', 'circle-stroke-opacity', 0.9 * (1 - phase));
       raf = requestAnimationFrame(animate);
     };
-    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) raf = requestAnimationFrame(animate);
+    const beaconsInView = () => {
+      const b = map.getBounds();
+      for (const p of plotsRef.current.values()) {
+        if ((p.beacon || p.spotlight) && b.contains([p.center.lng, p.center.lat])) return true;
+      }
+      return false;
+    };
+    const kickBeacons = () => {
+      if (!reduce && !raf && beaconsInView()) raf = requestAnimationFrame(animate);
+    };
+    map.on('moveend', kickBeacons);
+    kickBeaconsRef.current = kickBeacons;
 
     return () => {
       cancelAnimationFrame(raf);
@@ -568,6 +604,7 @@ export function WorldMap(props: Props) {
     });
   }, [props.selection, props.selectionState, props.claimMode, ready]);
 
+  if (noWebgl) return <NoWebglNotice />;
   return (
     <div className="absolute inset-0">
       <div ref={container} className="h-full w-full" aria-label="World map" role="application" />

@@ -229,8 +229,6 @@ interface LiveCtx {
   subscribe: (fn: (a: Activity) => void) => () => void;
   /** Who I am on the live socket (guests get an anonymous name and avatar). */
   you: You | null;
-  /** Explorers inside my current viewport (City and Land levels). */
-  peers: Peer[];
   /** Tell the server where my avatar is, and what part of the map I'm looking at. */
   sendMove: (lat: number, lng: number) => void;
   sendView: (b: { west: number; south: number; east: number; north: number } | null) => void;
@@ -254,7 +252,6 @@ const INERT_LIVE: LiveCtx = {
   connected: false,
   subscribe: unsub,
   you: null,
-  peers: [],
   sendMove: noop,
   sendView: noop,
   sendChat: noop,
@@ -288,7 +285,6 @@ function LiveProvider({ children }: { children: ReactNode }) {
   const lastView = useRef<string | null>(null);
   const lastMove = useRef<string | null>(null);
   const [you, setYou] = useState<You | null>(null);
-  const [peers, setPeers] = useState<Peer[]>([]);
   const { me, setUnread } = useSession();
   const { toast } = useGame();
   const userId = me.user?.id;
@@ -336,7 +332,6 @@ function LiveProvider({ children }: { children: ReactNode }) {
           if ((msg.type === 'welcome' || msg.type === 'you') && msg.you) setYou(msg.you);
           if (msg.type === 'notification' && msg.notification) onNote.current(msg.notification);
           if (msg.type === 'avatars' && msg.avatars) {
-            setPeers(msg.avatars);
             for (const fn of peerListeners.current) fn(msg.avatars);
           }
           if (msg.type === 'chat' && msg.message) for (const fn of chatListeners.current) fn(msg.message);
@@ -386,7 +381,6 @@ function LiveProvider({ children }: { children: ReactNode }) {
       activity,
       connected,
       you,
-      peers,
       subscribe: (fn) => add(listeners.current, fn),
       onChat: (fn) => add(chatListeners.current, fn),
       onChatError: (fn) => add(errorListeners.current, fn),
@@ -404,7 +398,7 @@ function LiveProvider({ children }: { children: ReactNode }) {
       },
       sendChat: (scope, body, to) => sendRaw(JSON.stringify({ type: 'chat', scope, body, ...(to ? { to } : {}) })),
     };
-  }, [online, activity, connected, you, peers]);
+  }, [online, activity, connected, you]);
   return <Live.Provider value={value}>{children}</Live.Provider>;
 }
 
