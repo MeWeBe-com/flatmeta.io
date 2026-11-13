@@ -16,7 +16,7 @@ import { KindChip, PlotCard } from '@/components/ui';
 import { OpenNowBadge } from '@/components/plot/open-now';
 import { serverApi } from '@/lib/server-api';
 import { flag, TIER_COLOR, TIER_LABEL, compact } from '@/lib/format';
-import { JsonLd, plotJsonLd, plotUrl } from '@/lib/seo';
+import { JsonLd, plotJsonLd, plotMetaDescription, plotTitle, plotUrl, siteTitle } from '@/lib/seo';
 import { t } from '@/lib/i18n';
 import type { Plot } from '@/lib/types';
 
@@ -31,19 +31,27 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const data = await getPlot(slug).catch(() => null);
   if (!data) return { title: 'Plot not found' };
   const p = data.plot;
-  const where = p.countryName ? ` in ${p.countryName}` : '';
-  const title = p.showcase ? `${p.showcase.brand} on FlatMeta${where}` : `${p.title}${where}`;
-  const description = p.tagline ?? `${p.title} is a ${p.width}×${p.height} plot on FlatMeta${where}. Visit, like and wave hello.`;
+  // S3: a unique 140–160 character description and a ≤ 60 character title for every plot; refreshed on every edit
+  // (the page is rendered per request; the share image and the sitemap lastmod follow the same edit, S2).
+  const title = plotTitle(p);
+  const description = plotMetaDescription(p);
+  const updated = p.contentModifiedAt ?? undefined;
+  const company = !!p.showcase;
   return {
-    title,
+    title: siteTitle(title),
     description,
     alternates: { canonical: plotUrl(p.slug) },
-    openGraph: { title, description, url: plotUrl(p.slug), type: 'website' },
+    openGraph: company
+      ? { title, description, url: plotUrl(p.slug), locale: 'en', siteName: 'FlatMeta' }
+      : { title, description, url: plotUrl(p.slug), locale: 'en', siteName: 'FlatMeta', type: 'article', modifiedTime: updated, authors: p.owner ? [`${p.owner.displayName}`] : undefined },
     twitter: { card: 'summary_large_image', title, description },
-    // S2: one rule with the sitemap (API lib/visibility.ts): drafts, hidden, moderated, takedown-pending and empty
-    // mini-pages are noindex (follow, so their links still count).
     robots: p.indexable ? undefined : { index: false, follow: true },
-    other: p.coverImageUrl ? { 'og:image:alt': p.title } : undefined,
+    other: {
+      ...(p.coverImageUrl ? { 'og:image:alt': p.title } : {}),
+      ...(updated ? { 'og:updated_time': updated } : {}),
+      // Company land is a place (Next's openGraph.type has no "place"); people's mini-pages are articles (above).
+      ...(company ? { 'og:type': 'place', 'place:location:latitude': String(p.center.lat), 'place:location:longitude': String(p.center.lng) } : {}),
+    },
   };
 }
 

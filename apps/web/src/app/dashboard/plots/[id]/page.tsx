@@ -1,6 +1,7 @@
 'use client';
 
 import { ComingSoon } from '@/components/coming-soon';
+import { SeoPreview } from '@/components/plot/seo-preview';
 import { PAID_CHECKOUT } from '@/lib/config';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
@@ -159,6 +160,7 @@ function Editor() {
               <div><label className="label">Title</label><input className="input" maxLength={80} value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></div>
               <div><label className="label">Tagline</label><input className="input" maxLength={140} value={draft.tagline} onChange={(e) => setDraft({ ...draft, tagline: e.target.value })} placeholder="One line that makes people stop" /></div>
               <div><label className="label">Description (Markdown)</label><textarea className="input font-mono text-[13px]" rows={10} maxLength={5000} value={draft.descriptionMd} onChange={(e) => setDraft({ ...draft, descriptionMd: e.target.value })} /></div>
+              {plot && <SeoPreview plot={{ ...plot, title: draft.title || plot.title, tagline: draft.tagline || null, descriptionMd: draft.descriptionMd || null }} />}
               <div className="grid md:grid-cols-2 gap-3">
                 <div><label className="label">Category</label><input className="input" value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} placeholder="e.g. food & drink" /></div>
                 <div><label className="label">Tags (comma separated)</label><input className="input" value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} /></div>
