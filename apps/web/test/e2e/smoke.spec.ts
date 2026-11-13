@@ -18,9 +18,10 @@ test('plot pages carry structured data and a share card', async ({ page, request
   test.skip(!plots.length, 'no published plots to visit');
   await page.goto(`/p/${plots[0].slug}`);
   await expect(page.locator('h1')).toContainText(plots[0].title);
-  const ld = await page.locator('script[type="application/ld+json"]').first().textContent();
-  const graph = [JSON.parse(ld ?? '[]')].flat();
-  expect(graph[0]['@context']).toBe('https://schema.org');
+  // Every JSON-LD block on the page (the site-wide Organization comes first, S4; the plot's own nodes follow).
+  const blocks = await page.locator('script[type="application/ld+json"]').allTextContents();
+  const graph = blocks.flatMap((t) => [JSON.parse(t)].flat());
+  expect(graph.every((n) => n['@context'] === 'https://schema.org')).toBe(true);
   expect(graph.map((n) => n['@type'])).toContain('BreadcrumbList');
   expect(await page.locator('meta[property="og:image"]').getAttribute('content')).toContain('/opengraph-image');
 });

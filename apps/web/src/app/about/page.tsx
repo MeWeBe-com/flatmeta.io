@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PageShell } from '@/components/site-chrome';
+import { Breadcrumbs, siteTitle } from '@/lib/seo';
 import { API_DOCS_URL, MCP_URL } from '@/lib/config';
 
-export const metadata: Metadata = { title: 'About FlatMeta', description: 'How FlatMeta works: claim plots of the real world, design them with AI, play, and get found.', alternates: { canonical: '/about' } };
+export const metadata: Metadata = { title: siteTitle('About FlatMeta'), description: 'How FlatMeta works: claim plots of the real world, design them with AI, play, and get found.', alternates: { canonical: '/about' } };
 
 const STEPS = [
   ['Explore', 'Spin the globe. Every glowing tile is a plot: explorers, creators, local businesses and showcase brands. Zoom in to see their art.'],
@@ -16,6 +17,7 @@ const STEPS = [
 export default function AboutPage() {
   return (
     <PageShell>
+      <Breadcrumbs trail={[{ name: 'About', path: '/about' }]} />
       <div id="main" className="max-w-3xl space-y-10">
         <h1 className="text-4xl md:text-5xl font-bold">How FlatMeta works</h1>
         <ol className="space-y-4">

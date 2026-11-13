@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { PageShell } from '@/components/site-chrome';
+import { Breadcrumbs } from '@/lib/seo';
 import { serverApi } from '@/lib/server-api';
 import type { Clan, ClanRank } from '@/lib/types';
 import { ClansClient } from './clans-client';
@@ -17,6 +18,7 @@ export default async function ClansPage() {
   ]);
   return (
     <PageShell wide>
+      <Breadcrumbs trail={[{ name: 'Clans', path: '/clans' }]} />
       <div id="main" className="space-y-8">
         <div>
           <h1 className="text-4xl md:text-5xl font-bold">Find your <span className="text-gradient">clan</span></h1>

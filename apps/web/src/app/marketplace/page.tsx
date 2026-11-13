@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { ComingSoon } from '@/components/coming-soon';
 import { PAID_CHECKOUT } from '@/lib/config';
 import { PageShell } from '@/components/site-chrome';
+import { Breadcrumbs } from '@/lib/seo';
 import { serverApi } from '@/lib/server-api';
 import type { Country, Listing } from '@/lib/types';
 import { MarketClient } from './market-client';
@@ -19,6 +20,7 @@ export default async function MarketplacePage() {
   ]);
   return (
     <PageShell wide>
+      <Breadcrumbs trail={[{ name: 'Marketplace', path: '/marketplace' }]} />
       <div id="main" className="space-y-8">
         <div>
           <h1 className="text-4xl md:text-5xl font-bold">The <span className="text-gradient">marketplace</span></h1>

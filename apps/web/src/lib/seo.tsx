@@ -1,4 +1,4 @@
-import { SITE_URL } from './config';
+import { COMPANY_NAME, SAME_AS, SITE_URL } from './config';
 import type { Plot } from './types';
 
 const DAY_MAP: Record<string, string> = { mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday' };
@@ -71,7 +71,8 @@ export function plotTitle(p: Plot) {
  * ("About FlatMeta · FlatMeta" before). Use as `title: siteTitle('…')`.
  */
 export function siteTitle(title: string): string | { absolute: string } {
-  return /flatmeta/i.test(title) ? { absolute: title } : title;
+  // S4: a title that already names FlatMeta is used as is (no "· FlatMeta" twice), cut to 60 characters.
+  return /flatmeta/i.test(title) ? { absolute: title.length > 60 ? trimWords(title, 60) : title } : title;
 }
 
 /**
@@ -153,6 +154,40 @@ export function plotJsonLd(p: Plot) {
     ],
   });
   return out;
+}
+
+/** S4: the one FlatMeta Organization node, on every page (layout); other nodes point at it by `@id`. */
+export const ORG_ID = `${SITE_URL}/#organization`;
+export function organizationJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    '@id': ORG_ID,
+    name: 'FlatMeta',
+    url: SITE_URL,
+    logo: { '@type': 'ImageObject', url: `${SITE_URL}/icons/icon-512.png`, width: 512, height: 512 },
+    description: 'A shared world map where people, businesses and brands own land.',
+    ...(SAME_AS.length ? { sameAs: SAME_AS } : {}),
+    parentOrganization: { '@type': 'Organization', name: COMPANY_NAME },
+  };
+}
+
+/**
+ * S4: a BreadcrumbList for a hub page: FlatMeta (home) first, the page itself last. `path`s are site paths; the last
+ * one must be the page's canonical path (with ?page= on later pages).
+ */
+export function breadcrumbJsonLd(trail: { name: string; path: string }[]) {
+  const items = [{ name: 'FlatMeta', path: '' }, ...trail];
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((x, i) => ({ '@type': 'ListItem', position: i + 1, name: x.name, item: `${SITE_URL}${x.path}` })),
+  };
+}
+
+/** S4: a hub page's breadcrumbs as a script tag. */
+export function Breadcrumbs({ trail }: { trail: { name: string; path: string }[] }) {
+  return <JsonLd data={breadcrumbJsonLd(trail)} />;
 }
 
 export function JsonLd({ data }: { data: unknown }) {

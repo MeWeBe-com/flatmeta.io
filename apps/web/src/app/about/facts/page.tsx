@@ -3,10 +3,10 @@ import Link from 'next/link';
 import { PageShell } from '@/components/site-chrome';
 import { API_INTERNAL_URL } from '@/lib/internal';
 import { API_DOCS_URL, MCP_URL, SITE_URL } from '@/lib/config';
-import { JsonLd } from '@/lib/seo';
+import { Breadcrumbs, JsonLd, ORG_ID, siteTitle } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'FlatMeta facts',
+  title: siteTitle('FlatMeta facts'),
   description: 'Short, citable facts about FlatMeta: what it is, how land works, prices, companies on the map, data sources, and live numbers.',
   alternates: { canonical: `${SITE_URL}/about/facts` },
 };
@@ -39,14 +39,15 @@ export default async function FactsPage() {
   const updated = new Date().toISOString().slice(0, 10);
   return (
     <PageShell>
+      <Breadcrumbs trail={[{ name: 'About', path: '/about' }, { name: 'Facts', path: '/about/facts' }]} />
       <JsonLd
         data={{
           '@context': 'https://schema.org',
-          '@type': 'Organization',
-          name: 'FlatMeta',
-          url: SITE_URL,
+          '@type': 'AboutPage',
+          name: 'FlatMeta facts',
+          url: `${SITE_URL}/about/facts`,
           description: FACTS[0]![1],
-          parentOrganization: { '@type': 'Organization', name: 'MeWeBe', url: 'https://mewebe.com' },
+          about: { '@id': ORG_ID },
         }}
       />
       <article id="main" className="max-w-3xl space-y-8">

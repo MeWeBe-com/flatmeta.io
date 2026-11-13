@@ -17,7 +17,7 @@ const TABS = [
 ];
 const CATEGORIES = ['food & drink', 'technology', 'culture', 'sport', 'music', 'arts', 'travel', 'education', 'nature', 'shopping', 'community'];
 
-export function ExploreClient({ initial, countries }: { initial: Plot[]; countries: Country[] }) {
+export function ExploreClient({ initial, countries, page = 1 }: { initial: Plot[]; countries: Country[]; page?: number }) {
   const params = useSearchParams();
   const router = useRouter();
   const tab = params.get('tab') ?? 'trending';
@@ -25,10 +25,13 @@ export function ExploreClient({ initial, countries }: { initial: Plot[]; countri
   const category = params.get('category') ?? '';
   const [q, setQ] = useState(params.get('q') ?? '');
   const [plots, setPlots] = useState<Plot[]>(initial);
-  const [next, setNext] = useState<number | null>(initial.length >= 24 ? 24 : null);
+  // S4: ?page=N starts the list at plot (N-1)×24 (the server rendered that page; filters start again from the top).
+  const base = (page - 1) * 24;
+  const [next, setNext] = useState<number | null>(initial.length >= 24 ? base + 24 : null);
   const [loading, setLoading] = useState(false);
 
-  const query = (cursor = 0) => {
+  const filtered = !!(params.get('tab') || country || category || params.get('q'));
+  const query = (cursor = filtered ? 0 : base) => {
     const t = TABS.find((x) => x.key === tab) ?? TABS[0]!;
     const parts = [t.q, `limit=24`, `cursor=${cursor}`];
     if (country) parts.push(`country=${country}`);

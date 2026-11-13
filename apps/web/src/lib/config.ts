@@ -23,4 +23,6 @@ export const COMING_SOON = 'Paid features are coming soon. Free land, editing, c
 // Legal pages
 export const COMPANY_NAME = process.env.NEXT_PUBLIC_COMPANY_NAME || 'MeWeBe';
 export const COMPANY_COUNTRY = process.env.NEXT_PUBLIC_COMPANY_COUNTRY || 'United Kingdom';
+/** S4: FlatMeta's own profiles elsewhere (comma-separated URLs), listed as `sameAs` in the site-wide Organization JSON-LD. */
+export const SAME_AS = (process.env.NEXT_PUBLIC_SAME_AS ?? '').split(',').map((s) => s.trim()).filter((s) => /^https:\/\//.test(s));
 export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'hello@flatmeta.io';

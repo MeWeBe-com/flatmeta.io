@@ -2,13 +2,14 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BadgeCheck, Bot, Clock, LineChart, MapPinned, Megaphone, Sparkles, Users } from 'lucide-react';
 import { PageShell } from '@/components/site-chrome';
+import { Breadcrumbs, siteTitle } from '@/lib/seo';
 import { PlotGrid } from '@/components/ui';
 import { serverApi } from '@/lib/server-api';
 import type { Plot } from '@/lib/types';
 
 export const metadata: Metadata = {
   alternates: { canonical: '/business' },
-  title: 'FlatMeta for business and brands',
+  title: siteTitle('FlatMeta for business and brands'),
   description: 'Be the place people and AI agents find on the map. A beautiful, verified business plot with offers, hours and leads, and showcase landmarks for brands.',
 };
 
@@ -27,6 +28,7 @@ export default async function BusinessPage() {
   const showcase = await serverApi<{ plots: Plot[] }>('/plots?kind=showcase&sort=loved&limit=8', { auth: false, revalidate: 300 }).catch(() => null);
   return (
     <PageShell wide>
+      <Breadcrumbs trail={[{ name: 'For business', path: '/business' }]} />
       <div id="main" className="space-y-20">
         <section className="text-center max-w-3xl mx-auto pt-6">
           <span className="chip chip-teal">For local businesses &amp; brands</span>

@@ -9,6 +9,7 @@ import { ServiceWorkerRegister } from '@/components/sw-register';
 import { CookieNotice } from '@/components/cookie-notice';
 import { APP_ENV, PLAUSIBLE_DOMAIN, SITE_URL } from '@/lib/config';
 import { DEFAULT_LOCALE, t } from '@/lib/i18n';
+import { JsonLd, organizationJsonLd } from '@/lib/seo';
 
 // M2: the fonts are self-hosted through next/font, with size-matched fallbacks (adjustFontFallback) so text paints at
 // once in the fallback and doesn't jump when the fonts arrive.
@@ -65,6 +66,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {PLAUSIBLE_DOMAIN && <script nonce={nonce} defer data-domain={PLAUSIBLE_DOMAIN} src="https://plausible.io/js/script.js" />}
       </head>
       <body>
+        {/* S4: who publishes every page (one node, referenced by @id from page-level JSON-LD). */}
+        <JsonLd data={organizationJsonLd()} />
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] btn-primary">Skip to content</a>
         <Providers>
           {children}

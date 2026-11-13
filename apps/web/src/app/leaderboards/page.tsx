@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { PageShell } from '@/components/site-chrome';
+import { Breadcrumbs } from '@/lib/seo';
 import { serverApi } from '@/lib/server-api';
 import type { Country } from '@/lib/types';
 import { LeaderboardClient } from './leaderboard-client';
@@ -11,6 +12,7 @@ export default async function LeaderboardsPage() {
   const countries = await serverApi<{ countries: Country[] }>('/countries', { auth: false, revalidate: 600 }).catch(() => null);
   return (
     <PageShell>
+      <Breadcrumbs trail={[{ name: 'Leaderboards', path: '/leaderboards' }]} />
       <div id="main" className="space-y-8">
         <div>
           <h1 className="text-4xl md:text-5xl font-bold">Leaderboards</h1>

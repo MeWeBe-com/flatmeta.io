@@ -7,7 +7,7 @@ import { Avatar, EmptyState, PlotGrid, SectionTitle } from '@/components/ui';
 import { VisitTracker } from '@/components/visit-tracker';
 import { serverApi } from '@/lib/server-api';
 import { SITE_URL } from '@/lib/config';
-import { JsonLd } from '@/lib/seo';
+import { Breadcrumbs, JsonLd } from '@/lib/seo';
 import type { Plot, Region } from '@/lib/types';
 
 type Params = { params: Promise<{ code: string }> };
@@ -41,6 +41,7 @@ export default async function CountryPage({ params }: Params) {
   const c = d.country;
   return (
     <PageShell wide>
+      <Breadcrumbs trail={[{ name: c.name, path: `/c/${code.toLowerCase()}` }]} />
       <JsonLd data={{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${c.name} on FlatMeta`, url: `${SITE_URL}/c/${code.toLowerCase()}`, about: { '@type': 'Country', name: c.name } }} />
       <VisitTracker path={`/countries/${c.code}/visit`} />
       <div className="space-y-12" id="main">
