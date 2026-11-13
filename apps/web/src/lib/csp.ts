@@ -10,6 +10,11 @@ export interface CspInput {
   connect: string[];
   /** Origins allowed in iframes (owner content on the usercontent origin, video embeds in plot descriptions). */
   frames: string[];
+  /**
+   * The site is served over https (APP_URL). Only then is `upgrade-insecure-requests` sent: Safari applies it even to
+   * http://localhost, which rewrote every script of a local or CI build to https and left the page dead in WebKit.
+   */
+  https?: boolean;
 }
 
 const origin = (u: string | undefined): string | null => {
@@ -26,7 +31,7 @@ export function originsOf(urls: (string | undefined)[]): string[] {
   return [...new Set(urls.map(origin).filter((o): o is string => !!o))];
 }
 
-export function buildCsp({ nonce, dev, connect, frames }: CspInput): string {
+export function buildCsp({ nonce, dev, connect, frames, https = true }: CspInput): string {
   const directives: [string, string[]][] = [
     ['default-src', ["'self'"]],
     ['script-src', ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(dev ? ["'unsafe-eval'"] : [])]],
@@ -46,7 +51,7 @@ export function buildCsp({ nonce, dev, connect, frames }: CspInput): string {
     ['frame-ancestors', ["'none'"]],
   ];
   const parts = directives.map(([k, v]) => `${k} ${v.join(' ')}`);
-  if (!dev) parts.push('upgrade-insecure-requests');
+  if (!dev && https) parts.push('upgrade-insecure-requests');
   return parts.join('; ');
 }
 

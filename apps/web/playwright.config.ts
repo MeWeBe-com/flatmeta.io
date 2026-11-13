@@ -10,13 +10,19 @@ const launchOptions = {
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
 };
 
+/** Specs that run the device matrix (test/e2e/devices.ts) instead of the desktop/mobile projects. */
+const MATRIX_SPECS = /(mobile-matrix|tour|matrix-[a-z0-9-]+)\.spec\.ts$/;
+
 export default defineConfig({
   testDir: 'test/e2e',
   timeout: 60_000,
   retries: process.env.CI ? 1 : 0,
   use: { baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3200', trace: 'retain-on-failure' },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'], launchOptions }  },
-    { name: 'mobile', use: { ...devices['Pixel 7'], launchOptions }  },
+    { name: 'desktop', testIgnore: MATRIX_SPECS, use: { ...devices['Desktop Chrome'], launchOptions } },
+    { name: 'mobile', testIgnore: MATRIX_SPECS, use: { ...devices['Pixel 7'], launchOptions } },
+    // Mobile + SEO QA device matrix (13 Nov 2026): each spec opens the 12 device sizes itself, in both engines.
+    { name: 'matrix-chromium', testMatch: MATRIX_SPECS, use: { browserName: 'chromium', launchOptions } },
+    { name: 'matrix-webkit', testMatch: MATRIX_SPECS, use: { browserName: 'webkit' } },
   ],
 });

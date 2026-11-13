@@ -101,6 +101,8 @@ describe('content security policy', () => {
     expect(csp).toMatch(/connect-src 'self' https:\/\/tiles\.openfreemap\.org;/);
     expect(csp).toMatch(/frame-src 'self' https:\/\/usercontent\.flatmeta\.io;/);
     expect(csp).toMatch(/upgrade-insecure-requests$/);
+    // An http site (local, CI) must not ask for upgrades: Safari applies them to localhost too and nothing loads.
+    expect(buildCsp({ nonce: 'x', dev: false, connect: [], frames: [], https: false })).not.toMatch(/upgrade-insecure-requests/);
     expect(buildCsp({ nonce: 'x', dev: true, connect: [], frames: [] })).toMatch(/'unsafe-eval'/);
   });
   it('turns configured URLs into origins and ignores junk', () => {

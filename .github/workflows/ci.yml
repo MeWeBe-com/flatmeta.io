@@ -15,7 +15,7 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 60
     services:
       postgres:
         image: postgres:16
@@ -96,10 +96,23 @@ jobs:
           else
             for i in 1 2 3; do timeout 300 npx playwright install-deps chromium && exit 0; echo "install-deps failed (attempt $i), retrying"; sleep 20; done; exit 1
           fi
+      # WebKit for the mobile device matrix (Safari handles 100vh, safe areas and fixed elements differently).
+      - name: Install WebKit for Playwright
+        timeout-minutes: 20
+        run: |
+          for i in 1 2 3; do timeout 600 npx playwright install --with-deps webkit && exit 0; echo "webkit install failed (attempt $i), retrying"; sleep 20; done; exit 1
       - name: End-to-end smoke tests
         run: npm run test:e2e
         env:
           E2E_BASE_URL: http://localhost:8080
+      - name: Mobile matrix screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-matrix
+          path: apps/web/test-results/mobile
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Logs on failure
         if: failure()
         run: tail -n 80 api.log worker.log web.log edge.log || true
