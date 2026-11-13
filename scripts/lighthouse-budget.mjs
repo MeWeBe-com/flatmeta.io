@@ -17,7 +17,15 @@ const outIdx = process.argv.indexOf('--out');
 const out = outIdx > 0 ? process.argv[outIdx + 1] : 'lighthouse-results';
 mkdirSync(out, { recursive: true });
 const BUDGET = { lcp: 2500, tbt: 300, cls: 0.1 };
-const pages = (process.env.LH_PAGES ?? '/,/p/tesla').split(',');
+// "@plot" stands for the first plot page in the plot sitemap (a public, indexable plot on whatever database this is:
+// a fixed slug may be hidden under production settings, e.g. an unverified showcase plot in CI).
+async function firstPlot() {
+  const xml = await (await fetch(`${base}/sitemap-plots.xml`)).text();
+  const loc = /<loc>([^<]+\/p\/[^<]+)<\/loc>/.exec(xml)?.[1];
+  if (!loc) throw new Error('no plot page in /sitemap-plots.xml to measure');
+  return new URL(loc).pathname;
+}
+const pages = await Promise.all((process.env.LH_PAGES ?? '/,@plot').split(',').map((p) => (p === '@plot' ? firstPlot() : p)));
 const flags = ['--headless=new', '--no-sandbox', '--disable-gpu', '--disable-webgl', '--disable-3d-apis'];
 const RUNS = Number(process.env.LH_RUNS ?? 3);
 const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];

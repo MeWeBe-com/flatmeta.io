@@ -111,9 +111,10 @@ jobs:
         run: command -v xmllint || (sudo apt-get update -qq && sudo apt-get install -y -qq libxml2-utils)
       # M2: Lighthouse mobile budget on the home page and a plot page (LCP < 2.5 s, TBT < 300 ms, CLS < 0.1). CI has no GPU, so the budget runs
       # without WebGL: see scripts/lighthouse-budget.mjs for why and what it covers. It runs before the end-to-end tests, on the
-      # freshly seeded database: those tests change and remove plots, and a quiet machine gives steadier numbers.
+      # freshly seeded database: those tests change and remove plots, and a quiet machine gives steadier numbers. @plot is the
+      # first plot page in the plot sitemap (a fixed slug can be hidden under the production launch settings CI builds with).
       - name: Lighthouse mobile budget
-        run: CHROME_PATH="$(node -e "console.log(require('@playwright/test').chromium.executablePath())")" LH_PAGES=/,/p/flatmeta-hq node scripts/lighthouse-budget.mjs http://localhost:8080 --out apps/web/test-results/lighthouse
+        run: CHROME_PATH="$(node -e "console.log(require('@playwright/test').chromium.executablePath())")" LH_PAGES=/,@plot node scripts/lighthouse-budget.mjs http://localhost:8080 --out apps/web/test-results/lighthouse
       - name: End-to-end smoke tests
         run: npm run test:e2e
         env:
