@@ -31,6 +31,7 @@ export function HelpMenu({ onReplayTour, className = '' }: { onReplayTour: () =>
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={id}
+        data-tour-return
         onClick={() => setOpen((o) => !o)}
       >
         <HelpCircle size={18} />

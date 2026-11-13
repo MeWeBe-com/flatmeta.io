@@ -78,6 +78,11 @@ h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0
   *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
 }
 
+/* ───────────── Stacking order for floating UI (one scale; use z-[var(--z-…)]) ─────────────
+   map panels and controls 20 · sheets (plot, claim) 30 · headers 40 · popovers and menus 50 · modal dialogs 60 ·
+   toasts 70 · staging banner 80 · the guided tour 90 (above everything it points at) · skip link 100 */
+:root { --z-map-ui: 20; --z-sheet: 30; --z-header: 40; --z-popover: 50; --z-modal: 60; --z-toast: 70; --z-banner: 80; --z-tour: 90; --z-skip: 100; }
+
 /* ───────────── Reusable surfaces (Tailwind v4 utilities, usable with @apply and variants) ───────────── */
 @utility glass {
   background: var(--panel);

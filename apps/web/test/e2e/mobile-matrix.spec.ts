@@ -185,7 +185,7 @@ test.describe('device matrix', () => {
         // The map keeps fetching tiles, so "network idle" never comes there: other pages wait for it (briefly).
         if (p.path === '/') await page.waitForLoadState('load').catch(() => undefined);
         else await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined);
-        if (p.id === 'home-tour') await page.getByRole('dialog', { name: 'Guided tour' }).waitFor({ timeout: 8000 });
+        if (p.id === 'home-tour') await page.getByRole('dialog', { name: 'Guided tour' }).waitFor({ timeout: 20_000 }); // slow under a full parallel run
         if (p.id === 'home') await page.waitForTimeout(800);
         const m = await measure(page, touch);
         const known = KNOWN.filter((k) => k.page === p.id && (!k.devices || k.devices.test(d.id)));

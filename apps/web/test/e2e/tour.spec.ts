@@ -118,5 +118,12 @@ test.describe('guided tour: keyboard, Back, replay', () => {
     await page.getByRole('menuitem', { name: 'Replay tour' }).click();
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText('Step 1 of 4')).toBeVisible();
+    // Modal: the page behind is inert while it runs…
+    expect(await page.evaluate(() => !!document.getElementById('main')?.closest('[inert]'))).toBe(true);
+    // …and when it ends, focus returns to the Help button and the page is usable again.
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(help).toBeFocused();
+    expect(await page.evaluate(() => !!document.getElementById('main')?.closest('[inert]'))).toBe(false);
   });
 });

@@ -44,9 +44,9 @@ function findTarget(name: string | null): Box | null {
 }
 
 /**
- * The first-visit guided tour (M1). A modal: above every floating control (portal, z-[85]), a dimmed backdrop with a
+ * The first-visit guided tour (M1). A modal: above every floating control (portal, --z-tour in globals.css), a dimmed backdrop with a
  * spotlight on the control each step is about, a counter, Back / Skip / Next (44 px), Esc to skip and the arrow keys
- * to move. Tapping outside the card does nothing, so the tour is never lost by accident; Skip is explicit. Phones get a
+ * to move. Everything behind it is inert while it runs, and focus returns to where it was when it ends. Tapping outside the card does nothing, so the tour is never lost by accident; Skip is explicit. Phones get a
  * bottom (or top) sheet, larger screens a card clamped to the viewport; see lib/tour-layout.ts.
  */
 export function Tour({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -62,6 +62,20 @@ export function Tour({ open, onClose }: { open: boolean; onClose: () => void }) 
 
   useEffect(() => {
     if (open) setI(0);
+  }, [open]);
+
+  // Modal: the page behind is inert (no taps, no Tab, hidden from screen readers); focus comes back afterwards.
+  useEffect(() => {
+    if (!open) return;
+    const opener = document.activeElement as HTMLElement | null;
+    const behind = [...document.body.children].filter((el) => el instanceof HTMLElement && !el.contains(card.current) && !el.matches('script')) as HTMLElement[];
+    const was = behind.map((el) => el.inert);
+    behind.forEach((el) => (el.inert = true));
+    return () => {
+      behind.forEach((el, k) => (el.inert = was[k]!));
+      const back = opener?.isConnected && opener !== document.body ? opener : document.querySelector<HTMLElement>('[data-tour-return]');
+      back?.focus({ preventScroll: true });
+    };
   }, [open]);
 
   const layout = useCallback(() => {
@@ -166,7 +180,7 @@ export function Tour({ open, onClose }: { open: boolean; onClose: () => void }) 
       : { left: place.left, top: place.top, width: place.width, maxHeight: place.maxHeight };
 
   return createPortal(
-    <div className="fixed inset-0 z-[85]" role="dialog" aria-modal="true" aria-label={t('tour.label')} aria-describedby="fm-tour-body" data-testid="tour">
+    <div className="fixed inset-0 z-[var(--z-tour)]" role="dialog" aria-modal="true" aria-label={t('tour.label')} aria-describedby="fm-tour-body" data-testid="tour">
       {/* The backdrop takes every tap outside the card and ignores it: only Skip ends the tour. */}
       <div className="absolute inset-0" data-testid="tour-backdrop" style={{ background: target ? 'transparent' : 'rgb(0 0 0 / .55)' }} onClick={(e) => e.stopPropagation()} />
       {target && (

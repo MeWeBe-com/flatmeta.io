@@ -57,7 +57,13 @@ test('paid land: claim, mock checkout, plot becomes active', async ({ page }) =>
   expect(body.checkoutUrl, 'nine cells is more than a Homestead, so checkout is required').toContain('/checkout/mock');
   await page.goto(body.checkoutUrl!);
   await page.getByRole('button', { name: /pay \(test\)/i }).click();
-  await expect.poll(async () => ((await (await page.request.get(`/api/v1/plots/${body.plotId}`)).json()) as { plot: { status: string } }).plot.status, { timeout: 30_000 }).toBe('active');
+  // Polls until the (mock) payment has settled; an answer without the plot (still settling, busy server) is "not yet".
+  await expect
+    .poll(async () => {
+      const r = await page.request.get(`/api/v1/plots/${body.plotId}`);
+      return r.ok() ? ((await r.json()) as { plot?: { status: string } }).plot?.status : `http ${r.status()}`;
+    }, { timeout: 30_000 })
+    .toBe('active');
 });
 
 test('showcase plots are labelled as unclaimed samples and offer to be claimed or removed', async ({ page, request }) => {
