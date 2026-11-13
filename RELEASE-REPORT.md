@@ -8,6 +8,129 @@ Branch `v2`, commits `9a5fe4d`…`9dcc782` on top of G1–G6. Every task in `tas
 
 
 
+## Mobile + SEO QA (13 Nov 2026)
+
+A hostile mobile and SEO pass: every item in tasks.md → "Mobile + SEO QA (13 Nov 2026)" was treated as a bug. Each was reproduced on the device matrix (Playwright, Chromium and WebKit), fixed at its root, covered by a test that would have caught it, and committed separately on `v2` (MX, M1–M11, S1–S6, from `85158fa` to `d39a07a`). The per-task root causes and fixes are in tasks.md, under each ticked item.
+
+### Where it is
+- **Staging** auto-deploys each `v2` commit once its CI is green. **CI was red from the M9 push (`446ebb3`) until the CI fixes `68d88d3` and `d39a07a`.**
+  - The failing step was always the Lighthouse budget; lint, typecheck, unit/API and all e2e tests passed in those runs.
+  - Lighthouse ran after the e2e tests, which remove plots, so its plot page answered 404. Moved before the e2e tests, its fixed `/p/flatmeta-hq` was still not public under CI's production settings. And one Lighthouse run failed to record a trace.
+  - Now the budget runs first, measures the first plot in the plot sitemap, and retries a failed Lighthouse run once.
+  - **Until a run goes green, staging shows the M3 build.**
+- **Production** follows staging automatically 10 minutes after a healthy staging deploy. The server steps below are manual.
+
+### Device matrix (`apps/web/test/e2e/mobile-matrix.spec.ts`)
+**Pages:** the tour, the map, walk mode, a plot page, /brands, /explore, /pricing, /business and sign-in.
+**Devices:** 320×568, 360×740, 375×667, 375×812, 390×844, 412×915, 430×932, 768×1024, 1024×768, 844×390, 1280×800 and 1440×900, in Chromium and WebKit.
+**Checks:**
+- no sideways scroll;
+- no visible control off-screen or covered (elementFromPoint);
+- tap targets of at least 44 px on touch screens (24 px with a mouse);
+- text of at least 12 px.
+
+The spec's known-bugs list is **empty**: every check applies everywhere.
+
+**After** (final run on 13 Nov, all fixes; 24 of 24 device runs passed; "pass" means it passed in both Chromium and WebKit):
+
+| Device | home-tour | home | home-walk | plot | brands | explore | pricing | business | signin |
+|---|---|---|---|---|---|---|---|---|---|
+| se1-320x568 | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| s8-360x740 | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| se3-375x667 | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| x-375x812 | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| i12-390x844 | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| pixel7-412x915 | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| promax-430x932 | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| ipad-768x1024 | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| ipad-1024x768 | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| phone-844x390 | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| desktop-1280x800 | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+| desktop-1440x900 | pass | pass | pass | pass | pass | pass | pass | pass | pass |
+
+**Before** (baseline on 13 Nov, Chromium, the build before the fixes):
+
+| Device | home-tour | home | plot | brands | explore | pricing | business | signin |
+|---|---|---|---|---|---|---|---|---|
+| se1-320x568 | fail (covered, offscreen, tap, text) | fail (offscreen, tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (covered, tap, text) |
+| s8-360x740 | fail (covered, offscreen, tap, text) | fail (offscreen, tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) |
+| se3-375x667 | fail (covered, offscreen, tap, text) | fail (offscreen, tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) |
+| x-375x812 | fail (covered, offscreen, tap, text) | fail (covered, offscreen, tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) |
+| i12-390x844 | fail (covered, offscreen, tap, text) | fail (offscreen, tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) |
+| pixel7-412x915 | fail (covered, offscreen, tap, text) | fail (offscreen, tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) |
+| promax-430x932 | fail (covered, offscreen, tap, text) | fail (offscreen, tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) |
+| ipad-768x1024 | fail (covered, tap, text) | fail (covered, tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (covered, tap, text) |
+| ipad-1024x768 | fail (covered, tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (covered, tap, text) |
+| phone-844x390 | fail (covered, offscreen, tap, text) | fail (offscreen, tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (covered, tap, text) |
+| desktop-1280x800 | fail (covered, tap, text) | fail (text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (covered, text) |
+| desktop-1440x900 | fail (covered, text) | fail (text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (tap, text) | fail (covered, text) |
+
+### The tour, before and after (Chromium, first visit)
+
+| Device | Before | After |
+|---|---|---|
+| 320×568 | <img src="docs/qa/2026-11-13/tour-se1-320x568-before.jpg" width="200"> | <img src="docs/qa/2026-11-13/tour-se1-320x568-after.jpg" width="200"> |
+| 375×667 | <img src="docs/qa/2026-11-13/tour-se3-375x667-before.jpg" width="200"> | <img src="docs/qa/2026-11-13/tour-se3-375x667-after.jpg" width="200"> |
+| 390×844 | <img src="docs/qa/2026-11-13/tour-i12-390x844-before.jpg" width="200"> | <img src="docs/qa/2026-11-13/tour-i12-390x844-after.jpg" width="200"> |
+| 412×915 | <img src="docs/qa/2026-11-13/tour-pixel7-412x915-before.jpg" width="200"> | <img src="docs/qa/2026-11-13/tour-pixel7-412x915-after.jpg" width="200"> |
+| 768×1024 | <img src="docs/qa/2026-11-13/tour-ipad-768x1024-before.jpg" width="200"> | <img src="docs/qa/2026-11-13/tour-ipad-768x1024-after.jpg" width="200"> |
+| 844×390 | <img src="docs/qa/2026-11-13/tour-phone-844x390-before.jpg" width="200"> | <img src="docs/qa/2026-11-13/tour-phone-844x390-after.jpg" width="200"> |
+
+### Lighthouse, mobile (`scripts/lighthouse-budget.mjs`: LCP < 2.5 s, TBT < 300 ms, CLS < 0.1)
+
+| | Score | FCP | LCP | TBT | CLS |
+|---|---|---|---|---|---|
+| `/` before (local; map drawn with software WebGL) | 0.36 | 1.2 s | 9.5 s | 12.3 s | 0 |
+| `/` after, CI (M7 build, median of 3) | – | 1.41 s | 1.41 s | 124 ms | 0.005 |
+| `/` after, CI (S4 build, median of 3) | – | 1.42 s | 1.46 s | 245 ms | 0.005 |
+| plot page after (local, all fixes, median of 3) | – | 1.50 s | 1.58 s | 261 ms | 0.001 |
+
+- **Why WebGL is off in the budget:** CI has no GPU. The budget measures all of the app's own work: HTML, hydration, data and controls. `home-start.spec.ts` checks that the idle map stops redrawing.
+- **The "before" row is not like-for-like:** with software WebGL, compiling the map's shaders alone takes seconds of main thread, which no phone spends.
+- **Late local numbers are noisy:** on 13 Nov this sandbox's CPU benchmark index fell from about 2,200 to 1,200–1,700, and identical code then measured 1.5–2× worse. CI, on steady hardware, is the gate.
+
+### Sitemaps (URL counts)
+
+| | `/sitemap.xml` | pages | plots | companies | insights |
+|---|---|---|---|---|---|
+| www.flatmeta.io now (old build; static file written by the insights automation) | a 60-URL list (insights and `/`) | 197 | 370 (people's plots and companies together) | – | only in the static file |
+| staging (S2 build) | index of 4 sitemaps | 216 | 1 (people's plots that pass `isIndexable`) | 368 | 0 (`INSIGHTS_DIR` not set there) |
+| local CI-like stack (all fixes, test data) | index of 4 sitemaps | 653 | 33 | 140 | 3 (2 fixture articles + the `/insights` hub) |
+
+### Tests added
+- **e2e, device and layout:** `mobile-matrix`, `tour`, `matrix-nav`, `matrix-brands`, `matrix-explore`, `matrix-claim`, `matrix-hints`, `home-start`, `live-socket`, `pricing`.
+- **e2e, SEO and crawling:** `sitemap` (XSD-validated), `sitemap-content`, `seo` (S3), `seo-site`, `insights`, `crawl-hygiene`.
+- **Unit (web):** `tour-layout`, `nearest`, `live-socket`, `plot-seo`, `seo-site`, `logo-badge`, `viewport`, `insights`, `robots`, `lib` (apex rule).
+- **API:** `indexing`, `live-handshake`, `sector`, and logo trimming and fill in `company-logos`.
+- **CI:**
+  - xmllint for the XSD checks;
+  - the Lighthouse budget;
+  - the matrix screenshots and Lighthouse JSON uploaded as an artifact.
+
+### Server steps (manual)
+1. **nginx include** (as root): render, diff, install, re-apply the NodeJS template, `nginx -t && systemctl reload nginx`. The commands are in `docs/deploy-hestia.md` → "Static files in public_html", steps 1–2. The new include:
+   - sends `/sitemap.xml`, `/indexnow-key.txt`, `/insights` and `/api/v1/live` (with a 3600 s read timeout) to the app;
+   - returns 301 for `/insights/` → `/insights`;
+   - returns 301 for every path on `flatmeta.io` → `https://www.flatmeta.io`.
+2. **Move the static sitemap aside**, so it is never confused with the app's:
+   ```bash
+   mv /home/flatmeta/web/flatmeta.io/public_html/sitemap.xml /home/flatmeta/web/flatmeta.io/public_html/sitemap.xml.insights-old
+   ```
+3. **Production `.env`** (app user), then the next deploy or `pm2 reload`:
+   - `INDEXNOW_KEY`: generate it on the server with `openssl rand -hex 16`. Never commit it, never paste it anywhere.
+   - `INSIGHTS_DIR=/home/flatmeta/web/flatmeta.io/public_html/insights`. The app user needs read access.
+   - Optionally `SAME_AS=`: FlatMeta's profile URLs, comma-separated.
+4. **Once, after the deploy, in `apps/api`:**
+   ```bash
+   npm run company-land:logos -- --apply --refresh
+   ```
+   This trims and measures the logos stored before M7, so thin wordmarks show initials. Migration 0012 (one spelling per sector) runs with the deploy.
+5. **Insights automation:** give it the rules in `docs/positioning.md` → "Rules for every insights article". Admin → Insights check lists the articles that break them.
+6. **Check:**
+   - `curl -sI https://flatmeta.io/pricing` answers 301 to www;
+   - `curl -s https://www.flatmeta.io/sitemap.xml` starts with `<sitemapindex`;
+   - https://www.flatmeta.io/insights lists the articles.
+
 ## Auto-deploy from cron, staging and production (12 Nov 2026)
 
 Both checkouts on cp2 now deploy themselves, like SiteRoll. A cron job runs `scripts/auto-deploy.sh --cron` every 2 minutes as `najamussaqib`. When `v2` moves:
