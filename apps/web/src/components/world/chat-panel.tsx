@@ -145,7 +145,7 @@ export function ChatPanel({ position, openWith, onOpenedWith }: { position: () =
       <div className="absolute z-20 right-3 bottom-[152px] md:bottom-6">
         <button className="glass rounded-2xl icon-btn relative" onClick={() => setOpen(true)} aria-label={`Chat${unread ? `, ${unread} unread` : ''}`}>
           <MessageCircle size={18} />
-          {unread > 0 && <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--color-coral)] text-[10px] font-bold grid place-items-center text-white">{unread > 9 ? '9+' : unread}</span>}
+          {unread > 0 && <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--color-coral)] text-xs font-bold grid place-items-center text-white">{unread > 9 ? '9+' : unread}</span>}
         </button>
       </div>
     );
@@ -220,7 +220,7 @@ export function ChatPanel({ position, openWith, onOpenedWith }: { position: () =
               <div key={m.id} className={clsx('flex gap-2', m.senderId === meId && 'flex-row-reverse')}>
                 <FaceBadge look={m.avatar} size={26} />
                 <div className={clsx('rounded-2xl px-3 py-1.5 max-w-[78%] break-words', m.senderId === meId ? 'bg-[var(--color-teal)] text-[#0b1020]' : 'bg-white/10')}>
-                  {m.senderId !== meId && <div className="text-[10px] font-semibold opacity-70">{m.senderName}</div>}
+                  {m.senderId !== meId && <div className="text-xs font-semibold opacity-70">{m.senderName}</div>}
                   {m.body}
                 </div>
               </div>
@@ -246,7 +246,7 @@ export function ChatPanel({ position, openWith, onOpenedWith }: { position: () =
               <button className="btn-primary btn-sm" aria-label="Send"><Send size={14} /></button>
             </form>
           )}
-          <p className="px-3 pb-2 text-[10px] muted flex items-center gap-1"><Shield size={10} /> Be kind. Messages are moderated and rate-limited.</p>
+          <p className="px-3 pb-2 text-xs muted flex items-center gap-1"><Shield size={10} /> Be kind. Messages are moderated and rate-limited.</p>
         </>
       )}
     </section>

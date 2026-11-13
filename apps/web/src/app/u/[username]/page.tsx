@@ -66,7 +66,7 @@ export default async function UserPage({ params }: Params) {
                 <div key={a.key} className="surface p-4 text-center" title={a.description}>
                   <span className="mx-auto size-12 rounded-2xl grid place-items-center" style={{ background: `${RARITY_COLOR[a.rarity]}22`, color: RARITY_COLOR[a.rarity] }}><NamedIcon name={a.icon} size={22} /></span>
                   <div className="font-semibold text-sm mt-2">{a.name}</div>
-                  <div className="text-[11px] capitalize" style={{ color: RARITY_COLOR[a.rarity] }}>{a.rarity}</div>
+                  <div className="text-xs capitalize" style={{ color: RARITY_COLOR[a.rarity] }}>{a.rarity}</div>
                 </div>
               ))}
             </div>

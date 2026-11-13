@@ -53,8 +53,6 @@ const KNOWN: { task: string; page: string; check: Check; devices?: RegExp }[] = 
   ...(['hscroll', 'offscreen', 'tap', 'text'] as const).map((check) => ({ task: 'M6', page: 'explore', check })),
   ...(['hscroll', 'offscreen', 'tap', 'text'] as const).map((check) => ({ task: 'M7', page: 'brands', check })),
   ...(['hscroll', 'offscreen', 'tap', 'text'] as const).map((check) => ({ task: 'M11', page: 'pricing', check })),
-  ...(['hscroll', 'offscreen', 'tap', 'text'] as const).map((check) => ({ task: 'M3', page: 'business', check })),
-  ...(['hscroll', 'offscreen', 'covered', 'tap', 'text'] as const).map((check) => ({ task: 'M3', page: 'signin', check })),
 ];
 
 type Violation = { check: Check; detail: string };

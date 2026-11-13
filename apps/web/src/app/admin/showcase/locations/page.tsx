@@ -169,12 +169,12 @@ export default function ShowcaseLocationsPage() {
                     <td className="p-3 align-top whitespace-nowrap">
                       <a className="inline-flex items-center gap-1 underline" href={`/?at=${r.lat},${r.lng},17`} target="_blank" rel="noreferrer">Map <ExternalLink size={12} /></a>
                       <a className="ml-3 inline-flex items-center gap-1 underline muted" href={`https://www.openstreetmap.org/?mlat=${r.lat}&mlon=${r.lng}#map=18/${r.lat}/${r.lng}`} target="_blank" rel="noreferrer">OSM <ExternalLink size={12} /></a>
-                      <div className="text-[11px] muted mt-1">{r.lat.toFixed(4)}, {r.lng.toFixed(4)}</div>
+                      <div className="text-xs muted mt-1">{r.lat.toFixed(4)}, {r.lng.toFixed(4)}</div>
                     </td>
                     <td className="p-3 align-top">
                       {r.locationVerified ? <span className="chip chip-teal">checked</span> : <span className="chip">unchecked</span>}
                       {r.flags.map((f) => <div key={f} className="text-xs text-[var(--color-coral)] mt-1 flex gap-1"><TriangleAlert size={12} className="mt-0.5 shrink-0" /> {f}</div>)}
-                      {r.locationNote && <div className="text-[11px] muted mt-1">{r.locationNote}</div>}
+                      {r.locationNote && <div className="text-xs muted mt-1">{r.locationNote}</div>}
                     </td>
                     <td className="p-3 align-top">
                       <div className="flex gap-2">

@@ -9,16 +9,11 @@ import { clsx } from '../ui';
  * G9 walk controls: an on-screen joystick (touch devices; WASD and the arrow keys do the same on a keyboard) and the
  * emote bar. Both are only shown at the City and Land levels, where avatars are drawn.
  */
-export function WalkControls({ onStick, onEmote, visible }: { onStick: (x: number, y: number) => void; onEmote: (e: Emote) => void; visible: boolean }) {
-  const [touch, setTouch] = useState(false);
+export function WalkControls({ onEmote, visible }: { onEmote: (e: Emote) => void; visible: boolean }) {
   const [open, setOpen] = useState(false);
-  useEffect(() => {
-    setTouch(window.matchMedia('(pointer: coarse)').matches);
-  }, []);
   if (!visible) return null;
   return (
     <>
-      {touch && <Joystick onStick={onStick} />}
       <div className="absolute z-20 right-3 bottom-[calc(env(safe-area-inset-bottom)+208px)] md:bottom-24 flex flex-col items-end gap-2">
         {open && (
           <div role="toolbar" aria-label="Emotes" className="surface p-1.5 grid grid-cols-4 gap-1 shadow-xl">
@@ -49,7 +44,18 @@ export function WalkControls({ onStick, onEmote, visible }: { onStick: (x: numbe
 
 const R = 46; // knob travel in px
 
-function Joystick({ onStick }: { onStick: (x: number, y: number) => void }) {
+/** Touch screens walk with this (keyboards use WASD / the arrows). */
+export function useTouch() {
+  const [touch, setTouch] = useState(false);
+  useEffect(() => setTouch(window.matchMedia('(pointer: coarse)').matches), []);
+  return touch;
+}
+
+/**
+ * The on-screen joystick. It sits in the map's left control column (world-experience.tsx), in normal flow, so it can
+ * never cover the locate / help buttons; the zoom buttons hide while it is shown (pinch still zooms).
+ */
+export function Joystick({ onStick }: { onStick: (x: number, y: number) => void }) {
   const base = useRef<HTMLDivElement>(null);
   const [knob, setKnob] = useState<[number, number]>([0, 0]);
   const active = useRef<number | null>(null);
@@ -76,7 +82,7 @@ function Joystick({ onStick }: { onStick: (x: number, y: number) => void }) {
       ref={base}
       role="application"
       aria-label="Walk joystick"
-      className="fm-joystick absolute z-20 left-4 bottom-[calc(env(safe-area-inset-bottom)+150px)] h-32 w-32 rounded-full border border-white/20 bg-[rgb(11_16_32/0.45)] backdrop-blur-sm select-none"
+      className="fm-joystick relative h-32 w-32 rounded-full border border-white/20 bg-[rgb(11_16_32/0.45)] backdrop-blur-sm select-none"
       onPointerDown={(e) => {
         active.current = e.pointerId;
         (e.target as HTMLElement).setPointerCapture?.(e.pointerId);

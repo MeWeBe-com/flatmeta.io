@@ -96,7 +96,7 @@ export function NotificationBell() {
         aria-haspopup="dialog"
       >
         <Bell size={18} />
-        {unread > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--color-coral)] text-[10px] font-bold grid place-items-center text-white">{unread > 9 ? '9+' : unread}</span>}
+        {unread > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--color-coral)] text-xs font-bold grid place-items-center text-white">{unread > 9 ? '9+' : unread}</span>}
       </button>
       {open && (
         <div className="absolute right-0 mt-2 w-[min(22rem,calc(100vw-1.5rem))] card p-2 z-50 animate-pop" role="dialog" aria-label="Notifications">
@@ -115,9 +115,9 @@ export function NotificationBell() {
                 <li key={n.id} className={clsx('rounded-xl px-2 py-2 text-sm', !n.readAt && 'bg-white/5')}>
                   {href ? <Link href={href} className="hover:underline">{text}</Link> : <span>{text}</span>}
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[11px] muted">{timeAgo(n.createdAt)}</span>
+                    <span className="text-xs muted">{timeAgo(n.createdAt)}</span>
                     {n.kind === 'connection_request' && (done ? (
-                      <span className="text-[11px] muted ml-auto">{done}</span>
+                      <span className="text-xs muted ml-auto">{done}</span>
                     ) : (
                       <span className="ml-auto flex gap-1">
                         <button className="btn-primary btn-sm h-7" onClick={() => void answer(n, true)}><Check size={12} /> Accept</button>

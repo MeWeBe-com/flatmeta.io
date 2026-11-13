@@ -92,7 +92,7 @@ export function SearchPalette({ open, onClose, onFlyTo, onPlot }: { open: boolea
         <div className="max-h-[60vh] overflow-y-auto p-2">
           {answer && (
             <section aria-label="Ask FlatMeta answer" className="m-1 mb-3 rounded-2xl p-3 border border-[rgb(139_124_255/.35)] bg-[rgb(139_124_255/.08)]">
-              <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-violet)] flex items-center gap-1.5">
+              <div className="text-xs uppercase tracking-wider font-semibold text-[var(--color-violet)] flex items-center gap-1.5">
                 <Sparkles size={12} /> Ask FlatMeta {answer.provider === 'ai' ? '' : '· search summary'}
               </div>
               <p className="text-sm mt-1.5">{answer.answer}</p>
@@ -141,7 +141,7 @@ export function SearchPalette({ open, onClose, onFlyTo, onPlot }: { open: boolea
             <Row key={u.id} onClick={() => pick(() => router.push(`/u/${u.username}`))} icon={<User size={16} />} title={u.displayName} sub={`@${u.username} · level ${u.level}`} />
           ))}</Group>}
         </div>
-        <div className="px-4 h-9 border-t border-[var(--line)] text-[11px] muted flex items-center gap-3">
+        <div className="px-4 h-9 border-t border-[var(--line)] text-xs muted flex items-center gap-3">
           <Globe2 size={12} /> Search covers plots, brands, places, cities and explorers <span className="ml-auto">Esc to close</span>
         </div>
       </div>
@@ -152,7 +152,7 @@ export function SearchPalette({ open, onClose, onFlyTo, onPlot }: { open: boolea
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="mb-2">
-      <div className="px-3 pt-2 pb-1 text-[11px] uppercase tracking-wider font-semibold muted">{label}</div>
+      <div className="px-3 pt-2 pb-1 text-xs uppercase tracking-wider font-semibold muted">{label}</div>
       {children}
     </div>
   );

@@ -39,7 +39,7 @@ export function NearbyCard({ at, onOpen }: { at: { lat: number; lng: number } | 
             <button className="w-full text-left rounded-xl px-2 py-1.5 hover:bg-white/5 flex items-center gap-2" onClick={() => onOpen(p)}>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium truncate">{p.showcase?.brand ?? p.title}</span>
-                <span className="block text-[11px] muted truncate">{p.kind === 'showcase' ? 'Reserved for its company · unclaimed' : p.kind === 'landmark' ? 'Landmark' : p.tagline ?? 'Plot'}</span>
+                <span className="block text-xs muted truncate">{p.kind === 'showcase' ? 'Reserved for its company · unclaimed' : p.kind === 'landmark' ? 'Landmark' : p.tagline ?? 'Plot'}</span>
               </span>
               <span className="text-xs muted shrink-0">{km(p.distanceKm)}</span>
             </button>

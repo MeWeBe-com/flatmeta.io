@@ -53,7 +53,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <SiteHeader />
       <div className="mx-auto max-w-[1400px] px-4 py-6 grid md:grid-cols-[210px_1fr] gap-8">
         <nav className="flex md:flex-col gap-1 overflow-x-auto md:sticky md:top-24 self-start" aria-label="Admin">
-          <div className="hidden md:block text-[11px] uppercase tracking-widest muted font-semibold px-3 mb-2">Admin</div>
+          <div className="hidden md:block text-xs uppercase tracking-widest muted font-semibold px-3 mb-2">Admin</div>
           {NAV.map((n) => {
             // The longest matching link wins, so /admin/showcase/locations doesn't also light up /admin/showcase.
             const best = NAV.filter((o) => (o.href === '/admin' ? pathname === o.href : pathname.startsWith(o.href))).sort((x, y) => y.href.length - x.href.length)[0];

@@ -159,7 +159,7 @@ export default async function PlotPage({ params }: Params) {
                     its own CSP, no forms, popups or top navigation. */}
                 <iframe title={`Custom content for ${p.title}`} src={sandboxSrc(p.customHtmlUrl)} sandbox="allow-scripts" referrerPolicy="no-referrer" loading="lazy" className="w-full h-[480px] bg-transparent" />
                 <div className="flex items-center justify-between gap-3 px-4 py-2 border-t border-[var(--line)]">
-                  <p className="text-[11px] muted">Custom content made by the plot owner, not by FlatMeta.</p>
+                  <p className="text-xs muted">Custom content made by the plot owner, not by FlatMeta.</p>
                   <ReportCustomHtml plotId={p.id} />
                 </div>
               </section>

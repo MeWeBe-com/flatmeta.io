@@ -23,7 +23,10 @@
     "organisations": "Organisations",
     "profile": "Public profile",
     "theme": "Toggle theme",
-    "install": "Install app"
+    "install": "Install app",
+    "companies": "Companies",
+    "about": "About",
+    "menu": "Menu"
   },
   "hud": {
     "claimLand": "Claim land",

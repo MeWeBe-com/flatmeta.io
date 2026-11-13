@@ -15,7 +15,7 @@ import { useGame, useLive, useSession, useTheme } from '../providers';
 import { UserMenu } from '../site-chrome';
 import { Logo, Spinner, clsx } from '../ui';
 import { ChatPanel } from './chat-panel';
-import { WalkControls } from './walk-controls';
+import { Joystick, WalkControls, useTouch } from './walk-controls';
 import { EMOTE_ICONS } from '@/lib/emotes';
 import { AVATAR_MIN_ZOOM } from '../map/avatars';
 import { NearbyCard } from './nearby-card';
@@ -30,6 +30,7 @@ import { QuestTracker } from './quest-tracker';
 import { SearchPalette } from './search-palette';
 import { Tour, useTourState } from './tour';
 import { HelpMenu } from './help-menu';
+import { NavMenu } from '../nav-menu';
 
 export function WorldExperience({ stats }: { stats: { plots: number; showcase: number; countries: number; explorers: number } | null }) {
   const map = useRef<WorldMapHandle>(null);
@@ -40,6 +41,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
   const live = useLive();
   const { online } = live;
   const tour = useTourState();
+  const touch = useTouch();
   const [claimMode, setClaimMode] = useState(false);
   const [selection, setSelection] = useState<Rect | null>(null);
   const [selState, setSelState] = useState<SelectionState>('idle');
@@ -49,6 +51,8 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
     const at = params.get('at')?.split(',').map(Number);
     return at && at.length >= 2 && at.every(Number.isFinite) ? (at[2] ?? 15) : 1.6;
   });
+  // Walk mode on a touch screen: avatars are drawn (City level and up) and the joystick is shown.
+  const walking = touch && !claimMode && zoom >= AVATAR_MIN_ZOOM;
   const [mobilePanel, setMobilePanel] = useState(false);
   const [peer, setPeer] = useState<Peer | null>(null);
   const [chatWith, setChatWith] = useState<string | null>(() => params.get('dm'));
@@ -256,7 +260,9 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
 
       {/* Top bar */}
       <header className="absolute top-0 inset-x-0 z-40 p-3 flex items-center gap-2 pointer-events-none">
-        <Link href="/explore" className="pointer-events-auto glass rounded-full h-11 px-3 flex items-center" aria-label="Explore FlatMeta">
+        {/* M3: the site menu (Sign in, every section, Replay tour) on phones and tablets, next to the logo. */}
+        <NavMenu className="pointer-events-auto lg:hidden shrink-0" onReplayTour={tour.start} />
+        <Link href="/" className="pointer-events-auto glass rounded-full h-11 min-w-11 px-2.5 flex items-center shrink-0" aria-label="FlatMeta home">
           <Logo size={26} withText={false} />
           <span className="hidden sm:inline font-display font-bold ml-2">FlatMeta</span>
         </Link>
@@ -264,12 +270,12 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
           <Search size={16} />
           <span className="truncate">{t('hud.search')}</span>
           <span className="ml-auto chip chip-violet h-6"><Sparkles size={11} /> AI</span>
-          <kbd className="hidden md:inline text-[10px] border border-[var(--line-strong)] rounded px-1.5 py-0.5">⌘K</kbd>
+          <kbd className="hidden md:inline text-xs border border-[var(--line-strong)] rounded px-1.5 py-0.5">⌘K</kbd>
         </button>
         <nav className="hidden lg:flex pointer-events-auto glass rounded-full h-11 items-center px-2 text-sm">
-          <Link href="/explore" className="px-3 h-9 rounded-full inline-flex items-center hover:bg-white/5">{t('nav.explore')}</Link>
-          <Link href="/leaderboards" className="px-3 h-9 rounded-full inline-flex items-center hover:bg-white/5">{t('nav.leaderboards')}</Link>
-          <Link href="/business" className="px-3 h-9 rounded-full inline-flex items-center hover:bg-white/5">{t('nav.business')}</Link>
+          <Link href="/explore" className="tap px-3 rounded-full hover:bg-white/5">{t('nav.explore')}</Link>
+          <Link href="/leaderboards" className="tap px-3 rounded-full hover:bg-white/5">{t('nav.leaderboards')}</Link>
+          <Link href="/business" className="tap px-3 rounded-full hover:bg-white/5">{t('nav.business')}</Link>
         </nav>
         <div className="ml-auto pointer-events-auto">
           <UserMenu />
@@ -327,9 +333,10 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
         </button>
       )}
 
-      {/* Left controls */}
-      <div className="absolute z-20 left-3 bottom-24 md:bottom-6 flex flex-col gap-2">
-        <div className="glass rounded-2xl flex flex-col">
+      {/* Left controls: one column, so nothing in it can cover anything else. In walk mode on a touch screen the
+          joystick joins it and the zoom buttons step aside (pinch zooms). */}
+      <div className="absolute z-20 left-3 bottom-[calc(env(safe-area-inset-bottom)+96px)] md:bottom-6 flex flex-col items-start gap-2">
+        <div className={clsx('glass rounded-2xl flex flex-col', walking && 'hidden')}>
           <button className="icon-btn" onClick={() => map.current?.zoomBy(1)} aria-label={t('hud.zoomIn')}><Plus size={18} /></button>
           <button className="icon-btn" onClick={() => map.current?.zoomBy(-1)} aria-label={t('hud.zoomOut')}><Minus size={18} /></button>
         </div>
@@ -342,6 +349,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
           {locating ? <Spinner /> : <LocateFixed size={18} />}
         </button>
         <HelpMenu onReplayTour={tour.start} />
+        {walking && <Joystick onStick={(x, y) => map.current?.setJoystick(x, y)} />}
       </div>
 
       {/* The three levels */}
@@ -351,7 +359,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
         </div>
       )}
 
-      <WalkControls visible={!claimMode && zoom >= AVATAR_MIN_ZOOM} onStick={(x, y) => map.current?.setJoystick(x, y)} onEmote={(e) => live.sendEmote(e)} />
+      <WalkControls visible={!claimMode && zoom >= AVATAR_MIN_ZOOM} onEmote={(e) => live.sendEmote(e)} />
 
       {peer && !claimMode && !openPlot && (
         <ErrorBoundary name="PeerCard">

@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Award, Code2, CreditCard, LayoutDashboard, LogOut, Map, Moon, Shield, Sun, User, Building2, Menu, X, Download, Settings } from 'lucide-react';
+import { Award, Code2, CreditCard, LayoutDashboard, LogOut, Map, Moon, Shield, Sun, User, Building2, Download, Settings } from 'lucide-react';
 import { APP_ENV, STAGING_DOMAIN } from '@/lib/config';
 import { t } from '@/lib/i18n';
 import { ErrorBoundary } from './error-boundary';
+import { NavMenu } from './nav-menu';
 import { NotificationBell } from './notification-bell';
 import { useSession, useTheme } from './providers';
 import { Avatar, LevelRing, Logo, clsx } from './ui';
@@ -15,7 +16,7 @@ export function StagingBanner() {
   const [show, setShow] = useState(false);
   useEffect(() => setShow(APP_ENV === 'staging' || location.hostname === STAGING_DOMAIN), []);
   if (!show) return null;
-  return <div className="fixed bottom-0 inset-x-0 z-[80] text-center text-[11px] font-semibold bg-[var(--color-coral)] text-white py-0.5">STAGING · {STAGING_DOMAIN} · test payments only</div>;
+  return <div className="fixed bottom-0 inset-x-0 z-[80] text-center text-xs font-semibold bg-[var(--color-coral)] text-white py-0.5">STAGING · {STAGING_DOMAIN} · test payments only</div>;
 }
 
 let deferredPrompt: (Event & { prompt: () => Promise<void> }) | null = null;
@@ -43,7 +44,8 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
   if (loading) return <span className="size-10 rounded-full skeleton" />;
   if (!me.user) {
     return (
-      <div className="flex items-center gap-1">
+      // On phones both live in the menu (NavMenu), so the header never runs off a 320 px screen (M3).
+      <div className="hidden sm:flex items-center gap-1">
         <button className="icon-btn" onClick={toggle} aria-label={t('nav.theme')}>{theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
         <button className="btn-primary" onClick={() => openSignIn()}>{t('nav.signIn')}</button>
       </div>
@@ -82,7 +84,7 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
           </div>
           {me.progress && (
             <div className="px-3 pb-2">
-              <div className="flex justify-between text-[11px] muted mb-1">
+              <div className="flex justify-between text-xs muted mb-1">
                 <span>Level {me.progress.level}</span>
                 <span>{me.progress.xp - me.progress.levelXp} / {me.progress.nextLevelXp - me.progress.levelXp} XP</span>
               </div>
@@ -119,6 +121,7 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
 const NAV = [
   { href: '/', label: 'nav.map' },
   { href: '/explore', label: 'nav.explore' },
+  { href: '/brands', label: 'nav.companies' },
   { href: '/marketplace', label: 'nav.marketplace' },
   { href: '/clans', label: 'nav.clans' },
   { href: '/leaderboards', label: 'nav.leaderboards' },
@@ -128,33 +131,24 @@ const NAV = [
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
-  useEffect(() => setOpen(false), [pathname]);
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-[color-mix(in_oklab,var(--bg)_82%,transparent)] backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-4 h-16 flex items-center gap-6">
-        <Link href="/" aria-label="FlatMeta home">
+        <Link href="/" aria-label="FlatMeta home" className="tap shrink-0">
           <Logo />
         </Link>
-        <nav className="hidden md:flex items-center gap-1 text-sm">
+        <nav className="hidden lg:flex items-center gap-1 text-sm">
           {NAV.map((n) => (
-            <Link key={n.href} href={n.href} className={clsx('px-3 h-9 inline-flex items-center rounded-full transition hover:bg-white/5', pathname === n.href ? 'text-[var(--color-teal)]' : 'muted')}>
+            <Link key={n.href} href={n.href} className={clsx('tap px-3 rounded-full transition hover:bg-white/5 whitespace-nowrap', pathname === n.href ? 'text-[var(--color-teal)]' : 'muted')}>
               {t(n.label)}
             </Link>
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-2">
           <UserMenu />
-          <button className="icon-btn md:hidden" onClick={() => setOpen((o) => !o)} aria-label="Menu">{open ? <X /> : <Menu />}</button>
+          <NavMenu className="lg:hidden" align="right" />
         </div>
       </div>
-      {open && (
-        <nav className="md:hidden px-4 pb-4 grid gap-1">
-          {NAV.map((n) => (
-            <Link key={n.href} href={n.href} className="px-3 h-11 flex items-center rounded-xl hover:bg-white/5">{t(n.label)}</Link>
-          ))}
-        </nav>
-      )}
     </header>
   );
 }
@@ -166,21 +160,21 @@ export function SiteFooter() {
         <div className="md:col-span-2 space-y-3">
           <Logo />
           <p className="muted max-w-sm">{t('app.tagline')}. {t('footer.made')}</p>
-          <p className="text-xs muted">A <a className="underline" href="https://mewebe.com">MeWeBe</a> product.</p>
+          <p className="text-xs muted">A <a className="underline" href="https://mewebe.com" data-inline-link>MeWeBe</a> product.</p>
         </div>
         <div className="grid gap-2">
-          <Link href="/explore" className="muted hover:text-[var(--text)]">{t('nav.explore')}</Link>
-          <Link href="/leaderboards" className="muted hover:text-[var(--text)]">{t('nav.leaderboards')}</Link>
-          <Link href="/business" className="muted hover:text-[var(--text)]">{t('nav.business')}</Link>
-          <Link href="/pricing" className="muted hover:text-[var(--text)]">{t('nav.pricing')}</Link>
-          <Link href="/brands" className="muted hover:text-[var(--text)]">Companies</Link>
+          <Link href="/explore" className="tap muted hover:text-[var(--text)]">{t('nav.explore')}</Link>
+          <Link href="/leaderboards" className="tap muted hover:text-[var(--text)]">{t('nav.leaderboards')}</Link>
+          <Link href="/business" className="tap muted hover:text-[var(--text)]">{t('nav.business')}</Link>
+          <Link href="/pricing" className="tap muted hover:text-[var(--text)]">{t('nav.pricing')}</Link>
+          <Link href="/brands" className="tap muted hover:text-[var(--text)]">Companies</Link>
         </div>
         <div className="grid gap-2">
-          <Link href="/about" className="muted hover:text-[var(--text)]">{t('footer.about')}</Link>
-          <Link href="/dashboard/developers" className="muted hover:text-[var(--text)]">{t('footer.api')}</Link>
-          <Link href="/legal/terms" className="muted hover:text-[var(--text)]">{t('footer.terms')}</Link>
-          <Link href="/legal/privacy" className="muted hover:text-[var(--text)]">{t('footer.privacy')}</Link>
-          <Link href="/legal/refunds" className="muted hover:text-[var(--text)]">{t('footer.refunds')}</Link>
+          <Link href="/about" className="tap muted hover:text-[var(--text)]">{t('footer.about')}</Link>
+          <Link href="/dashboard/developers" className="tap muted hover:text-[var(--text)]">{t('footer.api')}</Link>
+          <Link href="/legal/terms" className="tap muted hover:text-[var(--text)]">{t('footer.terms')}</Link>
+          <Link href="/legal/privacy" className="tap muted hover:text-[var(--text)]">{t('footer.privacy')}</Link>
+          <Link href="/legal/refunds" className="tap muted hover:text-[var(--text)]">{t('footer.refunds')}</Link>
         </div>
       </div>
       <div className="text-center text-xs muted pb-8">© {new Date().getFullYear()} FlatMeta · Map data © OpenStreetMap contributors</div>

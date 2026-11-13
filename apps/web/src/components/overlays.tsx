@@ -39,7 +39,7 @@ function Toasts() {
               )}
             </span>
             <span className="min-w-0">
-              {x.body && <span className="block text-[11px] uppercase tracking-wider font-semibold" style={{ color }}>{x.body}</span>}
+              {x.body && <span className="block text-xs uppercase tracking-wider font-semibold" style={{ color }}>{x.body}</span>}
               <span className={clsx('block font-semibold', x.kind === 'xp' && 'font-display text-lg')} style={x.kind === 'xp' ? { color } : undefined}>
                 {x.title}
               </span>
@@ -153,7 +153,7 @@ function SignInDialog() {
               {t('auth.google')}
             </a>
           )}
-          <p className="text-[11px] muted text-center">By continuing you agree to our <Link className="underline" href="/legal/terms">Terms</Link> and <Link className="underline" href="/legal/privacy">Privacy policy</Link>.</p>
+          <p className="text-xs muted text-center">By continuing you agree to our <Link className="underline" href="/legal/terms">Terms</Link> and <Link className="underline" href="/legal/privacy">Privacy policy</Link>.</p>
         </form>
       ) : (
         <form

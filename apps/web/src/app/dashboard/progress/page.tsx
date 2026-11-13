@@ -70,8 +70,8 @@ export default function ProgressPage() {
             <div key={a.key} className={clsx('surface p-4 text-center', !a.unlocked && 'opacity-45 grayscale')} title={a.description}>
               <span className="mx-auto size-12 rounded-2xl grid place-items-center" style={{ background: `${RARITY_COLOR[a.rarity]}22`, color: RARITY_COLOR[a.rarity] }}><NamedIcon name={a.icon} size={22} /></span>
               <div className="font-semibold text-sm mt-2">{a.name}</div>
-              <div className="text-[11px] muted">{a.description}</div>
-              <div className="text-[11px] capitalize mt-1" style={{ color: RARITY_COLOR[a.rarity] }}>{a.rarity}{a.xp ? ` · ${a.xp} XP` : ''}</div>
+              <div className="text-xs muted">{a.description}</div>
+              <div className="text-xs capitalize mt-1" style={{ color: RARITY_COLOR[a.rarity] }}>{a.rarity}{a.xp ? ` · ${a.xp} XP` : ''}</div>
             </div>
           ))}
         </div>

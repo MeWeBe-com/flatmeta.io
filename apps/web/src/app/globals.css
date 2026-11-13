@@ -99,9 +99,12 @@ h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
 }
+/* Touch screens (pointer: coarse) get 44 px tap targets everywhere (Mobile + SEO QA, MX); mouse layouts keep the
+   compact sizes, which are above WCAG 2.5.8's 24 px. */
 @utility btn {
   @apply inline-flex items-center justify-center gap-2 rounded-full px-4 h-10 text-sm font-semibold transition select-none whitespace-nowrap;
   &:disabled { opacity: .5; pointer-events: none; }
+  @media (pointer: coarse) { min-height: 2.75rem; }
 }
 @utility btn-primary {
   @apply btn text-[#04141a];
@@ -129,13 +132,20 @@ h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0
 }
 @utility btn-sm {
   @apply h-8 px-3 text-xs;
+  @media (pointer: coarse) { min-height: 2.75rem; min-width: 2.75rem; }
 }
 @utility icon-btn {
   @apply inline-flex items-center justify-center size-10 rounded-full transition;
   &:hover { background: rgb(255 255 255 / 0.1); }
+  @media (pointer: coarse) { min-height: 2.75rem; min-width: 2.75rem; }
+}
+/* A text link that is also a tap target on its own (footer, breadcrumb, lists of links). */
+@utility tap {
+  @apply inline-flex items-center min-h-8;
+  @media (pointer: coarse) { min-height: 2.75rem; }
 }
 @utility chip {
-  @apply inline-flex items-center gap-1 rounded-full px-2.5 h-6 text-[11px] font-semibold tracking-wide uppercase;
+  @apply inline-flex items-center gap-1 rounded-full px-2.5 h-6 text-xs font-semibold tracking-wide uppercase;
   background: rgb(255 255 255 / 0.07);
   border: 1px solid var(--line);
 }

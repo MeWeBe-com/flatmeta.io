@@ -384,7 +384,7 @@ function Designer({ plot, onApplied, credits, unlimited }: { plot: Plot; onAppli
           ))}
         </div>
       )}
-      {job?.output && <p className="text-[11px] muted">Made with {job.output.provider === 'ai' ? 'AI' : 'FlatMeta templates'}. Artwork is original and generated; check copy before publishing.</p>}
+      {job?.output && <p className="text-xs muted">Made with {job.output.provider === 'ai' ? 'AI' : 'FlatMeta templates'}. Artwork is original and generated; check copy before publishing.</p>}
     </div>
   );
 }

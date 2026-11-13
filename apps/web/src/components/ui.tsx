@@ -49,7 +49,7 @@ export function Avatar({ name, url, size = 36, level, className }: { name: strin
         </span>
       )}
       {level !== undefined && (
-        <span className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--color-night)] border border-[var(--color-teal)] text-[10px] font-bold grid place-items-center text-[var(--color-teal)]">
+        <span className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--color-night)] border border-[var(--color-teal)] text-xs font-bold grid place-items-center text-[var(--color-teal)]">
           {level}
         </span>
       )}
@@ -121,8 +121,9 @@ export function Modal({ open, onClose, children, title, wide, className }: { ope
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[60] grid place-items-end sm:place-items-center p-0 sm:p-6" role="dialog" aria-modal="true" aria-label={title}>
-      <button className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={onClose} aria-label="Close" tabIndex={-1} />
+    <div className="fixed inset-0 z-[var(--z-modal)] grid place-items-end sm:place-items-center p-0 sm:p-6" role="dialog" aria-modal="true" aria-label={title}>
+      {/* Tapping the backdrop closes too; it's not a second "Close" button for screen readers (that one is in the card). */}
+      <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div ref={ref} className={clsx('relative card w-full animate-rise p-6 max-h-[92vh] overflow-y-auto rounded-b-none sm:rounded-b-[var(--radius-card)]', wide ? 'sm:max-w-3xl' : 'sm:max-w-md', className)}>
         <button className="icon-btn absolute right-3 top-3" onClick={onClose} aria-label="Close">
           <X size={18} />

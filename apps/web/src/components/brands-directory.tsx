@@ -42,7 +42,7 @@ export function BrandsDirectory({ data, country, q, page }: { data: BrandsRes; c
                 <span className="min-w-0">
                   <span className="block font-semibold truncate">{b.title}</span>
                   <span className="block text-xs muted truncate">{[b.sector, b.city, b.countryCode && flag(b.countryCode)].filter(Boolean).join(' · ')}</span>
-                  <span className="block text-[11px] text-[var(--color-gold)]">Reserved · not affiliated with FlatMeta</span>
+                  <span className="block text-xs text-[var(--color-gold)]">Reserved · not affiliated with FlatMeta</span>
                 </span>
               </Link>
             </li>

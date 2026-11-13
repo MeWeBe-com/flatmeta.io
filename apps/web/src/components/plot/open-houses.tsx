@@ -63,7 +63,7 @@ export function OpenHouses({ plotId, canEdit = false, compact = false }: { plotI
         {data.openHouses.map((o) => (
           <li key={o.id} className="flex items-center gap-3 text-sm">
             <div className="min-w-0 flex-1">
-              <div className="font-medium truncate">{o.live && <span className="chip chip-coral mr-2 text-[10px]">Live now</span>}{o.title}</div>
+              <div className="font-medium truncate">{o.live && <span className="chip chip-coral mr-2 text-xs">Live now</span>}{o.title}</div>
               <div className="muted text-xs">{when(o)}{o.going ? ` · ${o.going} want${o.going === 1 ? 's' : ''} a reminder` : ''}</div>
             </div>
             {canEdit ? (

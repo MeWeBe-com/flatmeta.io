@@ -182,7 +182,7 @@ export function PlotSheet({ plotId, onClose, onFocus }: { plotId: string; onClos
             </div>
 
             {plot.descriptionMd && <Markdown source={plot.descriptionMd} className="prose-plot text-sm line-clamp-6" />}
-            <p className="text-[11px] muted">
+            <p className="text-xs muted">
               {t('plot.address')}: <span className="font-mono">{plot.threeWords}</span>
             </p>
           </div>

@@ -27,7 +27,7 @@ export function HappeningNow({ onOpen }: { onOpen: (plotId: string, at: { lat: n
                 <span className="block text-sm truncate">{o.title}</span>
                 <span className="block text-xs muted truncate">{o.plot.title}</span>
               </span>
-              <span className="chip text-[11px] inline-flex items-center gap-1 shrink-0"><Users size={11} /> {o.hereNow} here</span>
+              <span className="chip text-xs inline-flex items-center gap-1 shrink-0"><Users size={11} /> {o.hereNow} here</span>
             </button>
           </li>
         ))}

@@ -92,7 +92,7 @@ export function QuestTracker() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium truncate">{q.title}</div>
-                  <div className="text-[11px] muted truncate">{q.period === 'onboarding' ? 'First day' : q.period === 'daily' ? 'Today' : 'This week'} · +{q.xp} XP{q.credits ? ` · +${q.credits} AI` : ''}</div>
+                  <div className="text-xs muted truncate">{q.period === 'onboarding' ? 'First day' : q.period === 'daily' ? 'Today' : 'This week'} · +{q.xp} XP{q.credits ? ` · +${q.credits} AI` : ''}</div>
                 </div>
                 {q.completed && !q.claimed ? (
                   <button className="btn-gold btn-sm" onClick={() => void claim(q)} disabled={busy === q.key}>

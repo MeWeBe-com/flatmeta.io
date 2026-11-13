@@ -115,9 +115,9 @@ export default function CompanyLandRegister() {
               <tbody>
                 {res.rows.map((r) => (
                   <tr key={r.id} className="border-t border-[var(--line)] align-top">
-                    <td className="p-2 font-medium">{r.company}<div className="text-[11px] muted">{r.source}</div></td>
+                    <td className="p-2 font-medium">{r.company}<div className="text-xs muted">{r.source}</div></td>
                     <td className="p-2">{r.country ?? '–'}<div className="text-xs muted">{r.city ?? ''}</div></td>
-                    <td className="p-2"><span className={clsx('chip text-[11px]', STATUSES.find(([k]) => k === r.status)?.[2])}>{label(r.status)}</span></td>
+                    <td className="p-2"><span className={clsx('chip text-xs', STATUSES.find(([k]) => k === r.status)?.[2])}>{label(r.status)}</span></td>
                     <td className="p-2 text-xs space-y-0.5">
                       {r.plotUrl && <div><a className="underline" href={r.plotUrl} target="_blank" rel="noreferrer">Plot</a> · <a className="underline" href={r.mapUrl!} target="_blank" rel="noreferrer">Map</a></div>}
                       {r.website && <div><a className="underline" href={r.website} target="_blank" rel="noopener noreferrer nofollow">Website</a></div>}

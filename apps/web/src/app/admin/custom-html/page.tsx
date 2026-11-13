@@ -78,7 +78,7 @@ export default function CustomHtmlAdmin() {
               {preview?.id === it.id && (
                 <div className="grid lg:grid-cols-2 gap-3">
                   <iframe title={`Preview of ${it.plotTitle}`} src={preview.url} sandbox="allow-scripts" referrerPolicy="no-referrer" className="w-full h-80 rounded-xl border border-[var(--line)] bg-[#0b1020]" />
-                  <pre className="h-80 overflow-auto text-[11px] font-mono p-3 rounded-xl border border-[var(--line)] whitespace-pre-wrap break-all">{preview.html}</pre>
+                  <pre className="h-80 overflow-auto text-xs font-mono p-3 rounded-xl border border-[var(--line)] whitespace-pre-wrap break-all">{preview.html}</pre>
                 </div>
               )}
             </li>
