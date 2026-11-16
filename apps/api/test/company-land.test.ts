@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 import { and, eq, inArray } from 'drizzle-orm';
 import { db, pool, schema } from '../src/db/client.js';
 import { closeRedis } from '../src/lib/redis.js';
@@ -104,7 +104,13 @@ describe('company land from Wikidata (G12)', () => {
     expect((await app.inject({ method: 'POST', url: '/v1/admin/company-land/run', payload: { country: 'CA' } })).statusCode).toBe(401);
   });
 
-  it('claim by DNS TXT record, then the Brand checkout', async () => {
+  it('claim by DNS TXT record, then the Brand checkout (paid Landmark; the free claim is in golive-regressions)', async () => {
+    const { config } = await import('../src/config.js');
+    const price = config.COMPANY_CLAIM_PRICE_CENTS;
+    config.COMPANY_CLAIM_PRICE_CENTS = 99000;
+    onTestFinished(() => {
+      config.COMPANY_CLAIM_PRICE_CENTS = price;
+    });
     const [plot] = await db.select().from(schema.plots).where(and(eq(schema.plots.kind, 'showcase'), eq(schema.plots.status, 'showcase'))).limit(1);
     await db.update(schema.plots).set({ showcase: { ...plot!.showcase!, approved: true } }).where(eq(schema.plots.id, plot!.id));
     const u = await login();
