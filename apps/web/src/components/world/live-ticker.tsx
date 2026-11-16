@@ -30,8 +30,15 @@ export function describeActivity(a: Activity): string {
   }
 }
 
-export function LiveTicker({ onSelect, limit = 6 }: { onSelect: (a: Activity) => void; limit?: number }) {
-  const { activity, connected } = useLive();
+/** GL3d: activity older than this reads as an empty world ("12d ago"); the panel shows only what is fresh. */
+export const FRESH_MS = 7 * 86_400_000;
+export function freshActivity<T extends { createdAt: string }>(list: T[], now = Date.now()): T[] {
+  return list.filter((a) => now - new Date(a.createdAt).getTime() <= FRESH_MS);
+}
+
+export function LiveTicker({ onSelect, onClaim, limit = 6 }: { onSelect: (a: Activity) => void; onClaim?: () => void; limit?: number }) {
+  const { activity: all, connected } = useLive();
+  const activity = freshActivity(all);
   return (
     <div className="glass rounded-2xl p-3">
       <div className="flex items-center gap-2 px-1 pb-2 text-sm font-display font-bold">
@@ -49,7 +56,16 @@ export function LiveTicker({ onSelect, limit = 6 }: { onSelect: (a: Activity) =>
             </button>
           </li>
         ))}
-        {!activity.length && <li className="text-xs muted px-2">Quiet right now. Be the first to claim something!</li>}
+        {!activity.length && (
+          <li className="px-2 space-y-2" data-testid="live-empty">
+            <p className="text-xs muted">Quiet this week. Be the first: your first land is free.</p>
+            {onClaim && (
+              <button className="btn-sm btn-ghost" onClick={onClaim}>
+                Claim free land
+              </button>
+            )}
+          </li>
+        )}
       </ul>
     </div>
   );

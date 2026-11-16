@@ -212,7 +212,8 @@ Goal: live on its own domain, scoring 9/10 from every role, taking payments, pro
       - the yearly saving in money on every plan.
 
       /business shows the Business price and the launch offer. Tests: `unit/trust.test.ts`, e2e `golive-trust.spec.ts`.
-  - [ ] **GL3d** Living-world feel: hide stale Live activity (> 7 days) behind a "be the first" prompt; on phones the location prompt waits for the tour
+  - [x] **GL3d** Living-world feel: hide stale Live activity (> 7 days) behind a "be the first" prompt; on phones the location prompt waits for the tour
+    - Done: the Live panel shows only activity from the last 7 days (`freshActivity`). An empty week says "Quiet this week. Be the first: your first land is free" with a Claim button, instead of "12d ago" items that read as an empty world. A first visit gets one thing at a time: the location prompt waits until the tour is done or skipped (`useTourState().seen`). Tests: `unit/live-fresh.test.ts`, e2e `golive-trust.spec.ts` (prompt order).
   - [ ] **GL3z** Round 2: re-run the GL2 panel against the new build; append "Round 2 scores" with evidence
 - [ ] **GL4** Payments: Stripe (checkout, portal, signed webhooks, plans/prices from config, test-mode e2e; one account named "FlatMeta" inside the boss's Organisation; keys from .env only), PayPal Checkout (sandbox first), every external API key from .env named "FlatMeta-<Service>"
 - [ ] **GL5** Email from noreply@flatmeta.io (configurable), SPF/DKIM/DMARC, Cloudflare Email Routing for hello@/support@, sending via Cloudflare Email Sending or Resend with the domain verified

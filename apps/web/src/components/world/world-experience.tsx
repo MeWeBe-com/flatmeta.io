@@ -400,18 +400,18 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
       {!openPlot && !claimMode && (
         <div className="absolute z-20 right-3 top-[72px] w-80 space-y-3 hidden md:block max-h-[calc(100dvh-200px)] overflow-y-auto overscroll-contain rounded-2xl">
           <QuestTracker />
-          <LiveTicker onSelect={onActivity} />
+          <LiveTicker onSelect={onActivity} onClaim={startClaim} />
         </div>
       )}
       {mobilePanel && !openPlot && !claimMode && (
         <div className="md:hidden absolute z-20 inset-x-3 top-[72px] bottom-40 space-y-3 overflow-y-auto animate-rise">
           <QuestTracker />
-          <LiveTicker onSelect={(a) => { setMobilePanel(false); onActivity(a); }} />
+          <LiveTicker onSelect={(a) => { setMobilePanel(false); onActivity(a); }} onClaim={() => { setMobilePanel(false); startClaim(); }} />
         </div>
       )}
 
       {/* Start where you are? (asked once, in the app, before the browser's own prompt) */}
-      {askGeo && !claimMode && (
+      {askGeo && !claimMode && tour.seen && !tour.open && (
         <div className="absolute z-30 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 top-[64px] sm:top-[156px] sm:w-[22rem] glass rounded-2xl p-3 animate-pop" role="dialog" aria-label="Start where you are?">
           <div className="flex items-start gap-3">
             <span className="size-9 shrink-0 rounded-xl grid place-items-center bg-[rgb(45_226_196/.12)] text-[var(--color-teal)]"><MapPin size={18} /></span>
