@@ -152,7 +152,7 @@ Round 2 scores are appended below after GL3.
 | Release smoke, staging | not run | 19/19 |
 | Health URL | none | `/api/v1/health` `ok:true` (db 3 ms, redis 2 ms) |
 | Lighthouse mobile, performance | `/business` 100, `/pricing` 100, `/p/tesla` 96 | `/business` 99, `/pricing` 100, `/p/tesla` 95, `/for/local-businesses` 99, `/compare/…` 98 |
-| Lighthouse best practices | 100 | 93 on the pages with the support email: R2-1, fixed after this measurement, staging re-measures on the next deploy |
+| Lighthouse best practices | 100 | 93 on the pages with the support email (R2-1). **Re-measured after the fix on staging `f600f74`: 100 on `/business`, `/pricing` and `/for/local-businesses`, with 0 console errors** |
 | Lighthouse accessibility | 94–96 | 94–100. The remaining item is the staging-only banner's contrast; production has no banner |
 | Lighthouse SEO, staging | 66–69 | 66–69: staging is `noindex` on purpose. The checker reports only `noindex` on staging pages |
 | Buyer pages | /pricing, /business | plus `/for/*` ×3 and `/compare/*` ×3, with FAQPage and BreadcrumbList |
