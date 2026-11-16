@@ -240,5 +240,5 @@ Goal: live on its own domain, scoring 9/10 from every role, taking payments, pro
     - **Agents:** `ops/agents/` has the CEO, Marketing, Sales, Developer and QA prompts, each with its schedule, inputs, tools, outputs and guardrails (no spending, no posting as a person, no secrets, real numbers only, pull requests to `v2` only).
     - **Found by the SEO checker:** the home page had two `<h1>` elements in its HTML (the Suspense fallback and the streamed map card), now exactly one; the `/u/` fallback description was under 50 characters.
     - **Tests:** `seo-check.test.ts` and `weekly-report.test.ts`; `home-start.spec.ts` asserts one `<h1>` in the raw HTML.
-- [ ] **GL9** MeWeBe listing (`docs/golive/mewebe-listing.md`)
+- [x] **GL9** MeWeBe listing (`docs/golive/mewebe-listing.md`)
 - [ ] **GL10** Launch & 9/10 proof report (`docs/golive/04-launch-proof-report.md`)
