@@ -29,7 +29,8 @@
     "images:import": "tsx --env-file-if-exists=../../.env src/showcase/import-external.ts",
     "mcp:stdio": "tsx --env-file-if-exists=../../.env src/mcp/stdio.ts",
     "openapi:export": "tsx --env-file-if-exists=../../.env scripts/export-openapi.ts",
-    "payments:check": "tsx --env-file-if-exists=../../.env scripts/payments-check.ts"
+    "payments:check": "tsx --env-file-if-exists=../../.env scripts/payments-check.ts",
+    "email:check": "tsx --env-file-if-exists=../../.env scripts/email-check.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",

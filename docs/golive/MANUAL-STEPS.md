@@ -126,3 +126,62 @@ LAUNCH_OFFER=Founding companies: 50% off the first year of Business with code FO
 | `INDEXNOW_KEY` | none, generated on the server: `openssl rand -hex 16` | n/a | IndexNow pings |
 
 The app does not use OpenRouter, Twilio or Replicate today, so no keys are needed for them.
+
+---
+
+## Email from flatmeta.io (GL5)
+
+**Code (done):**
+- Every email is sent from `MAIL_FROM`, which defaults to `FlatMeta <noreply@<PRODUCTION_DOMAIN>>`. Replies go to `MAIL_REPLY_TO`, default `support@<PRODUCTION_DOMAIN>`.
+- On production the API logs a warning while `MAIL_FROM` is on another domain (today: mail.mewebe.net).
+- `npm run email:check -w flatmeta-api` checks the DNS (MX, SPF, DKIM, the bounce domain, DMARC) over DNS-over-HTTPS. With `--send you@example.com` it also sends one test email with the current settings.
+
+**State of flatmeta.io on 16 Nov** (`npm run email:check -- --domain flatmeta.io`):
+
+| Record | State |
+|---|---|
+| DKIM `resend._domainkey.flatmeta.io` | ✓ present (Resend sending is partly set up) |
+| Bounce domain `send.flatmeta.io` (MX + SPF) | ✓ present |
+| Inbound MX (Cloudflare Email Routing) | ✗ missing |
+| SPF on `flatmeta.io` | ✗ missing |
+| DMARC `_dmarc.flatmeta.io` | ✗ missing |
+
+**Until the steps below are done, keep sending from the current, verified sender.** Production keeps `MAIL_FROM="FlatMeta <…@mail.mewebe.net>"` in its `.env`. Don't change it until step 3 passes.
+
+**1. Inbound: hello@ and support@ (who: Fahad or the owner, in the boss's main Cloudflare account, flatmeta.io zone).**
+1. Cloudflare → flatmeta.io → **Email → Email Routing → Get started / Enable**. Accept the records Cloudflare adds:
+   - MX `route1.mx.cloudflare.net`, `route2.mx.cloudflare.net` and `route3.mx.cloudflare.net`;
+   - TXT `v=spf1 include:_spf.mx.cloudflare.net ~all` on `flatmeta.io`.
+2. **Destination addresses:** add the owner's inbox and verify it (Cloudflare emails a link).
+3. **Routing rules:**
+   - `hello@flatmeta.io` → the owner's inbox;
+   - `support@flatmeta.io` → the owner's inbox (or the support desk);
+   - `dmarc@flatmeta.io` → the owner's inbox (DMARC reports);
+   - `admin@flatmeta.io` → the owner's inbox (the seeded admin login).
+
+   Leave **Catch-all** set to **Drop**.
+4. Check: send an email to hello@flatmeta.io from any mailbox; it arrives in the owner's inbox.
+
+**2. Sending (who: owner).** Cloudflare's own email sending ("Email Service") is in beta and only on some accounts. If the boss's account shows **Email → Email Sending**, use it: add `flatmeta.io` and the records it shows. Ask before switching providers, because the app sends through Resend or SMTP today.
+
+**Otherwise use the existing Resend account (recommended now):**
+1. https://resend.com/domains → **Add domain** `flatmeta.io`. The DKIM and `send.` records already exist, so Resend may verify at once. If it asks for different values, update those records in Cloudflare (DNS only, grey cloud).
+2. **API Keys → Create** `FlatMeta-Resend` with sending access only, restricted to the flatmeta.io domain. Put it in the production `.env` as `RESEND_API_KEY`, replacing the old key, then revoke the old one.
+3. **Webhooks:** endpoint `https://www.flatmeta.io/api/v1/email/webhooks/resend`, events `email.bounced` and `email.complained`. Put the signing secret in `RESEND_WEBHOOK_SECRET`.
+
+**3. DMARC (who: Fahad or the owner, Cloudflare DNS).** Add TXT `_dmarc` with:
+```
+v=DMARC1; p=none; rua=mailto:dmarc@flatmeta.io; fo=1
+```
+After two weeks of clean reports, change `p=none` to `p=quarantine`.
+
+**4. Switch the sender (who: server admin).** Once `npm run email:check -w flatmeta-api -- --domain flatmeta.io` shows ✓ on every line, set this in the production `.env`:
+```
+MAIL_FROM="FlatMeta <noreply@flatmeta.io>"
+MAIL_REPLY_TO=support@flatmeta.io
+```
+(or delete both lines: those are the defaults). Then reload the app and run:
+```bash
+npm run email:check -w flatmeta-api -- --send <owner inbox>
+```
+Sign in on the site once to confirm the sign-in code arrives from noreply@flatmeta.io.

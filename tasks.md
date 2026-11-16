@@ -224,7 +224,13 @@ Goal: live on its own domain, scoring 9/10 from every role, taking payments, pro
     - **Migration:** expand-only `0013_paypal_orders`.
     - **Keys:** read from `.env` only, named `FlatMeta-<Service>` (table in MANUAL-STEPS).
     - **Tests:** `apps/api/test/paypal.test.ts` (happy path, wrong amount, not completed, wrong order, wrong token, cancel, PayPal off); `stripe-testmode.test.ts`, a real Stripe test-mode check that runs when CI has `STRIPE_TEST_SECRET_KEY`.
-- [ ] **GL5** Email from noreply@flatmeta.io (configurable), SPF/DKIM/DMARC, Cloudflare Email Routing for hello@/support@, sending via Cloudflare Email Sending or Resend with the domain verified
+- [!] **GL5** Email from noreply@flatmeta.io (configurable), SPF/DKIM/DMARC, Cloudflare Email Routing for hello@/support@, sending via Cloudflare Email Sending or Resend with the domain verified
+  - [!] waiting: Cloudflare Email Routing (MX/SPF) and DMARC records for flatmeta.io, then the Resend domain verification and the new `FlatMeta-Resend` key (who: Fahad / owner; MANUAL-STEPS → Email). Until then production keeps sending from mail.mewebe.net (verified).
+  - Done in code:
+    - The sender defaults to `noreply@<PRODUCTION_DOMAIN>` (GL1); replies default to `support@<PRODUCTION_DOMAIN>`; both are configurable.
+    - On production a warning shows while mail comes from another domain.
+    - `npm run email:check -w flatmeta-api` (DNS-over-HTTPS checks of MX, SPF, DKIM, the bounce domain and DMARC, plus `--send` for a test email). On 16 Nov it shows DKIM and the `send.` records already present for flatmeta.io; MX, SPF and DMARC are missing.
+    - Tests in `apps/api/test/brand-config.test.ts`.
 - [ ] **GL6** Go-live readiness: canonical host, 301s, CORS, cookies, CSP, Cloudflare Workers where they help (wrangler config), health check, uptime URL, error tracking hook, "Launch checklist" in MANUAL-STEPS.md
 - [ ] **GL7** SEO, GEO/AI-SEO, socials: on-site tags and JSON-LD (Organization, SoftwareApplication, FAQPage, BreadcrumbList), Lighthouse mobile 90+, buyer-intent landing pages and "X vs Y" pages, llms.txt / llms-full.txt, `docs/golive/03-growth-plan.md` (30 submission sites with copy, ASO if relevant, 30-day social calendar)
 - [ ] **GL8** The 5-agent business team (`ops/agents/`: CEO, Marketing, Sales, Developer, QA prompts), plus GitHub Actions schedules: daily QA smoke + Lighthouse, daily SEO check, weekly CEO report (`docs/golive/weekly/<date>.md`)

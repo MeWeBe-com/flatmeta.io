@@ -198,6 +198,8 @@ function load(): Config {
     if (c.SESSION_SECRET === 'dev-only-insecure-secret') throw new Error('SESSION_SECRET must be set in production');
   }
   for (const p of stripeProblems(c)) console.warn(`[config] STRIPE: ${p}`);
+  const sender = senderDomainProblem(c);
+  if (sender) console.warn(`[config] EMAIL: ${sender}`);
   return c;
 }
 
@@ -205,13 +207,23 @@ function load(): Config {
  * GL1: addresses derived from the brand and the production domain unless set: noreply@ for sending (GL5), hello@ for
  * contact, admin@ for the seeded admin. A domain switch changes PRODUCTION_DOMAIN (and APP_URL) only.
  */
-export function applyBrandDefaults(c: Pick<Config, 'APP_NAME' | 'PRODUCTION_DOMAIN' | 'MAIL_FROM' | 'CONTACT_EMAIL' | 'SEED_ADMIN_EMAIL' | 'GEOCODER_USER_AGENT'>) {
+export function applyBrandDefaults(c: Pick<Config, 'APP_NAME' | 'PRODUCTION_DOMAIN' | 'MAIL_FROM' | 'CONTACT_EMAIL' | 'SEED_ADMIN_EMAIL' | 'GEOCODER_USER_AGENT'> & Partial<Pick<Config, 'MAIL_REPLY_TO'>>) {
   const domain = c.PRODUCTION_DOMAIN;
   c.MAIL_FROM ||= `${c.APP_NAME} <noreply@${domain}>`;
   c.CONTACT_EMAIL ||= `hello@${domain}`;
   c.SEED_ADMIN_EMAIL ||= `admin@${domain}`;
+  // GL5: replies to noreply@ go to the support inbox (Cloudflare Email Routing forwards it).
+  c.MAIL_REPLY_TO ||= `support@${domain}`;
   c.GEOCODER_USER_AGENT ||= `${c.APP_NAME}/2.0 (${c.CONTACT_EMAIL})`;
   return c;
+}
+
+/** GL5: on production, mail should come from the project's own domain (noreply@<PRODUCTION_DOMAIN>). */
+export function senderDomainProblem(c: Pick<Config, 'APP_ENV' | 'MAIL_FROM' | 'PRODUCTION_DOMAIN'>): string | null {
+  if (c.APP_ENV !== 'production') return null;
+  const d = c.MAIL_FROM.match(/@([^>\s]+)/)?.[1]?.toLowerCase();
+  if (!d || d === c.PRODUCTION_DOMAIN || d.endsWith(`.${c.PRODUCTION_DOMAIN}`)) return null;
+  return `Mail is sent from ${d}, not ${c.PRODUCTION_DOMAIN}. Fine while ${c.PRODUCTION_DOMAIN} is being verified; then set MAIL_FROM to noreply@${c.PRODUCTION_DOMAIN} (docs/golive/MANUAL-STEPS.md → Email; npm run email:check).`;
 }
 
 /** The public site's canonical origin: www.<PRODUCTION_DOMAIN> in production when APP_URL is the bare domain. */
