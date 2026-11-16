@@ -87,7 +87,9 @@ async function main() {
   const admin = key ? await (await get(`${base}/api/v1/admin/stats`, { authorization: `Bearer ${key}` }))?.json().catch(() => null) : null;
   let sitemapUrls = 0;
   const index = await (await get(`${base}/sitemap.xml`))?.text();
-  for (const loc of [...(index ?? '').matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].replace(/&amp;/g, '&'))) {
+  // A plain urlset (older builds) counts its own entries; a sitemap index counts its children's.
+  if (index && !index.includes('<sitemapindex')) sitemapUrls = index.split('<url>').length - 1;
+  else for (const loc of [...(index ?? '').matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].replace(/&amp;/g, '&'))) {
     sitemapUrls += ((await (await get(loc))?.text()) ?? '').split('<url>').length - 1;
   }
   let commits = [];

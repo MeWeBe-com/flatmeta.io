@@ -242,4 +242,4 @@ Goal: live on its own domain, scoring 9/10 from every role, taking payments, pro
     - **Found by the SEO checker:** the home page had two `<h1>` elements in its HTML (the Suspense fallback and the streamed map card), now exactly one; the `/u/` fallback description was under 50 characters.
     - **Tests:** `seo-check.test.ts` and `weekly-report.test.ts`; `home-start.spec.ts` asserts one `<h1>` in the raw HTML.
 - [x] **GL9** MeWeBe listing (`docs/golive/mewebe-listing.md`)
-- [ ] **GL10** Launch & 9/10 proof report (`docs/golive/04-launch-proof-report.md`)
+- [x] **GL10** Launch & 9/10 proof report (`docs/golive/04-launch-proof-report.md`)
