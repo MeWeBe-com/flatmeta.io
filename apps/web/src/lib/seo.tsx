@@ -173,6 +173,26 @@ export function organizationJsonLd() {
 }
 
 /**
+ * GL7: FlatMeta as a SoftwareApplication (pricing page), with one Offer per plan from the live price list. Prices are
+ * never invented: no plans from the API, no offers.
+ */
+export function softwareAppJsonLd(plans: { key: string; name: string; month: number }[] = []) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'FlatMeta',
+    url: SITE_URL,
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web browser',
+    description: 'A shared world map where people, businesses and brands claim land and publish a page on it. The first land is free.',
+    publisher: { '@id': ORG_ID },
+    ...(plans.length
+      ? { offers: plans.map((p) => ({ '@type': 'Offer', name: p.name, price: (p.month / 100).toFixed(2), priceCurrency: 'USD', url: `${SITE_URL}/pricing#${p.key}`, ...(p.month > 0 ? { priceSpecification: { '@type': 'UnitPriceSpecification', price: (p.month / 100).toFixed(2), priceCurrency: 'USD', unitCode: 'MON' } } : {}) })) }
+      : {}),
+  };
+}
+
+/**
  * S4: a BreadcrumbList for a hub page: FlatMeta (home) first, the page itself last. `path`s are site paths; the last
  * one must be the page's canonical path (with ?page= on later pages).
  */

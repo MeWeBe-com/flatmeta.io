@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { FREE_LAND_CELLS, PAID_CHECKOUT } from '@/lib/config';
 import { PageShell } from '@/components/site-chrome';
-import { Breadcrumbs } from '@/lib/seo';
+import { Breadcrumbs, JsonLd, softwareAppJsonLd } from '@/lib/seo';
 import { serverApi } from '@/lib/server-api';
 import { PricingClient, type Plans } from './pricing-client';
 import { PricingLoader } from './pricing-loader';
@@ -18,6 +18,7 @@ export default async function PricingPage() {
   return (
     <PageShell wide>
       <Breadcrumbs trail={[{ name: 'Pricing', path: '/pricing' }]} />
+      <JsonLd data={softwareAppJsonLd(data?.plans)} />
       <div id="main" className="space-y-12">
         <div className="text-center max-w-2xl mx-auto">
           <h1 className="text-4xl md:text-6xl font-bold">Simple, <span className="text-gradient">fair</span> pricing</h1>

@@ -1,5 +1,7 @@
 import { serverApi } from '@/lib/server-api';
 import { SITE_URL } from '@/lib/config';
+import { LANDING_PATHS } from '@/lib/landing';
+import { insightArticles } from '@/lib/insights';
 
 export interface SitemapFeed {
   /** company: a company (showcase) plot, listed in sitemap-companies.xml instead of sitemap-plots.xml. */
@@ -19,7 +21,7 @@ export const BUILD_TIME = process.env.BUILD_TIME || new Date(0).toISOString();
 
 /** Sitemaps hold at most 50,000 URLs and 50 MB: split at 40,000 (plot entries are well under 1 KB each). */
 export const PLOTS_PER_SITEMAP = 40_000;
-export const STATIC_PAGES = ['', '/explore', '/leaderboards', '/marketplace', '/clans', '/pricing', '/business', '/brands', '/about', '/about/facts', '/legal/terms', '/legal/privacy', '/legal/refunds'];
+export const STATIC_PAGES = ['', '/explore', '/leaderboards', '/marketplace', '/clans', '/pricing', '/business', '/brands', '/about', '/about/facts', '/legal/terms', '/legal/privacy', '/legal/refunds', ...LANDING_PATHS];
 
 /** The API's list of public URLs (plots visible on the map, countries, cities, owners, organisations). */
 export async function sitemapFeed(): Promise<SitemapFeed | null> {
@@ -49,9 +51,27 @@ export const pageCount = (n: number) => Math.max(1, Math.ceil(n / PLOTS_PER_SITE
 export async function sitemapIndex() {
   const feed = await sitemapFeed();
   const paged = (file: string, n: number) => Array.from({ length: pageCount(n) }, (_, i) => abs(i === 0 ? file : `${file}?page=${i + 1}`));
-  const maps = [abs('/sitemap-pages.xml'), ...paged('/sitemap-plots.xml', plotsOf(feed, false).length), ...paged('/sitemap-companies.xml', plotsOf(feed, true).length), abs('/sitemap-insights.xml')];
-  return xmlResponse(`<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${maps.map((m) => `  <sitemap><loc>${xmlEscape(m)}</loc></sitemap>`).join('\n')}\n</sitemapindex>`);
+  const articles = await insightArticles().catch(() => []);
+  const people = plotsOf(feed, false);
+  const companies = plotsOf(feed, true);
+  const pagesLastmod = newest([BUILD_TIME, ...(feed?.users ?? []).map((u) => u.updatedAt), ...(feed?.orgs ?? []).map((o) => o.updatedAt), ...Object.values(feed?.lastmod?.countries ?? {}), ...Object.values(feed?.lastmod?.brands ?? {})]);
+  // GL7: each child sitemap carries a real lastmod: the newest entry inside it.
+  const maps: { loc: string; lastmod: string | null }[] = [
+    { loc: abs('/sitemap-pages.xml'), lastmod: pagesLastmod },
+    ...paged('/sitemap-plots.xml', people.length).map((loc, i) => ({ loc, lastmod: newest(pageOf(people, i + 1).map((p) => p.updatedAt)) })),
+    ...paged('/sitemap-companies.xml', companies.length).map((loc, i) => ({ loc, lastmod: newest(pageOf(companies, i + 1).map((p) => p.updatedAt)) })),
+    { loc: abs('/sitemap-insights.xml'), lastmod: newest(articles.map((a) => a.lastmod)) },
+  ];
+  const row = (m: (typeof maps)[number]) => `  <sitemap><loc>${xmlEscape(m.loc)}</loc>${m.lastmod ? `<lastmod>${m.lastmod}</lastmod>` : ''}</sitemap>`;
+  return xmlResponse(`<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${maps.map(row).join('\n')}\n</sitemapindex>`);
 }
+
+/** The newest of some dates as an ISO string, or null when there are none (the epoch counts as none). */
+export function newest(dates: (string | null | undefined)[]): string | null {
+  const t = Math.max(...dates.map((d) => (d ? Date.parse(d) : NaN)).filter((n) => Number.isFinite(n) && n > 0));
+  return Number.isFinite(t) ? new Date(t).toISOString() : null;
+}
+const pageOf = <T,>(rows: T[], page: number) => rows.slice((page - 1) * PLOTS_PER_SITEMAP, page * PLOTS_PER_SITEMAP);
 
 /** One urlset of plot pages with their share images (plots and companies alike). */
 export function plotUrlset(plots: SitemapFeed['plots'], page: number) {

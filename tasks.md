@@ -232,7 +232,7 @@ Goal: live on its own domain, scoring 9/10 from every role, taking payments, pro
     - `npm run email:check -w flatmeta-api` (DNS-over-HTTPS checks of MX, SPF, DKIM, the bounce domain and DMARC, plus `--send` for a test email). On 16 Nov it shows DKIM and the `send.` records already present for flatmeta.io; MX, SPF and DMARC are missing.
     - Tests in `apps/api/test/brand-config.test.ts`.
 - [x] **GL6** Go-live readiness: canonical host, 301s, CORS, cookies, CSP, Cloudflare Workers where they help (wrangler config), health check, uptime URL, error tracking hook, "Launch checklist" in MANUAL-STEPS.md
-- [ ] **GL7** SEO, GEO/AI-SEO, socials: on-site tags and JSON-LD (Organization, SoftwareApplication, FAQPage, BreadcrumbList), Lighthouse mobile 90+, buyer-intent landing pages and "X vs Y" pages, llms.txt / llms-full.txt, `docs/golive/03-growth-plan.md` (30 submission sites with copy, ASO if relevant, 30-day social calendar)
+- [x] **GL7** SEO, GEO/AI-SEO, socials: on-site tags and JSON-LD (Organization, SoftwareApplication, FAQPage, BreadcrumbList), Lighthouse mobile 90+, buyer-intent landing pages and "X vs Y" pages, llms.txt / llms-full.txt, `docs/golive/03-growth-plan.md` (30 submission sites with copy, ASO if relevant, 30-day social calendar)
 - [ ] **GL8** The 5-agent business team (`ops/agents/`: CEO, Marketing, Sales, Developer, QA prompts), plus GitHub Actions schedules: daily QA smoke + Lighthouse, daily SEO check, weekly CEO report (`docs/golive/weekly/<date>.md`)
 - [ ] **GL9** MeWeBe listing (`docs/golive/mewebe-listing.md`)
 - [ ] **GL10** Launch & 9/10 proof report (`docs/golive/04-launch-proof-report.md`)

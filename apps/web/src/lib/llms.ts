@@ -1,4 +1,5 @@
 import { SITE_URL } from '@/lib/config';
+import { COMPARE_PAGES, FOR_PAGES } from '@/lib/landing';
 
 /**
  * llms.txt (G14, https://llmstxt.org): what FlatMeta is, in plain words, and where an AI assistant or agent finds
@@ -14,7 +15,7 @@ Key facts:
 - Land: the map is divided into cells of about 120–190 m; plots are rectangles of cells. Prices depend on the area tier (big-city centres cost more). Each person gets free squares to start.
 - Plots have stable public URLs: ${s}/p/<slug>. People have links like ${s}/@<handle>.
 - Companies: land is reserved for many companies next to their public headquarters. Each such plot says "Reserved for <Company>, not affiliated with FlatMeta" until the company claims it (verified by work email or DNS). Company facts come from Wikidata (CC0).
-- Plans: Free; Plus ($5/month or $48/year); Business ($29/month); Brand ($249/month). Company Landmark claim: one-time, includes 3 months of Brand.
+- Plans: Free; Plus, Business and Brand subscriptions; one-time land, boosts and AI packs. Current prices: ${s}/pricing. Verified staff can claim their company's reserved plot; the current claim price is on the pricing page.
 - Operator: MeWeBe. FlatMeta is not a VR, NFT or blockchain product.
 
 ## Pages
@@ -24,6 +25,10 @@ Key facts:
 - [Companies on FlatMeta](${s}/brands): reserved company land, by country
 - [Pricing](${s}/pricing)
 - [For business](${s}/business)
+${FOR_PAGES.map((p) => `- [${p.chip}](${s}/for/${p.slug}): ${p.description}`).join('\n')}
+
+## Comparisons
+${COMPARE_PAGES.map((c) => `- [FlatMeta vs ${c.other}](${s}/compare/${c.slug}): ${c.verdict}`).join('\n')}
 
 ## For developers and agents
 - [REST API (OpenAPI)](${s}/api/openapi.json) · [API docs](${s}/api/docs)

@@ -28,7 +28,7 @@ const FACTS: [string, string][] = [
   ['Plots', `A plot has a public page (${SITE_HOST}/p/<name>) with a cover, description, links, gallery, guestbook, visitor count, open-house times and optional custom HTML, which runs sandboxed on a separate site.`],
   ['People', `Explorers walk the map as avatars, chat with people nearby, wave, follow and join clans. Everyone has a link: ${SITE_HOST}/@<handle>.`],
   ['Companies', 'Land is reserved for many companies next to their public headquarters. Each such plot reads “Reserved for <Company>, not affiliated with FlatMeta” until the company claims it, verified by work email or a DNS record.'],
-  ['Prices', 'Free to start. Plus: $5/month or $48/year. Business: $29/month. Brand: $249/month. A company Landmark claim is one-time and includes 3 months of Brand.'],
+  ['Prices', 'Free to start. Plus, Business and Brand subscriptions, and one-time land, boosts and AI packs. Current prices are on the pricing page.'],
   ['For AI assistants and agents', 'A REST API with OpenAPI, an MCP server, and llms.txt. Agents can search, find nearby places and claim land; paid land always goes through a checkout link for the person.'],
   ['Data sources', 'Company facts (name, website, headquarters) come from Wikidata (CC0). Plot content is written by its owners. Map tiles: OpenFreeMap (OpenStreetMap data).'],
   ['Operator', 'FlatMeta is made by MeWeBe.'],

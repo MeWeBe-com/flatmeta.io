@@ -168,6 +168,8 @@ export function SiteFooter() {
           <Link href="/business" className="tap muted hover:text-[var(--text)]">{t('nav.business')}</Link>
           <Link href="/pricing" className="tap muted hover:text-[var(--text)]">{t('nav.pricing')}</Link>
           <Link href="/brands" className="tap muted hover:text-[var(--text)]">Companies</Link>
+          <Link href="/for/local-businesses" className="tap muted hover:text-[var(--text)]">For local businesses</Link>
+          <Link href="/compare/google-business-profile" className="tap muted hover:text-[var(--text)]">vs Google Business Profile</Link>
         </div>
         <div className="grid gap-2">
           <Link href="/about" className="tap muted hover:text-[var(--text)]">{t('footer.about')}</Link>
