@@ -144,11 +144,16 @@ LIVE="$(cat "$ROOT/logs/current" 2>/dev/null || true)"
 if [ -n "$LIVE" ] && [[ "$LIVE" == "$COMMIT"* ]] && [ "$BACKED_UP" = 0 ]; then
   ok "${COMMIT:0:7} is already live and .env did not change (logs/current)"
 elif [ "$DRY" = 1 ]; then
-  dry "bash scripts/auto-deploy.sh --sha ${COMMIT:0:7}   (live now: ${LIVE:0:7}; asks you to type \"production\"; rolls back by itself on failure)"
+  dry "deploy with the checkout's scripts/auto-deploy.sh --sha ${COMMIT:0:7}   (live now: ${LIVE:0:7}; asks you to type \"production\"; rolls back by itself on failure)"
 else
   [ -t 0 ] || die "The deploy asks you to type \"production\": run this script in an interactive terminal."
   info "live now: ${LIVE:0:7}. The deploy takes a database backup first, then builds (a few minutes)."
-  if (cd "$ROOT" && bash scripts/auto-deploy.sh --sha "$COMMIT"); then
+  # The live checkout's own deploy scripts do the work. Older releases have no auto-deploy.sh --sha: use deploy.sh.
+  if grep -q -- '--sha' "$ROOT/scripts/auto-deploy.sh" 2>/dev/null; then DEPLOY=(bash scripts/auto-deploy.sh --sha "$COMMIT")
+  elif grep -q -- '--commit' "$ROOT/scripts/deploy.sh" 2>/dev/null; then DEPLOY=(bash scripts/deploy.sh production --commit "$COMMIT")
+  else die "$ROOT/scripts/deploy.sh is too old to deploy one commit. Run once: cd $ROOT && git fetch origin v2 && git checkout --force -B v2 origin/v2 && bash scripts/deploy.sh production"; fi
+  info "running: ${DEPLOY[*]}"
+  if (cd "$ROOT" && "${DEPLOY[@]}"); then
     LIVE="$(cat "$ROOT/logs/current" 2>/dev/null || true)"
     if [[ "$LIVE" == "$COMMIT"* ]]; then ok "deployed ${COMMIT:0:7}"; else die "The deploy finished but logs/current is ${LIVE:0:7}. See $ROOT/logs/deploy.log"; fi
   else

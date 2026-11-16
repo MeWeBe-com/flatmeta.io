@@ -40,7 +40,7 @@ function setup(env: Record<string, string | undefined> = {}) {
   writeFileSync(path.join(root, 'scripts/deploy.sh'), '# placeholder\n');
   writeFileSync(path.join(home, 'web/staging.flatmeta.io/private/flatmeta/scripts/auto-deploy.sh'), '# staging\n');
   // Fake deploy: records the call and the .env it saw; marks the commit live.
-  exe(path.join(root, 'scripts/auto-deploy.sh'), `#!/usr/bin/env bash\necho "$*" >> deploy-calls\n[ "\${FAKE_DEPLOY_RC:-0}" = 0 ] || exit 1\necho "$2" > logs/current\n`);
+  exe(path.join(root, 'scripts/auto-deploy.sh'), `#!/usr/bin/env bash\n# usage: --sha <commit>\necho "$*" >> deploy-calls\n[ "\${FAKE_DEPLOY_RC:-0}" = 0 ] || exit 1\necho "$2" > logs/current\n`);
   writeFileSync(
     path.join(root, 'scripts/new-instance.mjs'),
     `import { mkdirSync, writeFileSync } from 'node:fs';\nmkdirSync('deploy/out/production', { recursive: true });\nwriteFileSync('deploy/out/production/nodejs-app.conf', 'if ($host = flatmeta.io) { return 301 https://www.flatmeta.io$request_uri; }\\nlocation = /llms.txt { }\\n');\n`,
@@ -88,7 +88,7 @@ describe('go-live-production.sh', () => {
     expect(r.out).toContain('DRY RUN');
     expect(r.out).toMatch(/would: set AUTO_DEPLOY=true/);
     expect(r.out).toMatch(/would: set APP_URL=https:\/\/www\.flatmeta\.io/);
-    expect(r.out).toMatch(/would: bash scripts\/auto-deploy\.sh --sha f600f74/);
+    expect(r.out).toMatch(/would: deploy with the checkout.s scripts\/auto-deploy\.sh --sha f600f74/);
     expect(r.out).toMatch(/would: move .*public_html\/llms\.txt/);
     expect(t.dotenv()).toBe(before);
     expect(existsSync(path.join(t.root, 'deploy-calls'))).toBe(false);
