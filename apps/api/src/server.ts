@@ -2,6 +2,7 @@ import { buildApp, buildMcpApp } from './app.js';
 import { config } from './config.js';
 import { pool } from './db/client.js';
 import { closeRedis } from './lib/redis.js';
+import { reportError } from './lib/error-report.js';
 
 const app = await buildApp();
 
@@ -20,6 +21,12 @@ const shutdown = async (signal: string) => {
   process.exit(0);
 };
 process.on('SIGINT', () => void shutdown('SIGINT'));
+// GL6: crashes and stray promise rejections reach the error webhook too (then the process manager restarts us).
+process.on('unhandledRejection', (reason) => {
+  const err = reason instanceof Error ? reason : new Error(String(reason));
+  app.log.error({ err }, 'Unhandled rejection');
+  void reportError({ source: 'api', where: 'process', name: 'UnhandledRejection', message: err.message });
+});
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
 
 await app.listen({ host: config.HOST, port: config.PORT });

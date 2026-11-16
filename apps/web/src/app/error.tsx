@@ -2,11 +2,13 @@
 
 import Link from 'next/link';
 import { useEffect } from 'react';
+import { reportClientError } from '@/lib/report-error';
 
 /** Route-level error page: the site header and providers stay; only the failing page is replaced. */
 export default function RouteError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     console.error('[flatmeta] page error', error);
+    reportClientError(error, 'page');
   }, [error]);
   return (
     <main id="main" className="min-h-[60vh] grid place-items-center p-6 text-center">

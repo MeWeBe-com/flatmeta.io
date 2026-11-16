@@ -1,7 +1,11 @@
 'use client';
 
+import { useEffect } from 'react';
+import { reportClientError } from '@/lib/report-error';
+
 /** Last resort when the root layout itself fails (it replaces the whole document, so styles are inline). */
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => reportClientError(error, 'root'), [error]);
   return (
     <html lang="en">
       <body style={{ margin: 0, minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#0B1020', color: '#E8ECF8', fontFamily: 'system-ui, sans-serif', textAlign: 'center', padding: 24 }}>

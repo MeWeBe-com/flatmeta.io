@@ -2,6 +2,9 @@ import { registerUsercontentGuard } from './lib/usercontent.js';
 import Fastify, { type FastifyError } from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
+import { release, reportError } from './lib/error-report.js';
+import { pool } from './db/client.js';
+import { z } from 'zod';
 import helmet from '@fastify/helmet';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
@@ -102,6 +105,7 @@ export async function buildApp() {
       return reply.status(err.statusCode).send({ error: { code: err.code ?? 'error', message: err.message } });
     }
     req.log.error({ err }, 'Unhandled error');
+    void reportError({ source: 'api', where: `${req.method} ${req.routeOptions?.url ?? req.url.split('?')[0]}`, name: err.name, message: err.message });
     return reply.status(500).send({ error: { code: 'internal', message: 'Something went wrong on our side. Please try again.' } });
   });
   app.setNotFoundHandler((req, reply) => reply.status(404).send({ error: { code: 'not_found', message: `No route for ${req.method} ${req.url}` } }));
@@ -110,6 +114,33 @@ export async function buildApp() {
     await redis.ping();
     return { ok: true, env: config.APP_ENV, time: new Date().toISOString() };
   });
+  // GL6: the uptime check URL (https://<site>/api/v1/health): database and Redis round trips, the release and uptime.
+  // 200 when both answer, 503 otherwise (so an uptime monitor alerts). No secrets, no counts that need auth.
+  app.get('/v1/health', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } }, schema: { tags: ['world'], summary: 'Health: database, Redis, release, uptime' } }, async (_req, reply) => {
+    const timed = async (fn: () => Promise<unknown>) => {
+      const t = Date.now();
+      try {
+        await Promise.race([fn(), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000))]);
+        return { ok: true, ms: Date.now() - t };
+      } catch {
+        return { ok: false, ms: Date.now() - t };
+      }
+    };
+    const [database, cache] = await Promise.all([timed(() => pool.query('select 1')), timed(() => redis.ping())]);
+    const ok = database.ok && cache.ok;
+    reply.header('cache-control', 'no-store');
+    return reply.status(ok ? 200 : 503).send({ ok, env: config.APP_ENV, release, uptimeSeconds: Math.round(process.uptime()), database, redis: cache, time: new Date().toISOString() });
+  });
+  // GL6: browser errors from the web app (error boundaries), forwarded to the error webhook. Rate-limited, scrubbed.
+  app.post(
+    '/v1/client-errors',
+    { config: { rateLimit: { max: 10, timeWindow: '1 minute' } }, schema: { hide: true, body: z.object({ where: z.string().max(200), name: z.string().max(100).default('Error'), message: z.string().max(500), digest: z.string().max(64).optional() }) } },
+    async (req, reply) => {
+      req.log.warn({ where: req.body.where, name: req.body.name, digest: req.body.digest }, 'client error');
+      void reportError({ source: 'web', where: req.body.where, name: req.body.name, message: `${req.body.message}${req.body.digest ? ` (digest ${req.body.digest})` : ''}` });
+      return reply.status(204).send();
+    },
+  );
   app.get('/', { schema: { hide: true } }, async () => ({ name: 'FlatMeta API', version: '2.0.0', docs: '/docs', openapi: '/openapi.json', mcp: '/mcp' }));
   app.get('/openapi.json', { schema: { hide: true } }, async () => app.swagger());
 

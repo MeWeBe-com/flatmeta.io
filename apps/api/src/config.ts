@@ -38,6 +38,9 @@ const schema = z.object({
 
   SESSION_SECRET: z.string().default('dev-only-insecure-secret'),
   COOKIE_DOMAIN: optional,
+  // GL6: where server and browser errors are reported (a Slack/Discord/Google Chat or incident webhook URL; JSON
+  // { text }). Empty = logs only. Never commit a webhook URL that carries a token.
+  ERROR_WEBHOOK_URL: optional,
   COOKIE_SECURE: bool,
   // GL1: the brand, domain and every address come from here (APP_NAME, APP_URL, PRODUCTION_DOMAIN, MAIL_FROM,
   // CONTACT_EMAIL): switching domain is a .env change. Empty = derived from PRODUCTION_DOMAIN in load().

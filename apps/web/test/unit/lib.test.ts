@@ -142,3 +142,18 @@ describe('apex → www (S6)', () => {
     expect(apexRedirects({ CANONICAL_URL: 'https://flatmeta.io' })).toEqual([]);
   });
 });
+
+describe('old and extra domains (GL6)', () => {
+  it('REDIRECT_HOSTS answer every path with a 301 to the canonical host', async () => {
+    const { apexRedirects } = await import('../../src/lib/canonical');
+    const r = apexRedirects({ PRODUCTION_DOMAIN: 'flatmeta.io', REDIRECT_HOSTS: 'flatmeta.com, www.flatmeta.com,not a host,www.flatmeta.io' });
+    expect(r.map((x) => [x.has[0]!.value, x.destination, x.statusCode])).toEqual([
+      ['flatmeta.io', 'https://www.flatmeta.io/:path*', 301],
+      ['flatmeta.com', 'https://www.flatmeta.io/:path*', 301],
+      ['www.flatmeta.com', 'https://www.flatmeta.io/:path*', 301],
+    ]);
+    // After a domain switch the old domain points at the new canonical host.
+    expect(apexRedirects({ CANONICAL_URL: 'https://plotglobe.com', REDIRECT_HOSTS: 'flatmeta.io,www.flatmeta.io' }).map((x) => x.destination)).toEqual(['https://plotglobe.com/:path*', 'https://plotglobe.com/:path*']);
+  });
+});
+

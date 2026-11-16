@@ -185,3 +185,78 @@ MAIL_REPLY_TO=support@flatmeta.io
 npm run email:check -w flatmeta-api -- --send <owner inbox>
 ```
 Sign in on the site once to confirm the sign-in code arrives from noreply@flatmeta.io.
+
+---
+
+## Launch checklist (GL6)
+
+Do these in order. Steps 1 to 3 are what makes www.flatmeta.io show the build in this repo. **Today (16 Nov) production still runs an older build**: it shows doubled page titles, "Free" on the pricing page, a 404 on `/insights`, and the old static `llms.txt` ("3D Virtual Land… Digital Twin"). CI's production job skips because the `PROD_DEPLOY_*` secrets are not set, and the server's cron deploys nothing while `AUTO_DEPLOY=false`.
+
+**1. Turn production deploys on (who: server admin, 10 minutes). Pick one of the three.**
+- **A (recommended), cron on the server:** in the production checkout's `.env` set `AUTO_DEPLOY=true`, `DEPLOY_BRANCH=v2` and `REQUIRE_CI=true`. Keep `DEPLOY_STAGING_SOAK=600`, so a commit must be healthy on staging for 10 minutes first. The existing cron (`scripts/auto-deploy.sh --cron`, every 2 minutes) then deploys each green commit. See `docs/deploy/auto-deploy.md`.
+- **B, from CI:** in GitHub → repo → Settings → Secrets and variables → Actions, add `PROD_DEPLOY_HOST`, `PROD_DEPLOY_USER`, `PROD_DEPLOY_PATH` and `PROD_DEPLOY_KEY`. The key is an SSH key allowed only to run the deploy script. CI's `deploy-production` job then runs after staging passes.
+- **C, once by hand now:** as the app user, in the production checkout:
+  ```bash
+  bash scripts/deploy.sh production
+  ```
+  It asks you to type "production".
+- Check: `curl -s https://www.flatmeta.io/api/v1/health` shows `"ok":true` and a `release` equal to the latest green commit on `v2`.
+
+**2. Re-render nginx and remove the stale static files (who: server admin, root).**
+1. Run:
+   ```bash
+   node scripts/new-instance.mjs production --nginx-only
+   ```
+   Install the rendered `deploy/out/production/nodejs-app.conf` as the domain's Hestia nginx template, as in `docs/deploy-hestia.md`, then `nginx -t && systemctl reload nginx`. The new template sends `/llms.txt`, `/llms-full.txt`, `/sitemap.xml`, `/robots.txt` and `/insights` to the app, and 301s the bare `flatmeta.io` to `www`.
+2. Delete the old static files in the domain's `public_html`: `llms.txt`, `llms-full.txt`, `sitemap.xml` and `robots.txt`, if present. Back them up first. Leave `public_html/insights/*.html` in place: those articles are still served as files.
+3. Check:
+   - `curl -s https://www.flatmeta.io/llms.txt | head -1` → `# FlatMeta`, and no "Digital Twin";
+   - `curl -sI https://flatmeta.io/pricing` → `301` to `https://www.flatmeta.io/pricing`.
+
+**3. Production `.env` (who: server admin; values from the owner and the boss).**
+- `APP_URL=https://www.flatmeta.io`, `PRODUCTION_DOMAIN=flatmeta.io`.
+- Payments, from "Payments (GL4)" above: the `STRIPE_*` keys, `PAYPAL_*` with `PAYPAL_ENV=live` only after the sandbox test passes, and `PAID_CHECKOUT_ENABLED=auto`. With `auto`, checkout opens only when Stripe is fully configured: live keys and a webhook secret.
+- `MAIL_FROM`, from "Email from flatmeta.io (GL5)" above, once the domain is verified.
+- `REDIRECT_HOSTS=flatmeta.com,www.flatmeta.com`, only if those domains point at the server instead of using the Cloudflare redirect rule in "Domains" step 2.
+- `ERROR_WEBHOOK_URL`: a Slack, Discord or Google Chat incoming webhook for the team's alerts channel. Name it `FlatMeta-Errors`.
+- Then deploy again (step 1). Check: `npm run payments:check -w flatmeta-api` and `npm run email:check -w flatmeta-api` both end with ✓.
+
+**4. DNS and SSL (who: Fahad or the owner, in the boss's main Cloudflare account; top-left account switcher).**
+1. If `flatmeta.io` is not yet a zone in the boss's main Cloudflare account: **Add a site** → `flatmeta.io` → Free plan.
+   - Cloudflare imports the existing records. Check that `A @`, `A www` (or `CNAME www`), `A staging`, the mail records (DKIM, `send.`) and any MX records are all there.
+   - At the registrar, change the nameservers to the two Cloudflare shows.
+2. Records for the web: `@`, `www` and `staging` → the server IP, **Proxied**.
+3. **SSL/TLS → Overview → Full (strict).** The server already has Let's Encrypt certificates from Hestia. Then **Edge Certificates**: turn on Always Use HTTPS, set Minimum TLS 1.2, and turn on HSTS, but only after the site has worked for a week on HTTPS.
+4. Buy `flatmeta.com` and redirect it, as in "Domains" steps 1 and 2.
+5. Check: `curl -sI https://www.flatmeta.io` → `200`, `server: cloudflare`, plus the app's own `strict-transport-security` and `content-security-policy` headers.
+
+**5. Cloudflare Workers (who: Fahad or the owner; optional but recommended).** Deploy `flatmeta-edge`, which resizes and caches images and caches feeds, and `flatmeta-uptime`, which alerts when the site goes down, by the steps in `ops/cloudflare/README.md`. The API token is named `FlatMeta-Workers`.
+
+**6. Uptime and error alerts (who: owner).**
+- The uptime URL is `https://www.flatmeta.io/api/v1/health`. It answers 200 with `"ok":true` when the database and Redis answer, and 503 when either is down.
+- The `flatmeta-uptime` worker checks it every 5 minutes. Add it to any other monitor you already use as well, for example UptimeRobot (free) with a keyword check for `"ok":true`.
+- Errors arrive in the `ERROR_WEBHOOK_URL` channel: server 5xx, crashes and browser errors, with emails, tokens and keys removed.
+
+**7. Production smoke test (who: owner, 15 minutes, on a phone and a laptop).**
+1. Run:
+   ```bash
+   node scripts/release-smoke.cjs https://www.flatmeta.io
+   ```
+   Every line must be ✓.
+2. By hand, then tick each check:
+   - [ ] home loads with the map;
+   - [ ] sign in with an email code;
+   - [ ] claim free land;
+   - [ ] edit the plot and open its `/p/<slug>` page;
+   - [ ] `/pricing` shows real prices;
+   - [ ] buy the cheapest item with a real card, then refund it in Stripe (Payments → the payment → Refund);
+   - [ ] PayPal on the same order, sandbox first;
+   - [ ] the email arrives from `noreply@flatmeta.io` and is not in spam;
+   - [ ] `/brands` and a company page load;
+   - [ ] `/llms.txt` is the new one;
+   - [ ] Google Search Console → Sitemaps → submit `https://www.flatmeta.io/sitemap.xml`.
+3. If anything fails, roll back:
+   ```bash
+   bash scripts/deploy.sh production --rollback --commit <previous sha from logs/releases>
+   ```
+   Then send the failing step to the developer.

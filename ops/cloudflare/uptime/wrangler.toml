@@ -1,0 +1,16 @@
+# GL6: FlatMeta uptime cron worker. Deploy from this folder: npx wrangler deploy (see ../README.md).
+# Secrets (never committed): npx wrangler secret put ALERT_WEBHOOK_URL
+name = "flatmeta-uptime"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+[triggers]
+crons = ["*/5 * * * *", "17 6 * * *"]
+
+[vars]
+SITES = "https://www.flatmeta.io,https://staging.flatmeta.io"
+
+# Create once: npx wrangler kv namespace create UPTIME, then paste the id here.
+[[kv_namespaces]]
+binding = "UPTIME"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"

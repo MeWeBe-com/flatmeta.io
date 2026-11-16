@@ -1,0 +1,19 @@
+# GL6: FlatMeta edge worker. Deploy from this folder: npx wrangler deploy (see ../README.md).
+# account_id comes from the CLOUDFLARE_ACCOUNT_ID environment variable (the boss's main account); never commit tokens.
+name = "flatmeta-edge"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+workers_dev = false
+
+# Only the paths where the edge helps; everything else never reaches the worker.
+routes = [
+  { pattern = "www.flatmeta.io/media/*", zone_name = "flatmeta.io" },
+  { pattern = "www.flatmeta.io/api/v1/plots/*", zone_name = "flatmeta.io" },
+  { pattern = "www.flatmeta.io/sitemap*", zone_name = "flatmeta.io" },
+  { pattern = "www.flatmeta.io/llms*", zone_name = "flatmeta.io" },
+  { pattern = "www.flatmeta.io/robots.txt", zone_name = "flatmeta.io" },
+]
+
+[vars]
+# "off" if Image Resizing is not enabled on the zone (images are then cached, not resized).
+IMAGE_RESIZING = "on"
