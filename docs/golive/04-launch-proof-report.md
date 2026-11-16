@@ -87,7 +87,7 @@ Then confirm the Stripe account. That is the shortest path from 7.3 to 9.
 | Stripe Checkout, portal, signed webhooks (8 events, each processed once), prices from config | Built and tested | Boss: confirm the live keys belong to the "FlatMeta" account inside the Organisation (`npm run payments:check` prints it), then add the webhook endpoint |
 | Stripe test-mode e2e | Built; runs when CI has `STRIPE_TEST_SECRET_KEY` | Owner: add the secret |
 | PayPal Checkout (Orders v2), sandbox first | Built and tested (3 tests covering 7 cases) | Boss or owner: create the `FlatMeta-PayPal` app, sandbox then live. **The $40 PayPal credit is not used by anything here.** |
-| Production checkout switched on | `PAID_CHECKOUT_ENABLED=auto` turns on once the Stripe keys and the webhook are present | Server admin: production `.env` and a deploy |
+| Production checkout switched on | `PAID_CHECKOUT_ENABLED=true`. In production, `auto` means off; `scripts/server/go-live-production.sh` sets `true` once the live keys pass its checks | Server admin: production `.env`, then the script |
 
 ## Appendix E: What is live, and what waits on whom
 

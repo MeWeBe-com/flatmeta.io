@@ -192,6 +192,8 @@ Sign in on the site once to confirm the sign-in code arrives from noreply@flatme
 
 Do these in order. Steps 1 to 3 are what makes www.flatmeta.io show the build in this repo. **Today (16 Nov) production still runs an older build**: it shows doubled page titles, "Free" on the pricing page, a 404 on `/insights`, and the old static `llms.txt` ("3D Virtual Land… Digital Twin"). CI's production job skips because the `PROD_DEPLOY_*` secrets are not set, and the server's cron deploys nothing while `AUTO_DEPLOY=false`.
 
+**Steps 1–3 in one go (who: server admin):** `scripts/server/go-live-production.sh` runs as najamussaqib and `scripts/server/go-live-production-root.sh` runs as root. Both have `--dry-run`, are safe to run twice, print OK or FAIL for each step, never print a secret, and end with a smoke test of the live URLs. The first script stops, naming the key, if `.env` lacks something production needs. The steps below are what the scripts do, for reference.
+
 **1. Turn production deploys on (who: server admin, 10 minutes). Pick one of the three.**
 - **A (recommended), cron on the server:** in the production checkout's `.env` set `AUTO_DEPLOY=true`, `DEPLOY_BRANCH=v2` and `REQUIRE_CI=true`. Keep `DEPLOY_STAGING_SOAK=600`, so a commit must be healthy on staging for 10 minutes first. The existing cron (`scripts/auto-deploy.sh --cron`, every 2 minutes) then deploys each green commit. See `docs/deploy/auto-deploy.md`.
 - **B, from CI:** in GitHub → repo → Settings → Secrets and variables → Actions, add `PROD_DEPLOY_HOST`, `PROD_DEPLOY_USER`, `PROD_DEPLOY_PATH` and `PROD_DEPLOY_KEY`. The key is an SSH key allowed only to run the deploy script. CI's `deploy-production` job then runs after staging passes.
@@ -215,7 +217,7 @@ Do these in order. Steps 1 to 3 are what makes www.flatmeta.io show the build in
 
 **3. Production `.env` (who: server admin; values from the owner and the boss).**
 - `APP_URL=https://www.flatmeta.io`, `PRODUCTION_DOMAIN=flatmeta.io`.
-- Payments, from "Payments (GL4)" above: the `STRIPE_*` keys, `PAYPAL_*` with `PAYPAL_ENV=live` only after the sandbox test passes, and `PAID_CHECKOUT_ENABLED=auto`. With `auto`, checkout opens only when Stripe is fully configured: live keys and a webhook secret.
+- Payments, from "Payments (GL4)" above: the `STRIPE_*` keys, `PAYPAL_*` with `PAYPAL_ENV=live` only after the sandbox test passes, and `PAID_CHECKOUT_ENABLED=true`. In production, `auto` means checkout is **off**: it is turned on only by `true`, once the live keys and the webhook pass `npm run payments:check`. `scripts/server/go-live-production.sh` checks the keys and sets `true` for you.
 - `MAIL_FROM`, from "Email from flatmeta.io (GL5)" above, once the domain is verified.
 - `REDIRECT_HOSTS=flatmeta.com,www.flatmeta.com`, only if those domains point at the server instead of using the Cloudflare redirect rule in "Domains" step 2.
 - `ERROR_WEBHOOK_URL`: a Slack, Discord or Google Chat incoming webhook for the team's alerts channel. Name it `FlatMeta-Errors`.
