@@ -46,7 +46,7 @@ async function plotState(slug: string): Promise<PlotState> {
 const NOT_FOUND_PATH = '/_fm/not-found';
 const GONE_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>This plot was removed · FlatMeta</title></head><body style="font:16px system-ui;background:#0b1020;color:#e8ecf8;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px;text-align:center"><main><h1>This plot was removed</h1><p>The land is no longer on FlatMeta.</p><p><a style="color:#2de2c4" href="/">Back to the map</a> · <a style="color:#2de2c4" href="/explore">Explore places</a></p></main></body></html>`;
 
-const PRIVATE_PAGE = /^\/(login|dashboard|admin|checkout|claim)(\/|$)/;
+const PRIVATE_PAGE = /^\/(login|dashboard|admin|checkout|claim|pay)(\/|$)/;
 
 /** A nonce-based CSP on every page (G2). Next.js reads the nonce from the request's CSP header and applies it to its scripts. */
 export async function proxy(request: NextRequest) {

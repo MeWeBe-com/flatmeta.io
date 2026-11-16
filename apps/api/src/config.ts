@@ -71,6 +71,12 @@ const schema = z.object({
 
   STRIPE_SECRET_KEY: optional,
   STRIPE_WEBHOOK_SECRET: optional,
+  // GL4: the publishable key (pk_live_/pk_test_), kept beside the secret so the pair can be checked (same mode).
+  STRIPE_PUBLISHABLE_KEY: optional,
+  // GL4: PayPal Checkout as a second way to pay one-time orders. Sandbox until PAYPAL_ENV=live. Never commit these.
+  PAYPAL_CLIENT_ID: optional,
+  PAYPAL_CLIENT_SECRET: optional,
+  PAYPAL_ENV: z.enum(['sandbox', 'live']).default('sandbox'),
   STRIPE_PRICE_PLUS_MONTH: optional,
   STRIPE_PRICE_PLUS_YEAR: optional,
   STRIPE_PRICE_BUSINESS_MONTH: optional,
@@ -237,13 +243,17 @@ export function stripeModeFor(key: string | undefined): 'live' | 'test' | 'none'
 export const stripeMode = () => stripeModeFor(config.STRIPE_SECRET_KEY);
 
 /** Problems with the Stripe setup for this environment (shown to admins; a test key on production blocks checkout). */
-export function stripeProblems(c: Pick<Config, 'APP_ENV' | 'STRIPE_SECRET_KEY' | 'STRIPE_WEBHOOK_SECRET'> = config): string[] {
+export function stripeProblems(c: Pick<Config, 'APP_ENV' | 'STRIPE_SECRET_KEY' | 'STRIPE_WEBHOOK_SECRET'> & Partial<Pick<Config, 'STRIPE_PUBLISHABLE_KEY'>> = config): string[] {
   const out: string[] = [];
   const mode = stripeModeFor(c.STRIPE_SECRET_KEY);
   if (c.APP_ENV === 'production' && mode === 'test') out.push('A Stripe TEST key is set on production: checkout is refused until STRIPE_SECRET_KEY is a live key (sk_live_… or rk_live_…).');
   if (c.APP_ENV !== 'production' && mode === 'live') out.push(`A Stripe LIVE key is set on ${c.APP_ENV}: real cards would be charged here.`);
   if (mode !== 'none' && !c.STRIPE_WEBHOOK_SECRET) out.push('STRIPE_WEBHOOK_SECRET is missing: payments would succeed in Stripe but never be delivered here.');
   if (c.STRIPE_WEBHOOK_SECRET && !c.STRIPE_WEBHOOK_SECRET.startsWith('whsec_')) out.push('STRIPE_WEBHOOK_SECRET does not look like a webhook signing secret (whsec_…).');
+  // GL4: the publishable key must be the same mode (and account) as the secret key.
+  const pk = c.STRIPE_PUBLISHABLE_KEY;
+  if (pk && !/^pk_(live|test)_/.test(pk)) out.push('STRIPE_PUBLISHABLE_KEY does not look like a publishable key (pk_live_… or pk_test_…).');
+  if (pk && mode !== 'none' && !pk.startsWith(`pk_${mode}_`)) out.push(`STRIPE_PUBLISHABLE_KEY is a ${pk.startsWith('pk_live_') ? 'live' : 'test'} key but STRIPE_SECRET_KEY is a ${mode} key: they must be the same mode, from the same account.`);
   return out;
 }
 /** Checkout must never run on production with a test key (orders would "succeed" without real money). */

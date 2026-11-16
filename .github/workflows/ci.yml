@@ -45,6 +45,10 @@ jobs:
       - run: npm run typecheck
       - name: Unit and API tests (real Postgres, Redis and WebSockets)
         run: npm test
+        env:
+          # GL4: optional. A Stripe TEST secret key (sk_test_…) from the FlatMeta account runs the real test-mode check in
+          # apps/api/test/stripe-testmode.test.ts; without it that test is skipped. Never a live key.
+          STRIPE_TEST_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
       - name: Build
         env:
           APP_URL: https://ci.example.test

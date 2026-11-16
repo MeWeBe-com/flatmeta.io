@@ -1,5 +1,6 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type Stripe from 'stripe';
+import { capturePaypalOrder, createPaypalOrder, paypalEnabled } from './paypal.js';
 import { config, paidCheckout, paymentsMock, stripeTestKeyOnProduction } from '../config.js';
 import { db, schema } from '../db/client.js';
 import type { Order, OrderItem, User } from '../db/schema.js';
@@ -78,7 +79,7 @@ export async function createCheckout(input: CheckoutInput): Promise<{ url: strin
   if (amountCents < 50) throw badRequest('Amount too small for a card payment');
   const [order] = await db
     .insert(schema.orders)
-    .values({ userId: input.user.id, orgId: input.orgId, kind: input.kind, amountCents, currency: config.CURRENCY, items: input.items, plotId: input.plotId ?? null, listingId: input.listingId ?? null, listingVersion: input.listingVersion ?? null })
+    .values({ userId: input.user.id, orgId: input.orgId, kind: input.kind, amountCents, currency: config.CURRENCY, items: input.items, plotId: input.plotId ?? null, listingId: input.listingId ?? null, listingVersion: input.listingVersion ?? null, successPath: input.successPath, cancelPath: input.cancelPath })
     .returning();
   const orderId = order!.id;
 
@@ -88,10 +89,19 @@ export async function createCheckout(input: CheckoutInput): Promise<{ url: strin
     return { url: web(`/checkout/mock?session=${sessionId}&next=${encodeURIComponent(input.successPath)}&cancel=${encodeURIComponent(input.cancelPath)}`), orderId };
   }
 
+  // GL4: with PayPal set up, the buyer chooses on our /pay page (card through Stripe, or PayPal); else straight to Stripe.
+  if (paypalEnabled()) return { url: web(`/pay/${orderId}`), orderId };
+  return { url: await stripeSessionForOrder(order!, input.user), orderId };
+}
+
+/** The Stripe Checkout Session for a pending one-time order (from createCheckout, or the /pay chooser). */
+export async function stripeSessionForOrder(order: Order, user: User): Promise<string> {
+  const orderId = order.id;
+  const input = { kind: order.kind as CheckoutInput['kind'], items: order.items, orgId: order.orgId, successPath: order.successPath ?? '/dashboard/billing', cancelPath: order.cancelPath ?? '/dashboard/billing' };
   const s = await stripe();
   const session = await s.checkout.sessions.create({
     mode: 'payment',
-    customer: await customerFor(input.user, input.orgId),
+    customer: await customerFor(user, input.orgId),
     client_reference_id: orderId,
     metadata: { orderId, kind: input.kind },
     payment_intent_data: { metadata: { orderId, kind: input.kind } },
@@ -104,8 +114,36 @@ export async function createCheckout(input: CheckoutInput): Promise<{ url: strin
     success_url: web(withParams(input.successPath, { checkout: 'success', order: orderId })),
     cancel_url: web(withParams(input.cancelPath, { checkout: 'cancelled', order: orderId })),
   });
-  await db.update(schema.orders).set({ stripeSessionId: session.id }).where(eq(schema.orders.id, orderId));
-  return { url: session.url!, orderId };
+  await db.update(schema.orders).set({ stripeSessionId: session.id, provider: 'stripe' }).where(eq(schema.orders.id, orderId));
+  return session.url!;
+}
+
+/** GL4: PayPal approval link for a pending one-time order. The amount comes from the order row, never the browser. */
+export async function paypalApprovalForOrder(order: Order): Promise<string> {
+  const description = order.items.map((i) => i.description).join(', ') || `${config.APP_NAME} order`;
+  const { paypalOrderId, approveUrl } = await createPaypalOrder({
+    orderId: order.id,
+    amountCents: order.amountCents,
+    currency: order.currency,
+    description,
+    returnUrl: `${config.API_URL}/v1/paypal/return?order=${order.id}`,
+    cancelUrl: `${config.API_URL}/v1/paypal/cancel?order=${order.id}`,
+  });
+  await db.update(schema.orders).set({ paypalOrderId, provider: 'paypal', updatedAt: new Date() }).where(eq(schema.orders.id, order.id));
+  return approveUrl;
+}
+
+/** GL4: back from PayPal: capture, then fulfil exactly once (the same fulfilment as a Stripe payment). */
+export async function capturePaypalReturn(orderId: string, paypalToken: string): Promise<{ ok: boolean; order: Order | null }> {
+  const [order] = await db.select().from(schema.orders).where(eq(schema.orders.id, orderId));
+  if (!order || order.paypalOrderId !== paypalToken) return { ok: false, order: order ?? null };
+  if (order.status === 'paid') return { ok: true, order }; // a reload of the return page
+  if (order.status !== 'pending') return { ok: false, order };
+  const captureId = await capturePaypalOrder(paypalToken, { orderId: order.id, amountCents: order.amountCents, currency: order.currency });
+  if (!captureId) return { ok: false, order };
+  await db.update(schema.orders).set({ paypalCaptureId: captureId, updatedAt: new Date() }).where(eq(schema.orders.id, order.id));
+  const done = await fulfilOrder(order.id, null);
+  return { ok: !!done, order: done ?? order };
 }
 
 export type PlanName = 'plus' | 'business' | 'brand';
@@ -439,3 +477,18 @@ export async function handleStripeEvent(event: Stripe.Event) {
   }
   return { duplicate: false };
 }
+
+/**
+ * GL4: which Stripe account the keys belong to. Payments must go to the one account named exactly after the project
+ * (APP_NAME) inside the boss's Stripe Organisation. Stripe's API shows the account's name, id and mode, not the
+ * Organisation, so membership is confirmed in the dashboard (docs/golive/MANUAL-STEPS.md → Payments).
+ */
+export interface StripeAccountInfo { id: string; name: string | null; country: string | null; chargesEnabled: boolean; livemode: boolean; nameMatches: boolean }
+export async function stripeAccountInfo(): Promise<StripeAccountInfo | null> {
+  if (!config.STRIPE_SECRET_KEY) return null;
+  const s = await stripe();
+  const a = await s.accounts.retrieveCurrent();
+  const name = a.settings?.dashboard?.display_name || a.business_profile?.name || null;
+  return { id: a.id, name, country: a.country ?? null, chargesEnabled: !!a.charges_enabled, livemode: config.STRIPE_SECRET_KEY.includes('_live_'), nameMatches: name === config.APP_NAME };
+}
+

@@ -9,7 +9,8 @@ import { db, schema } from '../db/client.js';
 import { requireUser } from '../lib/auth.js';
 import { badRequest, forbidden, notFound } from '../lib/errors.js';
 import { DEFAULT_TIERS, PLANS, SUBSCRIPTION_PRICES, UPGRADES, claimPriceCents } from '../lib/pricing.js';
-import { createCheckout, createSubscriptionCheckout, fulfilOrder, handleStripeEvent, mockSubscribe, portalUrl, stripe } from '../services/billing.js';
+import { capturePaypalReturn, createCheckout, createSubscriptionCheckout, fulfilOrder, handleStripeEvent, mockSubscribe, paypalApprovalForOrder, portalUrl, requirePaidCheckout, stripe, stripeSessionForOrder } from '../services/billing.js';
+import { paypalEnabled } from '../services/paypal.js';
 import { getPrices } from '../services/plots.js';
 import { assertCanEditPlot, orgRole } from './views.js';
 import { loadPlot } from './plots.js';
@@ -125,6 +126,52 @@ export default async function billingRoutes(app: App) {
       orders: orders.map((o) => ({ id: o.id, kind: o.kind, status: o.status, amountCents: o.amountCents, currency: o.currency, items: o.items, plotId: o.plotId, createdAt: o.createdAt, paidAt: o.paidAt })),
       subscriptions: subs,
     };
+  });
+
+  // ── GL4: the /pay chooser (card through Stripe, or PayPal) for one-time orders ──
+  const myPendingOrder = async (userId: string, id: string) => {
+    const [o] = await db.select().from(schema.orders).where(eq(schema.orders.id, id));
+    if (!o || o.userId !== userId) throw notFound('Order');
+    return o;
+  };
+  app.get('/v1/orders/:id', { schema: { tags: ['billing'], summary: 'One of my orders, and how it can be paid', params: z.object({ id: z.uuid() }) } }, async (req) => {
+    const user = requireUser(req);
+    const o = await myPendingOrder(user.id, req.params.id);
+    return {
+      order: { id: o.id, kind: o.kind, status: o.status, amountCents: o.amountCents, currency: o.currency, items: o.items.map((i) => ({ description: i.description, amountCents: i.amountCents, quantity: i.quantity ?? 1 })), cancelPath: o.cancelPath, createdAt: o.createdAt },
+      providers: { stripe: !!config.STRIPE_SECRET_KEY, paypal: paypalEnabled() },
+    };
+  });
+  app.post(
+    '/v1/orders/:id/pay',
+    { config: { rateLimit: { max: 20, timeWindow: '1 minute' } }, schema: { tags: ['billing'], summary: 'Start paying a pending order with Stripe (card) or PayPal', params: z.object({ id: z.uuid() }), body: z.object({ provider: z.enum(['stripe', 'paypal']) }) } },
+    async (req) => {
+      const user = requireUser(req);
+      requirePaidCheckout();
+      const o = await myPendingOrder(user.id, req.params.id);
+      if (o.status !== 'pending') throw badRequest(o.status === 'paid' ? 'This order is already paid' : 'This order can no longer be paid');
+      if (req.body.provider === 'paypal') {
+        if (!paypalEnabled()) throw badRequest('PayPal is not available');
+        return { url: await paypalApprovalForOrder(o) };
+      }
+      return { url: await stripeSessionForOrder(o, user) };
+    },
+  );
+  // PayPal sends the buyer back here (return_url / cancel_url point at the API).
+  app.get(
+    '/v1/paypal/return',
+    { config: { rateLimit: { max: 30, timeWindow: '1 minute' } }, schema: { hide: true, querystring: z.object({ order: z.uuid(), token: z.string().max(64) }) } },
+    async (req, reply) => {
+      const { ok, order } = await capturePaypalReturn(req.query.order, req.query.token);
+      const web = (p: string, q: Record<string, string>) => `${config.APP_URL}${p}${p.includes('?') ? '&' : '?'}${new URLSearchParams(q)}`;
+      if (ok && order) return reply.redirect(web(order.successPath ?? '/dashboard/billing', { checkout: 'success', order: order.id }), 303);
+      return reply.redirect(web(order?.cancelPath ?? '/dashboard/billing', { checkout: 'failed', order: req.query.order }), 303);
+    },
+  );
+  app.get('/v1/paypal/cancel', { schema: { hide: true, querystring: z.object({ order: z.uuid() }) } }, async (req, reply) => {
+    const [o] = await db.select().from(schema.orders).where(eq(schema.orders.id, req.query.order));
+    const path = o?.cancelPath ?? '/dashboard/billing';
+    return reply.redirect(`${config.APP_URL}${path}${path.includes('?') ? '&' : '?'}${new URLSearchParams({ checkout: 'cancelled', order: req.query.order })}`, 303);
   });
 
   // ── Dev mock checkout (never in production) ──

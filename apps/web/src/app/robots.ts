@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { APP_ENV, SITE_URL } from '@/lib/config';
 
-const PRIVATE = ['/dashboard', '/admin', '/checkout', '/login', '/claim/', '/api/'];
+const PRIVATE = ['/dashboard', '/admin', '/checkout', '/login', '/claim/', '/pay/', '/api/'];
 // Plot share images are served by the API; let crawlers (and image search) fetch them.
 const PUBLIC_API = ['/api/v1/plots/*/cover.jpg'];
 const AI_CRAWLERS = ['GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'ClaudeBot', 'Claude-SearchBot', 'Claude-User', 'PerplexityBot', 'Perplexity-User', 'Google-Extended', 'Applebot-Extended', 'Amazonbot', 'meta-externalagent', 'Bytespider', 'CCBot'];

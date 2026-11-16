@@ -155,6 +155,13 @@ export default async function adminRoutes(app: App) {
         else prices[k] = (await resolvePrice(plan, interval).catch(() => undefined)) ? 'lookup' : 'missing';
       }
     const missing = Object.entries(prices).filter(([, v]) => v === 'missing').map(([k]) => k);
+    // GL4: the account the keys belong to (name, id, mode); it must be the one named exactly APP_NAME.
+    const { stripeAccountInfo } = await import('../services/billing.js');
+    const { paypalEnabled } = await import('../services/paypal.js');
+    const account = await stripeAccountInfo().catch(() => null);
+    const accountProblems: string[] = [];
+    if (account && !account.nameMatches) accountProblems.push(`The Stripe keys belong to "${account.name ?? '(no name)'}" (${account.id}), not an account named "${config.APP_NAME}". Use the ${config.APP_NAME} account inside the Organisation: docs/golive/MANUAL-STEPS.md → Payments.`);
+    if (account && !account.chargesEnabled) accountProblems.push(`Stripe account ${account.id} cannot take charges yet: finish its activation in the Stripe dashboard.`);
     if (missing.length) problems.push(`No Stripe price for ${missing.join(', ')}: run scripts/stripe-sync.ts or set STRIPE_PRICE_* (lookup keys ${lookupKeyFor('plus', 'month').replace('plus_month', '<plan>_<interval>')}).`);
     return {
       appEnv: config.APP_ENV,
@@ -166,7 +173,9 @@ export default async function adminRoutes(app: App) {
       currency: config.CURRENCY,
       webhookUrl: `${config.API_URL}/v1/stripe/webhook`,
       prices,
-      problems,
+      problems: [...problems, ...accountProblems],
+      account,
+      paypal: { enabled: paypalEnabled(), env: config.PAYPAL_ENV, returnUrl: `${config.API_URL}/v1/paypal/return` },
       checkoutBlocked: stripeTestKeyOnProduction(),
     };
   });

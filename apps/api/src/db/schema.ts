@@ -517,6 +517,12 @@ export const orders = pgTable(
     listingVersion: integer('listing_version'),
     stripeSessionId: text('stripe_session_id').unique(),
     stripePaymentIntent: text('stripe_payment_intent'),
+    // GL4: PayPal as a second way to pay one-time orders, and where to send the buyer afterwards (the /pay chooser).
+    provider: text('provider'), // stripe | paypal | mock (null = not chosen yet)
+    paypalOrderId: text('paypal_order_id').unique(),
+    paypalCaptureId: text('paypal_capture_id'),
+    successPath: text('success_path'),
+    cancelPath: text('cancel_path'),
     paidAt: ts('paid_at'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
