@@ -18,7 +18,9 @@ const tags = ['social'];
 export default async function openHouseRoutes(app: App) {
   const publicPlot = async (id: string) => {
     const plot = await loadPlot(id);
-    if (!plot || plot.status !== 'active' || plot.moderationStatus === 'rejected') throw notFound('Plot');
+    // Reserved company (showcase) plots are public too: they just have no open houses yet (GL3a: every company page
+    // asked and got a 404 in the console).
+    if (!plot || (plot.status !== 'active' && plot.status !== 'showcase') || plot.moderationStatus === 'rejected') throw notFound('Plot');
     return plot;
   };
 

@@ -33,6 +33,9 @@ export async function setPlotLikes(plotId: string, likes: number) {
   if (await redis.exists(k.loved())) await redis.zadd(k.loved(), likes, plotId);
 }
 
+/** The Redis key of a board (exported for tests). */
+export const boardKeyFor = (board: Board, country?: string) => boardKey(board, country);
+
 function boardKey(board: Board, country?: string): string {
   switch (board) {
     case 'xp':
@@ -55,13 +58,16 @@ export interface LeaderRow {
   plot?: { id: string; slug: string; title: string; thumbUrl: string | null; countryCode: string | null; kind: string };
 }
 
+const EMPTY_MARKER = '__empty__';
+
 export async function top(board: Board, opts: { country?: string; limit?: number; me?: string | null } = {}) {
   const limit = Math.min(opts.limit ?? 100, 100);
   const rk = boardKey(board, opts.country);
   if ((await redis.exists(rk)) === 0) await rebuild(board, opts.country);
   const raw = await redis.zrevrange(rk, 0, limit - 1, 'WITHSCORES');
   const entries: { id: string; score: number }[] = [];
-  for (let i = 0; i < raw.length; i += 2) entries.push({ id: raw[i]!, score: Number(raw[i + 1]) });
+  // The empty-board marker (see rebuild) is never a row: it is not a uuid, and querying users with it fails (GL3a).
+  for (let i = 0; i < raw.length; i += 2) if (raw[i] !== EMPTY_MARKER) entries.push({ id: raw[i]!, score: Number(raw[i + 1]) });
   const ids = entries.map((e) => e.id);
   let rows: LeaderRow[];
   if (board === 'plots-loved') {
@@ -136,7 +142,7 @@ export async function rebuild(board: Board, country?: string) {
   const m = redis.multi().del(rk);
   for (const p of pairs) m.zadd(rk, p.score, p.id);
   // An empty board keeps a marker member so we don't rebuild on every request (it never matches a user).
-  if (pairs.length === 0) m.zadd(rk, -1, '__empty__');
+  if (pairs.length === 0) m.zadd(rk, -1, EMPTY_MARKER);
   if (board === 'xp-week') m.expire(rk, 60 * 60 * 24 * 21);
   else m.expire(rk, 60 * 60 * 24 * 7);
   await m.exec();
