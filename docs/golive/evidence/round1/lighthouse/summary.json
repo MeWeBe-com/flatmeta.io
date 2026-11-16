@@ -1,0 +1,130 @@
+[
+ {
+  "page": "staging-",
+  "url": "https://staging.flatmeta.io/",
+  "error": null,
+  "scores": {
+   "performance": 63,
+   "accessibility": 100,
+   "best-practices": 100,
+   "seo": 66
+  },
+  "lcp_ms": 1810,
+  "tbt_ms": 12566,
+  "cls": 0,
+  "benchmarkIndex": 2580,
+  "fetchTime": "2026-11-16T08:01:14.621Z"
+ },
+ {
+  "page": "staging-business",
+  "url": "https://staging.flatmeta.io/business",
+  "error": null,
+  "scores": {
+   "performance": 100,
+   "accessibility": 94,
+   "best-practices": 100,
+   "seo": 69
+  },
+  "lcp_ms": 1424,
+  "tbt_ms": 80,
+  "cls": 0,
+  "benchmarkIndex": 2665,
+  "fetchTime": "2026-11-16T08:01:59.668Z"
+ },
+ {
+  "page": "staging-p-tesla",
+  "url": "https://staging.flatmeta.io/p/tesla",
+  "error": null,
+  "scores": {
+   "performance": 96,
+   "accessibility": 96,
+   "best-practices": 96,
+   "seo": 69
+  },
+  "lcp_ms": 2244,
+  "tbt_ms": 168,
+  "cls": 0.001,
+  "benchmarkIndex": 2203,
+  "fetchTime": "2026-11-16T08:01:45.434Z"
+ },
+ {
+  "page": "staging-pricing",
+  "url": "https://staging.flatmeta.io/pricing",
+  "error": null,
+  "scores": {
+   "performance": 100,
+   "accessibility": 94,
+   "best-practices": 100,
+   "seo": 66
+  },
+  "lcp_ms": 1080,
+  "tbt_ms": 66,
+  "cls": 0,
+  "benchmarkIndex": 2438,
+  "fetchTime": "2026-11-16T08:01:31.799Z"
+ },
+ {
+  "page": "www-",
+  "url": "https://www.flatmeta.io/",
+  "error": "NO_NAVSTART",
+  "scores": {
+   "performance": null,
+   "accessibility": 100,
+   "best-practices": null,
+   "seo": 100
+  },
+  "lcp_ms": 0,
+  "tbt_ms": 0,
+  "cls": 0,
+  "benchmarkIndex": 2230,
+  "fetchTime": "2026-11-16T07:59:35.089Z"
+ },
+ {
+  "page": "www-business",
+  "url": "https://www.flatmeta.io/business",
+  "error": "NO_NAVSTART",
+  "scores": {
+   "performance": null,
+   "accessibility": 98,
+   "best-practices": null,
+   "seo": 100
+  },
+  "lcp_ms": 0,
+  "tbt_ms": 0,
+  "cls": 0,
+  "benchmarkIndex": 2128.5,
+  "fetchTime": "2026-11-16T08:01:03.358Z"
+ },
+ {
+  "page": "www-p-tesla",
+  "url": "https://www.flatmeta.io/p/tesla",
+  "error": null,
+  "scores": {
+   "performance": 98,
+   "accessibility": 100,
+   "best-practices": 96,
+   "seo": 100
+  },
+  "lcp_ms": 2103,
+  "tbt_ms": 99,
+  "cls": 0,
+  "benchmarkIndex": 2512,
+  "fetchTime": "2026-11-16T08:00:48.472Z"
+ },
+ {
+  "page": "www-pricing",
+  "url": "https://www.flatmeta.io/pricing",
+  "error": null,
+  "scores": {
+   "performance": 98,
+   "accessibility": 98,
+   "best-practices": 100,
+   "seo": 100
+  },
+  "lcp_ms": 2085,
+  "tbt_ms": 122,
+  "cls": 0,
+  "benchmarkIndex": 2515.5,
+  "fetchTime": "2026-11-16T08:00:34.827Z"
+ }
+]
