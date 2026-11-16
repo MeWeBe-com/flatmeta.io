@@ -25,11 +25,8 @@ export function HomeFirstPaint({ stats, behind = false }: { stats: Stats; behind
       />
         <div className="relative h-full grid place-items-center px-4 text-center">
           <div className="max-w-xl">
-            {behind ? (
-              <p className="font-display font-bold text-3xl sm:text-5xl leading-tight">{t('app.tagline')}</p>
-            ) : (
-              <h1 className="font-display font-bold text-3xl sm:text-5xl leading-tight">{t('app.tagline')}</h1>
-            )}
+            {/* GL8: the page's one <h1> is in app/page.tsx, outside Suspense, so the raw HTML and the hydrated page both have exactly one. */}
+            <p className="font-display font-bold text-3xl sm:text-5xl leading-tight" aria-hidden="true">{t('app.tagline')}</p>
             <p className="muted mt-3 text-base sm:text-lg">Explore glowing plots around the globe, meet people nearby, and claim your own land. Your first plot is free.</p>
             {stats && (
               <p className="mt-4 text-sm muted">

@@ -1,0 +1,28 @@
+# GL8: daily SEO check of production: robots.txt, the sitemap index and every child sitemap (lastmod), a sample of
+# pages from each (200, self canonical, one h1, title ≤ 60 with FlatMeta once, description length, og:image,
+# JSON-LD, no noindex) and llms.txt. Read-only. See scripts/seo-check.mjs.
+name: Daily SEO check (live)
+
+on:
+  schedule:
+    - cron: '41 5 * * *'
+  workflow_dispatch:
+    inputs:
+      site:
+        description: Site to check
+        default: https://www.flatmeta.io
+
+permissions:
+  contents: read
+
+jobs:
+  seo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: SEO check
+        run: node scripts/seo-check.mjs "${{ inputs.site || 'https://www.flatmeta.io' }}" --sample 25

@@ -1,0 +1,65 @@
+# GL8: daily QA of the live sites: the public release smoke test (security headers, share links, company plots, the
+# claim page, llms.txt, Ask FlatMeta, live presence and walking) on www and staging, and the Lighthouse mobile budget on production. Read-only: no
+# account, no secrets. A failed scheduled run emails whoever last changed this schedule (GitHub's rule), and the weekly
+# CEO report links the latest run.
+# Note: GitHub runs `schedule` only from the default branch; see docs/golive/MANUAL-STEPS.md "Agents (GL8)".
+name: Daily QA (live)
+
+on:
+  schedule:
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-qa
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        site: [https://www.flatmeta.io, https://staging.flatmeta.io]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Release smoke test
+        run: node scripts/release-smoke.cjs "${{ matrix.site }}" | tee smoke.txt
+      - name: Summary
+        if: always()
+        run: |
+          { echo "## Smoke · ${{ matrix.site }}"; echo; sed 's/^/    /' smoke.txt 2>/dev/null || echo "no output"; } >> "$GITHUB_STEP_SUMMARY"
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Lighthouse mobile budget (home, a plot page, pricing, a landing page)
+        run: CHROME_PATH="$(node -e "console.log(require('@playwright/test').chromium.executablePath())")" LH_PAGES=/,@plot,/pricing,/for/local-businesses node scripts/lighthouse-budget.mjs https://www.flatmeta.io --out lighthouse | tee lighthouse.txt
+      - name: Summary
+        if: always()
+        run: |
+          { echo "## Lighthouse mobile · www.flatmeta.io"; echo; grep -E '^[✓✗]' lighthouse.txt | sed 's/^/- /' || echo "no output"; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-live
+          path: lighthouse
+          retention-days: 14

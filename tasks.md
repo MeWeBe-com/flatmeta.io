@@ -233,6 +233,12 @@ Goal: live on its own domain, scoring 9/10 from every role, taking payments, pro
     - Tests in `apps/api/test/brand-config.test.ts`.
 - [x] **GL6** Go-live readiness: canonical host, 301s, CORS, cookies, CSP, Cloudflare Workers where they help (wrangler config), health check, uptime URL, error tracking hook, "Launch checklist" in MANUAL-STEPS.md
 - [x] **GL7** SEO, GEO/AI-SEO, socials: on-site tags and JSON-LD (Organization, SoftwareApplication, FAQPage, BreadcrumbList), Lighthouse mobile 90+, buyer-intent landing pages and "X vs Y" pages, llms.txt / llms-full.txt, `docs/golive/03-growth-plan.md` (30 submission sites with copy, ASO if relevant, 30-day social calendar)
-- [ ] **GL8** The 5-agent business team (`ops/agents/`: CEO, Marketing, Sales, Developer, QA prompts), plus GitHub Actions schedules: daily QA smoke + Lighthouse, daily SEO check, weekly CEO report (`docs/golive/weekly/<date>.md`)
+- [!] **GL8** The 5-agent business team (`ops/agents/`: CEO, Marketing, Sales, Developer, QA prompts), plus GitHub Actions schedules: daily QA smoke + Lighthouse, daily SEO check, weekly CEO report (`docs/golive/weekly/<date>.md`)
+  - [!] waiting: the repo owner makes `v2` the default branch (GitHub runs `schedule:` only from the default branch), optionally adds the `FM_REPORT_API_KEY` secret, and sets up the five agents in claude.ai or Antigravity. Steps in `docs/golive/MANUAL-STEPS.md` → Agents and daily checks.
+  - Done in code:
+    - **Workflows:** `daily-qa.yml` (release smoke on www and staging, plus the Lighthouse mobile budget on www, with job summaries), `daily-seo.yml` (`scripts/seo-check.mjs`: robots.txt, the sitemap index and every child with its lastmod, sampled pages, llms.txt) and `weekly-ceo-report.yml` (`scripts/weekly-report.mjs` writes `docs/golive/weekly/<date>.md` and commits it with `[skip ci]`).
+    - **Agents:** `ops/agents/` has the CEO, Marketing, Sales, Developer and QA prompts, each with its schedule, inputs, tools, outputs and guardrails (no spending, no posting as a person, no secrets, real numbers only, pull requests to `v2` only).
+    - **Found by the SEO checker:** the home page had two `<h1>` elements in its HTML (the Suspense fallback and the streamed map card), now exactly one; the `/u/` fallback description was under 50 characters.
+    - **Tests:** `seo-check.test.ts` and `weekly-report.test.ts`; `home-start.spec.ts` asserts one `<h1>` in the raw HTML.
 - [ ] **GL9** MeWeBe listing (`docs/golive/mewebe-listing.md`)
 - [ ] **GL10** Launch & 9/10 proof report (`docs/golive/04-launch-proof-report.md`)

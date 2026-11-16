@@ -1,0 +1,44 @@
+# GL8: the weekly CEO report. Every Monday it writes docs/golive/weekly/<date>.md (live numbers, the week's daily QA
+# and SEO results, what shipped) and commits it to v2 with [skip ci]. The CEO agent (ops/agents/ceo.md) then reads
+# it and fills in the verdict, risks and priorities. Optional secret FM_REPORT_API_KEY (a moderator's API key named
+# "FlatMeta-Reports") adds sign-ups, orders and revenue; without it those lines say "not available".
+name: Weekly CEO report
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: weekly-ceo-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v2
+          fetch-depth: 200
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Write the report
+        env:
+          FM_REPORT_API_KEY: ${{ secrets.FM_REPORT_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/weekly-report.mjs https://www.flatmeta.io --out docs/golive/weekly
+      - name: Commit it
+        run: |
+          git config user.name "flatmeta-reports[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/golive/weekly
+          git diff --cached --quiet && { echo "nothing new"; exit 0; }
+          git commit -m "docs(weekly): CEO report $(date -u +%F) [skip ci]"
+          for i in 1 2 3; do git pull --rebase -q origin v2 && git push -q origin HEAD:v2 && exit 0; sleep 10; done; exit 1

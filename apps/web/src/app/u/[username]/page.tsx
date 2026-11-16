@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { username } = await params;
   const d = await load(username).catch(() => null);
   if (!d) return { title: 'Explorer not found' };
-  return { title: `${d.user.displayName} (@${d.user.username})`, description: d.user.bio ?? `${d.user.displayName} is a level ${d.user.level} ${d.user.levelTitle} on FlatMeta.`, alternates: { canonical: `${SITE_URL}/u/${d.user.username}` } };
+  return { title: `${d.user.displayName} (@${d.user.username})`, description: d.user.bio ?? `${d.user.displayName} is a level ${d.user.level} ${d.user.levelTitle} on FlatMeta, the shared world map. See their plots, achievements and clans.`, alternates: { canonical: `${SITE_URL}/u/${d.user.username}` } };
 }
 
 export default async function UserPage({ params }: Params) {

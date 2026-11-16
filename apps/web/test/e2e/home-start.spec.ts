@@ -32,9 +32,12 @@ test('the home page HTML is a real first screen, readable without JavaScript', a
   const ctx = await browser.newContext({ ...info.project.use, javaScriptEnabled: false });
   const page = await ctx.newPage();
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1, name: 'The world map you can own a piece of' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'The world map you can own a piece of' })).toHaveCount(1);
+  await expect(page.getByTestId('home-first-paint').first().getByText('The world map you can own a piece of', { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Explore places' })).toBeVisible();
   await ctx.close();
+  // GL8: exactly one <h1> in the raw HTML (the Suspense fallback and the streamed map must not both carry one).
+  expect(html.match(/<h1\b/g)).toHaveLength(1);
 });
 
 test('a new visitor somewhere empty starts at City zoom, then sees the nearest plots', async ({ browser }, info) => {

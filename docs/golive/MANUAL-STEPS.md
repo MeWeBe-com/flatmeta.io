@@ -260,3 +260,44 @@ Do these in order. Steps 1 to 3 are what makes www.flatmeta.io show the build in
    bash scripts/deploy.sh production --rollback --commit <previous sha from logs/releases>
    ```
    Then send the failing step to the developer.
+
+---
+
+## Agents and daily checks (GL8)
+
+**Already in the repo:**
+- `.github/workflows/daily-qa.yml`: the release smoke test on www and staging, and the Lighthouse mobile budget on www, daily.
+- `.github/workflows/daily-seo.yml`: sitemaps, page tags, JSON-LD and llms.txt, daily.
+- `.github/workflows/weekly-ceo-report.yml`: writes `docs/golive/weekly/<date>.md` every Monday.
+- `ops/agents/*.md`: five prompts (CEO, Marketing, Sales, Developer, QA), each with its guardrails.
+
+**1. Make `v2` the default branch (who: the repository owner on GitHub, 1 minute).** GitHub only runs `schedule:` workflows from the default branch, and the default branch is `main` today. Without this step the three schedules never run.
+1. GitHub → the repo → **Settings → General → Default branch**.
+2. Click ⇄, choose `v2`, then **Update**.
+3. The `ci.yml` comment already says the project works on `v2`; `main` stays as it is.
+
+Then:
+1. **Actions** → "Daily QA (live)" → **Run workflow**, once, to check it runs.
+2. Check: the Actions tab lists all three workflows with a "This workflow has a schedule" note.
+
+**2. Optional: the report key (who: owner, 3 minutes).** Without it, the weekly report says "not available" for sign-ups, orders and revenue.
+1. Sign in to FlatMeta with a **moderator** account, not the admin account.
+2. Dashboard → Developers → **New API key**, named `FlatMeta-Reports`.
+3. GitHub → Settings → Secrets and variables → Actions → **New repository secret**: name `FM_REPORT_API_KEY`, and paste the key.
+4. The key can read the admin numbers but cannot change roles or money, because that needs `requireAdmin`.
+
+**3. The weekly report commits to `v2` (who: repository owner).** If branch protection on `v2` blocks the GitHub Actions bot, allow "github-actions" to push in the rule, or set the workflow to open a pull request instead.
+
+**4. The five agents (who: owner; Antigravity or claude.ai, whichever the team uses).** For each file in `ops/agents/`:
+1. **claude.ai:** open a new scheduled task, connect the GitHub repo `MeWeBe-com/flatmeta.io` (read, plus pull requests), paste the "Prompt" section, and set the schedule in the file's header (UK time).
+2. **Antigravity Cloud Automations:** create an automation with the same prompt and schedule, and give it the same repository access.
+3. Give the agents **no** payment, email-sending or social-posting connectors. They draft; people publish.
+4. Check after the first run: a pull request to `v2` from each agent, touching only `docs/golive/drafts/` or `docs/golive/weekly/`. The Developer agent's pull requests touch code and come with tests.
+
+| Agent | Schedule (UK) | Needs |
+|---|---|---|
+| QA | daily 06:15 | Repository: read, issues, pull requests |
+| Developer | daily 06:30 | Repository: read, branches, pull requests, issues |
+| Marketing | daily 08:00 | Repository: read, pull requests |
+| Sales | weekdays 09:00 | Repository: read, pull requests; web access to public company sites |
+| CEO | Mondays 07:30 | Repository: read, pull requests |

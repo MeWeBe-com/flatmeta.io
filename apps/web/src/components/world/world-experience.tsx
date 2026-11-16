@@ -584,7 +584,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
         <div className="glass rounded-2xl p-4 animate-rise">
           <div className="flex items-start gap-2">
             <div>
-              <h1 className="font-display font-bold text-lg leading-tight">{t('app.tagline')}</h1>
+              <h2 className="font-display font-bold text-lg leading-tight">{t('app.tagline')}</h2>
               <p className="text-sm muted mt-1">Explore glowing plots around the globe, then claim your own. Your first plot is free.</p>
             </div>
           </div>

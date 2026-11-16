@@ -61,7 +61,7 @@ export function LiveTicker({ onSelect, onClaim, limit = 6 }: { onSelect: (a: Act
             <p className="text-xs muted">Quiet this week. Be the first: your first land is free.</p>
             {onClaim && (
               <button className="btn-sm btn-ghost" onClick={onClaim}>
-                Claim free land
+                Claim a plot
               </button>
             )}
           </li>

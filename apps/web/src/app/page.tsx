@@ -5,6 +5,7 @@ import { WorldExperience } from '@/components/world/world-experience';
 import { HomeFirstPaint } from '@/components/world/home-first-paint';
 import { JsonLd } from '@/lib/seo';
 import { SITE_URL } from '@/lib/config';
+import { t } from '@/lib/i18n';
 
 // The map takes ?at=, ?plot=, ?dm= … parameters: they all describe the same page.
 export const metadata: Metadata = { alternates: { canonical: '/' } };
@@ -34,6 +35,8 @@ export default async function Home() {
         }}
       />
       {/* The map reads its URL (?at=, ?plot=…), so it renders in the browser; the server sends a real first screen. */}
+      {/* GL8: exactly one <h1> on the home page, before and after the map loads (the first screen shows the same words). */}
+      <h1 className="sr-only">{t('app.tagline')}</h1>
       <Suspense fallback={<HomeFirstPaint stats={stats} />}>
         <WorldExperience stats={stats} />
       </Suspense>
