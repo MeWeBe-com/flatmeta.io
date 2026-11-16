@@ -75,7 +75,7 @@ export function PricingClient({ data }: { data: Plans }) {
                 <span className="font-display text-4xl font-bold" data-testid="plan-price">{usd(p.month === 0 ? 0 : Math.round(price))}</span>
                 <span className="muted mb-1">{p.month === 0 ? 'forever' : '/mo'}</span>
               </div>
-              {p.month > 0 && yearly && <div className="text-xs muted">billed {usd(p.year)} yearly</div>}
+              {p.month > 0 && yearly && <div className="text-xs muted">billed {usd(p.year)} yearly · <span className="text-[var(--color-teal)]">you save {usd(p.month * 12 - p.year)}</span></div>}
               <ul className="mt-6 space-y-2 text-sm flex-1">
                 {p.features.map((f) => (
                   <li key={f} className="flex gap-2"><Check size={16} className="text-[var(--color-teal)] shrink-0 mt-0.5" /> {f}</li>

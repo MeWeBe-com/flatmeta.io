@@ -4,6 +4,8 @@ import { BadgeCheck, Bot, Clock, LineChart, MapPinned, Megaphone, Sparkles, User
 import { PageShell } from '@/components/site-chrome';
 import { Breadcrumbs, siteTitle } from '@/lib/seo';
 import { PlotGrid } from '@/components/ui';
+import { Faq, HowItWorks, PaymentTrust, TrustStats } from '@/components/trust';
+import { usd } from '@/lib/format';
 import { serverApi } from '@/lib/server-api';
 import type { Plot } from '@/lib/types';
 
@@ -25,7 +27,12 @@ const FEATURES = [
 ];
 
 export default async function BusinessPage() {
-  const showcase = await serverApi<{ plots: Plot[] }>('/plots?kind=showcase&sort=loved&limit=8', { auth: false, revalidate: 300 }).catch(() => null);
+  const [showcase, plans] = await Promise.all([
+    serverApi<{ plots: Plot[] }>('/plots?kind=showcase&sort=loved&limit=8', { auth: false, revalidate: 300 }).catch(() => null),
+    serverApi<{ landmarkPriceCents: number; plans: { key: string; month: number; year: number }[]; launchOffer?: string | null }>('/billing/plans', { auth: false, revalidate: 300 }).catch(() => null),
+  ]);
+  const claimFree = (plans?.landmarkPriceCents ?? 0) === 0;
+  const business = plans?.plans.find((p) => p.key === 'business');
   return (
     <PageShell wide>
       <Breadcrumbs trail={[{ name: 'For business', path: '/business' }]} />
@@ -39,6 +46,8 @@ export default async function BusinessPage() {
             <Link href="/?claim" className="btn-ghost btn-lg">Claim your spot</Link>
           </div>
         </section>
+        <TrustStats />
+        <HowItWorks audience="business" />
         <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {FEATURES.map((f) => (
             <div key={f.title} className="surface p-6">
@@ -57,11 +66,29 @@ export default async function BusinessPage() {
           <div className="surface p-6 flex flex-col md:flex-row gap-4 md:items-center">
             <div className="flex-1">
               <h3 className="text-xl font-bold">Claim a landmark</h3>
-              <p className="muted text-sm mt-1">Find your organisation on the map, press “Claim it”, verify with an email at your company’s domain, and the plot becomes yours, with 3 months of the Brand plan included.</p>
+              <p className="muted text-sm mt-1">
+                {claimFree
+                  ? 'Find your organisation on the map, press “Claim it free”, verify with an email at your company’s domain (or a DNS record), and the plot becomes your verified page at once.'
+                  : 'Find your organisation on the map, press “Claim it”, verify with an email at your company’s domain, and the plot becomes yours, with 3 months of the Brand plan included.'}
+              </p>
             </div>
             <Link href="/explore?tab=showcase" className="btn-gold btn-lg">Find your landmark</Link>
           </div>
         </section>
+        {business && (
+          <section aria-labelledby="business-price" className="surface p-6 md:p-8 flex flex-col md:flex-row gap-4 md:items-center">
+            <div className="flex-1">
+              <h2 id="business-price" className="text-2xl font-bold">FlatMeta Business</h2>
+              <p className="muted mt-1">
+                {usd(business.month)}/month, or {usd(business.year)}/year (2 months free). {claimFree ? 'Your verified company page itself stays free.' : ''}
+              </p>
+              {plans?.launchOffer && <p className="text-sm text-[var(--color-gold)] mt-2">{plans.launchOffer}</p>}
+            </div>
+            <Link href="/pricing#business" className="btn-primary btn-lg">See what’s included</Link>
+          </section>
+        )}
+        <Faq claimFree={claimFree} />
+        <PaymentTrust />
       </div>
     </PageShell>
   );

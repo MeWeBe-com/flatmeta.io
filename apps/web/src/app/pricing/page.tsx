@@ -5,6 +5,7 @@ import { Breadcrumbs } from '@/lib/seo';
 import { serverApi } from '@/lib/server-api';
 import { PricingClient, type Plans } from './pricing-client';
 import { PricingLoader } from './pricing-loader';
+import { Faq, HowItWorks, PaymentTrust, TrustStats } from '@/components/trust';
 
 export const metadata: Metadata = {
   title: 'Pricing',
@@ -23,6 +24,11 @@ export default async function PricingPage() {
           <p className="muted mt-4 text-lg">Play for free forever. Pay for more land, more reach and business tools. Never for XP.</p>
         </div>
         {data ? <PricingClient data={data} /> : <PricingLoader />}
+        {/* GL3c: what buyers check before paying. */}
+        <PaymentTrust />
+        <TrustStats />
+        <HowItWorks audience="everyone" />
+        <Faq claimFree={(data?.landmarkPriceCents ?? 0) === 0} />
       </div>
     </PageShell>
   );

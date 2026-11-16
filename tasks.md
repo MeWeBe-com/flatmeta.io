@@ -203,7 +203,15 @@ Goal: live on its own domain, scoring 9/10 from every role, taking payments, pro
     - Done: the leaderboard skips its empty-board marker (it reached `users.id IN ('__empty__')`, a uuid error, so 500); open houses answer reserved company plots with an empty list instead of 404, still 404 for hidden plots. Test: `apps/api/test/golive-regressions.test.ts`.
   - [x] **GL3b** Claim-and-upgrade path: "Claim this company plot (free)" on every reserved page, post-verification upsell to Business, launch offer on /pricing (from config)
     - Done: `COMPANY_CLAIM_PRICE_CENTS` (default 0 = free). Verified staff (work email or DNS) get the reserved plot as their organisation's verified page at once; no plan is given away. The paid Landmark ($990 incl. 3 months of Brand) is one `.env` value away. Company pages say "Claim it free"; the claim wizard says the claim is free and opens the editor, where a Business upsell shows the price, the features and `LAUNCH_OFFER` (a Stripe promotion code; Checkout already accepts codes). /pricing shows the launch offer and "Claim your company's page: Free". Tests: free and paid claim in `apps/api/test/golive-regressions.test.ts`.
-  - [ ] **GL3c** Trust block on /pricing and /business: real counts, How it works, FAQ (+ FAQPage JSON-LD), secure payments line, support email, yearly saving in money
+  - [x] **GL3c** Trust block on /pricing and /business: real counts, How it works, FAQ (+ FAQPage JSON-LD), secure payments line, support email, yearly saving in money
+    - Done: `components/trust.tsx` on /pricing and /business:
+      - real counts from `/v1/world/stats` (company pages reserved, plots by people, countries), never invented;
+      - How it works in 3 steps (a business version and an everyone version);
+      - 6 FAQs that state the real policy (not crypto or NFT, what a business gets, reserved company pages, cancel, refunds matching /legal/refunds, payment security), as FAQPage JSON-LD too;
+      - secure checkout (only when payments are on), cancel any time, a refunds link and a mailto support line;
+      - the yearly saving in money on every plan.
+
+      /business shows the Business price and the launch offer. Tests: `unit/trust.test.ts`, e2e `golive-trust.spec.ts`.
   - [ ] **GL3d** Living-world feel: hide stale Live activity (> 7 days) behind a "be the first" prompt; on phones the location prompt waits for the tour
   - [ ] **GL3z** Round 2: re-run the GL2 panel against the new build; append "Round 2 scores" with evidence
 - [ ] **GL4** Payments: Stripe (checkout, portal, signed webhooks, plans/prices from config, test-mode e2e; one account named "FlatMeta" inside the boss's Organisation; keys from .env only), PayPal Checkout (sandbox first), every external API key from .env named "FlatMeta-<Service>"
