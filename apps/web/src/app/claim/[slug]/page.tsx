@@ -24,7 +24,7 @@ export default async function ClaimPage({ params, searchParams }: Props) {
           <h1 className="text-3xl md:text-5xl font-bold">{d.plot.showcase?.brand ?? d.plot.title}</h1>
           <p className="muted mt-2">This showcase plot is a sample. It isn’t created, endorsed or affiliated with {d.plot.showcase?.brand}. Claim it for your organisation, or ask us to remove it.</p>
         </div>
-        <ClaimWizard plot={d.plot} takedown={sp.takedown === '1'} requestId={sp.request ?? null} landmarkCents={plans?.landmarkPriceCents ?? 99000} />
+        <ClaimWizard plot={d.plot} takedown={sp.takedown === '1'} requestId={sp.request ?? null} landmarkCents={plans?.landmarkPriceCents ?? 0} />
       </div>
     </PageShell>
   );

@@ -11,7 +11,8 @@ import { badRequest, notFound } from '../lib/errors.js';
 import { stripText } from '../lib/markdown.js';
 import { consumeCode, issueCode } from './auth.js';
 import { loadPlot } from './plots.js';
-import { emailMatchesWebsite, landmarkCheckout, registrableDomain, verifiedOrgFor } from '../services/showcase-claim.js';
+import { completeFreeClaim, emailMatchesWebsite, landmarkCheckout, registrableDomain, verifiedOrgFor } from '../services/showcase-claim.js';
+import { claimPriceCents } from '../lib/pricing.js';
 import { dnsRecordFor, domainHasToken, newDnsToken } from '../services/dns-verify.js';
 
 export default async function showcaseRoutes(app: App) {
@@ -66,6 +67,12 @@ export default async function showcaseRoutes(app: App) {
         const orgId = await verifiedOrgFor(user, request.orgName, plot!.showcase!.website);
         await db.update(schema.claimRequests).set({ status: 'verified', orgId, updatedAt: new Date() }).where(eq(schema.claimRequests.id, request.id));
       }
+      // GL3b: a free claim completes at once: the plot is the organisation's verified page, and the editor offers Business.
+      if (claimPriceCents() === 0) {
+        const done = await completeFreeClaim(user, request.id);
+        await quietly(emailAdmins(templates.adminClaimLead(request.orgName, request.email, (await loadPlot(request.plotId))?.title ?? 'a showcase plot')));
+        return { status: 'completed', redirect: done.redirect };
+      }
       if (!paidCheckout()) {
         // Launch without payments: a verified claim is a lead. The team follows up; the claim page can finish it later.
         const plot = await loadPlot(request.plotId);
@@ -116,6 +123,11 @@ export default async function showcaseRoutes(app: App) {
         const orgId = await verifiedOrgFor(user, request.orgName, plot.showcase.website);
         await db.update(schema.claimRequests).set({ status: 'verified', orgId, updatedAt: new Date() }).where(eq(schema.claimRequests.id, request.id));
       }
+      if (claimPriceCents() === 0) {
+        const done = await completeFreeClaim(user, request.id);
+        await quietly(emailAdmins(templates.adminClaimLead(request.orgName, request.email, plot.title)));
+        return { status: 'completed', redirect: done.redirect };
+      }
       if (!paidCheckout()) {
         await quietly(emailAdmins(templates.adminClaimLead(request.orgName, request.email, plot.title)));
         return { status: 'verified', comingSoon: true, message: 'Verified. Brand checkout opens soon: we’ve saved your claim and will email you as soon as you can complete it.' };
@@ -127,6 +139,7 @@ export default async function showcaseRoutes(app: App) {
 
   app.post('/v1/showcase/claim/:id/checkout', { schema: { tags: ['showcase'], summary: 'Checkout for an approved claim', params: z.object({ id: z.uuid() }) } }, async (req) => {
     const user = requireUser(req);
+    if (claimPriceCents() === 0) return completeFreeClaim(user, req.params.id).then((d) => ({ status: 'completed', redirect: d.redirect }));
     const checkout = await landmarkCheckout(user, req.params.id);
     return { checkoutUrl: checkout.url, orderId: checkout.orderId };
   });

@@ -104,12 +104,13 @@ function Editor() {
         <div className="rounded-2xl p-5 bg-gradient-to-r from-[rgb(45_226_196/.15)] to-[rgb(139_124_255/.15)] border border-[rgb(45_226_196/.3)] flex items-center gap-4 animate-rise">
           <PartyPopper className="text-[var(--color-gold)] shrink-0" />
           <div>
-            <div className="font-bold">{welcome === 'landmark' ? 'Your Landmark is verified and yours!' : 'Welcome to your new plot!'}</div>
+            <div className="font-bold">{welcome === 'landmark' ? 'Your Landmark is verified and yours!' : welcome === 'claimed' ? 'Your company page is verified and yours!' : 'Welcome to your new plot!'}</div>
             <div className="text-sm muted">Let the AI Designer dress it up, then publish it to the world.</div>
           </div>
         </div>
       )}
-      {welcome && welcome !== 'landmark' && (
+      {welcome === 'claimed' && <ClaimedUpsell />}
+      {welcome && welcome !== 'landmark' && welcome !== 'claimed' && (
         // G11: the moment people are proudest of their land is the best moment to share it.
         <div className="surface p-5 space-y-3" role="region" aria-label="Share your new land">
           <div className="font-semibold">Tell your friends where you live on the map</div>
@@ -558,6 +559,37 @@ function CustomHtmlStatus({ plot, onRestored }: { plot: Plot; onRestored: (p: Pl
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+/**
+ * GL3b: right after a free company claim, the one moment the company is paying attention: what Business adds, the
+ * price, and the launch offer (LAUNCH_OFFER on the API) if there is one.
+ */
+function ClaimedUpsell() {
+  const [plans, setPlans] = useState<{ plans: { key: string; month: number; year: number; features: string[] }[]; launchOffer?: string | null } | null>(null);
+  useEffect(() => {
+    api<{ plans: { key: string; month: number; year: number; features: string[] }[]; launchOffer?: string | null }>('/billing/plans').then(setPlans).catch(() => undefined);
+  }, []);
+  const business = plans?.plans.find((p) => p.key === 'business');
+  return (
+    <div className="surface p-5 space-y-3 border-[var(--color-teal)]" role="region" aria-label="Upgrade to Business" data-testid="claimed-upsell">
+      <div className="flex flex-wrap items-baseline gap-2">
+        <Store size={18} className="text-[var(--color-teal)]" />
+        <div className="font-semibold">Make it work for your company: FlatMeta Business</div>
+        {business && <div className="text-sm muted">{usd(business.month)}/month, or {usd(business.year)}/year (2 months free)</div>}
+      </div>
+      {business && (
+        <ul className="grid sm:grid-cols-2 gap-1 text-sm muted list-disc pl-5">
+          {business.features.slice(0, 6).map((f) => <li key={f}>{f}</li>)}
+        </ul>
+      )}
+      {plans?.launchOffer && <p className="text-sm rounded-xl px-3 py-2 bg-[rgb(255_201_77/.1)] text-[var(--color-gold)]" data-testid="launch-offer">{plans.launchOffer}</p>}
+      <div className="flex flex-wrap gap-2">
+        <Link href="/pricing#business" className="btn-primary">See Business</Link>
+        <span className="text-xs muted self-center">Your verified page stays free either way. Cancel any time.</span>
+      </div>
     </div>
   );
 }

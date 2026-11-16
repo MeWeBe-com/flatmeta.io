@@ -63,6 +63,8 @@ export default async function PlotPage({ params }: Params) {
   if (!data) notFound();
   const p = data.plot;
   const nb = await serverApi<{ neighbours: Plot[]; nearby: Plot[] }>(`/plots/${p.id}/neighbours`).catch(() => null);
+  // GL3b: when claiming a reserved company plot is free, the button says so.
+  const claimFree = p.showcase ? (await serverApi<{ landmarkPriceCents: number }>('/billing/plans', { auth: false, revalidate: 300 }).catch(() => null))?.landmarkPriceCents === 0 : false;
   const owner = p.owner;
   const hero = p.coverImageUrl;
 
@@ -140,7 +142,7 @@ export default async function PlotPage({ params }: Params) {
             </div>
             {/* M5: wraps (and fills the row) on phones; it used to widen the page to 448 px at 375. */}
             <div className="flex flex-wrap gap-2 md:shrink-0">
-              <Link href={`/claim/${p.slug}`} className="btn-gold flex-1 sm:flex-none">{t('plot.claimIt')}</Link>
+              <Link href={`/claim/${p.slug}`} className="btn-gold flex-1 sm:flex-none">{t(claimFree ? 'plot.claimItFree' : 'plot.claimIt')}</Link>
               <Link href={`/claim/${p.slug}?takedown=1`} className="btn-ghost flex-1 sm:flex-none">{t('plot.requestRemoval')}</Link>
             </div>
           </div>

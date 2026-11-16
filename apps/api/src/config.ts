@@ -117,6 +117,12 @@ const schema = z.object({
   COMPANY_NAME: z.string().default('MeWeBe'),
   COMPANY_COUNTRY: z.string().default('United Kingdom'),
   CONTACT_EMAIL: z.string().default(''),
+  // GL3b: what claiming a reserved company plot costs. 0 = free: verified staff get the page at once and are offered
+  // Business. Set to 99000 for the one-time Landmark ($990, includes 3 months of Brand).
+  COMPANY_CLAIM_PRICE_CENTS: z.coerce.number().int().min(0).default(0),
+  // GL3b: a launch offer shown on /pricing and after a claim (plain text, e.g. "Founding companies: 50% off the first
+  // year of Business with code FOUNDING50"). The code itself is a Stripe promotion code (Checkout accepts codes).
+  LAUNCH_OFFER: z.string().default(''),
 
   AI_TEXT_PROVIDER: z.enum(['anthropic', 'openai', 'gemini', 'heuristic', '']).optional(),
   ANTHROPIC_API_KEY: optional,

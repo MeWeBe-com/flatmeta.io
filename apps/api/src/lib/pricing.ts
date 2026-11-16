@@ -1,3 +1,4 @@
+import { config } from '../config.js';
 import { CITIES } from '../data/cities.js';
 import { countryAt, haversineKm, nearestCity } from './geo.js';
 import { type Rect, cellToLngLat, rectCells, rectCenter, rectHeight, rectWidth } from './grid.js';
@@ -32,6 +33,8 @@ export const UPGRADES = {
 export type UpgradeKind = keyof typeof UPGRADES;
 
 export const LANDMARK_PRICE_CENTS = 99000;
+/** GL3b: the price of claiming a reserved company plot right now (0 = a free claim; see COMPANY_CLAIM_PRICE_CENTS). */
+export const claimPriceCents = () => config.COMPANY_CLAIM_PRICE_CENTS;
 export const MIN_CHARGE_CENTS = 200;
 export const HOMESTEAD_MAX_CELLS = 4;
 

@@ -17,6 +17,8 @@ export interface Plans {
   tiers: { tier: string; label: string; priceCents: number; description: string }[];
   upgrades: { key: string; label: string; priceCents: number }[];
   landmarkPriceCents: number;
+  /** GL3b: an optional launch offer (LAUNCH_OFFER on the API). */
+  launchOffer?: string | null;
 }
 
 export function PricingClient({ data }: { data: Plans }) {
@@ -55,13 +57,16 @@ export function PricingClient({ data }: { data: Plans }) {
           <button className={clsx('tap justify-center px-5 h-9 rounded-full', yearly && 'bg-white/10 font-semibold')} aria-pressed={yearly} onClick={() => setYearly(true)}>Yearly <span className="text-[var(--color-teal)] ml-1">· 2 months free</span></button>
         </div>
       </div>
+      {data.launchOffer && (
+        <p className="text-center rounded-2xl px-4 py-3 bg-[rgb(255_201_77/.1)] text-[var(--color-gold)] font-semibold" data-testid="launch-offer">{data.launchOffer}</p>
+      )}
       {/* minmax(0, 1fr): a long button label wraps inside its card instead of widening the page (M11). */}
       <div className="grid grid-cols-[minmax(0,1fr)] md:grid-cols-2 xl:grid-cols-4 gap-4">
         {data.plans.map((p) => {
           const price = yearly ? p.year / 12 : p.month;
           const highlight = p.key === 'business';
           return (
-            <div key={p.key} className={clsx('surface p-6 flex flex-col relative', highlight && 'border-[var(--color-teal)] shadow-[var(--shadow-teal)]')}>
+            <div key={p.key} id={p.key} className={clsx('surface p-6 flex flex-col relative scroll-mt-24', highlight && 'border-[var(--color-teal)] shadow-[var(--shadow-teal)]')}>
               {highlight && <span className="chip chip-teal absolute -top-3 left-6 bg-[var(--color-night)]">Most popular</span>}
               <div className="text-sm muted">{p.for}</div>
               <h3 className="text-2xl font-bold mt-1">{p.name}</h3>
@@ -124,8 +129,17 @@ export function PricingClient({ data }: { data: Plans }) {
               </div>
             ))}
             <div className="surface p-4 flex items-center justify-between border-[rgb(255_201_77/.4)]">
-              <span><span className="font-semibold">Landmark claim</span><span className="block text-xs muted">For verified organisations claiming their showcase plot. Includes 3 months of Brand.</span></span>
-              <span className="font-display font-bold text-[var(--color-gold)]">{usd(data.landmarkPriceCents)}</span>
+              {data.landmarkPriceCents === 0 ? (
+                <>
+                  <span><span className="font-semibold">Claim your company’s page</span><span className="block text-xs muted">Land is reserved for many companies next to their headquarters. Verified staff claim it free.</span></span>
+                  <Link href="/brands" className="font-display font-bold text-[var(--color-gold)] underline">Free</Link>
+                </>
+              ) : (
+                <>
+                  <span><span className="font-semibold">Landmark claim</span><span className="block text-xs muted">For verified organisations claiming their showcase plot. Includes 3 months of Brand.</span></span>
+                  <span className="font-display font-bold text-[var(--color-gold)]">{usd(data.landmarkPriceCents)}</span>
+                </>
+              )}
             </div>
           </div>
         </div>

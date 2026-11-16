@@ -8,7 +8,7 @@ import { config, paidCheckout, paymentsMock } from '../config.js';
 import { db, schema } from '../db/client.js';
 import { requireUser } from '../lib/auth.js';
 import { badRequest, forbidden, notFound } from '../lib/errors.js';
-import { DEFAULT_TIERS, LANDMARK_PRICE_CENTS, PLANS, SUBSCRIPTION_PRICES, UPGRADES } from '../lib/pricing.js';
+import { DEFAULT_TIERS, PLANS, SUBSCRIPTION_PRICES, UPGRADES, claimPriceCents } from '../lib/pricing.js';
 import { createCheckout, createSubscriptionCheckout, fulfilOrder, handleStripeEvent, mockSubscribe, portalUrl, stripe } from '../services/billing.js';
 import { getPrices } from '../services/plots.js';
 import { assertCanEditPlot, orgRole } from './views.js';
@@ -36,7 +36,8 @@ export default async function billingRoutes(app: App) {
       ],
       tiers: DEFAULT_TIERS.map((t) => ({ ...t, priceCents: prices[t.tier] })),
       upgrades: Object.entries(UPGRADES).map(([key, u]) => ({ key, label: u.label, priceCents: u.priceCents })),
-      landmarkPriceCents: LANDMARK_PRICE_CENTS,
+      landmarkPriceCents: claimPriceCents(),
+      launchOffer: config.LAUNCH_OFFER || null,
     };
   });
 

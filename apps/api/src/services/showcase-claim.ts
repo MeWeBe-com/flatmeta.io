@@ -4,7 +4,7 @@ import { getDomain } from 'tldts';
 import { db, schema } from '../db/client.js';
 import type { Order, User } from '../db/schema.js';
 import { badRequest, forbidden, notFound } from '../lib/errors.js';
-import { LANDMARK_PRICE_CENTS } from '../lib/pricing.js';
+import { claimPriceCents } from '../lib/pricing.js';
 import { uniqueSlug } from '../lib/slug.js';
 import { notify, publishActivity } from '../game/activity.js';
 import { unlock } from '../game/engine.js';
@@ -67,17 +67,39 @@ export async function landmarkCheckout(user: User, requestId: string) {
     orgId,
     kind: 'landmark',
     plotId: plot.id,
-    items: [{ type: 'landmark', description: `Landmark claim: ${plot.showcase!.brand} on FlatMeta (includes 3 months of Brand)`, amountCents: LANDMARK_PRICE_CENTS, meta: { claimRequestId: req.id } }],
+    items: [{ type: 'landmark', description: `Landmark claim: ${plot.showcase!.brand} on FlatMeta (includes 3 months of Brand)`, amountCents: claimPriceCents(), meta: { claimRequestId: req.id } }],
     successPath: `/dashboard/plots/${plot.id}?welcome=landmark`,
     cancelPath: `/claim/${plot.slug}`,
   });
 }
 
-/** Called when the Landmark order is paid: the showcase plot becomes the organisation's. */
+/** Called when the Landmark order is paid: the showcase plot becomes the organisation's (with 3 months of Brand). */
 export async function completeLandmarkClaim(order: Order) {
   const requestId = order.items[0]?.meta?.claimRequestId as string | undefined;
   if (!order.plotId || !order.orgId) return;
-  const [plot] = await db.select().from(schema.plots).where(eq(schema.plots.id, order.plotId));
+  await transferClaimedPlot({ plotId: order.plotId, orgId: order.orgId, userId: order.userId, requestId, grantBrand: true, key: `landmark-${order.id}` });
+}
+
+/**
+ * GL3b: a free claim (COMPANY_CLAIM_PRICE_CENTS=0). Once staff are verified the reserved plot becomes their
+ * organisation's verified page at once (no plan granted); the editor then offers Business.
+ */
+export async function completeFreeClaim(user: User, requestId: string) {
+  const [req] = await db.select().from(schema.claimRequests).where(eq(schema.claimRequests.id, requestId));
+  if (!req) throw notFound('Claim request');
+  if (req.userId !== user.id) throw forbidden();
+  if (req.status !== 'verified' && req.status !== 'approved') throw badRequest('This claim is not verified yet');
+  const [plot] = await db.select().from(schema.plots).where(eq(schema.plots.id, req.plotId));
+  if (!plot || plot.kind !== 'showcase' || plot.status !== 'showcase') throw badRequest('This showcase plot is no longer available');
+  const orgId = req.orgId ?? (await verifiedOrgFor(user, req.orgName, plot.showcase!.website));
+  await transferClaimedPlot({ plotId: plot.id, orgId, userId: user.id, requestId: req.id, grantBrand: false, key: `claim-${req.id}` });
+  return { plotId: plot.id, redirect: `/dashboard/plots/${plot.id}?welcome=claimed` };
+}
+
+async function transferClaimedPlot(o: { plotId: string; orgId: string; userId: string | null; requestId?: string; grantBrand: boolean; key: string }) {
+  const order = { plotId: o.plotId, orgId: o.orgId, userId: o.userId, id: o.key };
+  const requestId = o.requestId;
+  const [plot] = await db.select().from(schema.plots).where(eq(schema.plots.id, o.plotId));
   if (!plot || plot.kind !== 'showcase') return;
   const [updated] = await db
     .update(schema.plots)
@@ -96,13 +118,13 @@ export async function completeLandmarkClaim(order: Order) {
     .returning();
   await db
     .update(schema.organizations)
-    .set({ plan: 'brand', planUntil: new Date(Date.now() + BRAND_GRANT_DAYS * 86400_000), verifiedAt: new Date(), updatedAt: new Date() })
+    .set(o.grantBrand ? { plan: 'brand', planUntil: new Date(Date.now() + BRAND_GRANT_DAYS * 86400_000), verifiedAt: new Date(), updatedAt: new Date() } : { verifiedAt: new Date(), updatedAt: new Date() })
     .where(eq(schema.organizations.id, order.orgId));
   if (requestId) await db.update(schema.claimRequests).set({ status: 'completed', updatedAt: new Date() }).where(eq(schema.claimRequests.id, requestId));
   if (order.userId) {
     await unlock(order.userId, 'brand-verified');
     await notify(order.userId, 'landmark', { plotId: plot.id, title: updated?.title });
-    if (updated) await quietly(emailUser(order.userId, templates.landmarkReady(updated), { idempotencyKey: `landmark-${order.id}` }));
+    if (updated) await quietly(emailUser(order.userId, templates.landmarkReady(updated), { idempotencyKey: order.id }));
   }
   if (updated) {
     await afterClaim(updated, order.userId);

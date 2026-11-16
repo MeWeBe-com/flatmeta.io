@@ -12,6 +12,8 @@ import { useGame, useSession } from '@/components/providers';
 import { Spinner } from '@/components/ui';
 
 export function ClaimWizard({ plot, takedown, requestId: initialRequest, landmarkCents }: { plot: Plot; takedown: boolean; requestId: string | null; landmarkCents: number }) {
+  // GL3b: COMPANY_CLAIM_PRICE_CENTS=0 on the API: claiming is free and completes as soon as staff are verified.
+  const free = landmarkCents === 0;
   const brand = plot.showcase?.brand ?? plot.title;
   const domain = plot.showcase ? new URL(plot.showcase.website).hostname.replace(/^www\./, '') : '';
   const { me, openSignIn } = useSession();
@@ -53,7 +55,8 @@ export function ClaimWizard({ plot, takedown, requestId: initialRequest, landmar
     setBusy(true);
     setError(null);
     try {
-      const r = await post<{ checkoutUrl?: string; message?: string }>(`/showcase/claim/${requestId}/verify-dns`);
+      const r = await post<{ checkoutUrl?: string; message?: string; redirect?: string }>(`/showcase/claim/${requestId}/verify-dns`);
+      if (r.redirect) return void (window.location.href = r.redirect);
       if (r.checkoutUrl) return void (window.location.href = r.checkoutUrl);
       setMessage(r.message ?? 'Verified. We’ll email you when you can complete the claim.');
       setStep('review');
@@ -85,7 +88,9 @@ export function ClaimWizard({ plot, takedown, requestId: initialRequest, landmar
     setBusy(true);
     setError(null);
     try {
-      const r = await post<{ checkoutUrl?: string; message?: string }>('/showcase/claim/verify', { requestId, code: value });
+      const r = await post<{ checkoutUrl?: string; message?: string; redirect?: string }>('/showcase/claim/verify', { requestId, code: value });
+      // GL3b: a free claim is done at once: straight to the company's new page in the editor.
+      if (r.redirect) return void (window.location.href = r.redirect);
       if (r.checkoutUrl) return void (window.location.href = r.checkoutUrl);
       // Payments not open yet: the verified claim is saved and the team follows up.
       setMessage(r.message ?? 'Verified. We’ll email you when you can complete the claim.');
@@ -100,8 +105,8 @@ export function ClaimWizard({ plot, takedown, requestId: initialRequest, landmar
     if (!requestId) return;
     setBusy(true);
     try {
-      const r = await post<{ checkoutUrl: string }>(`/showcase/claim/${requestId}/checkout`);
-      window.location.href = r.checkoutUrl;
+      const r = await post<{ checkoutUrl?: string; redirect?: string }>(`/showcase/claim/${requestId}/checkout`);
+      window.location.href = r.redirect ?? r.checkoutUrl ?? `/p/${plot.slug}`;
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Not approved yet');
       setBusy(false);
@@ -132,12 +137,14 @@ export function ClaimWizard({ plot, takedown, requestId: initialRequest, landmar
             <h2 className="text-2xl font-bold">Make this landmark official</h2>
             <ol className="text-sm muted space-y-1 list-decimal pl-5">
               <li>Verify that you work at {brand} with an email at <b className="text-[var(--text)]">@{domain}</b>.</li>
-              {PAID_CHECKOUT ? (
+              {free ? (
+                <li>That’s it: claiming is <b className="text-[var(--text)]">free</b>. The plot becomes {brand}’s verified page straight away.</li>
+              ) : PAID_CHECKOUT ? (
                 <li>Pay the one-time Landmark price ({usd(landmarkCents)}, includes 3 months of the Brand plan).</li>
               ) : (
                 <li>We save your verified claim and contact you. Landmark checkout opens soon.</li>
               )}
-              <li>The plot moves to your verified organisation: edit it, invite your team, add more plots.</li>
+              <li>The plot moves to your verified organisation: edit it, invite your team, add more plots.{free ? ' Business (hours, offers, “Open now”, analytics) is optional.' : ''}</li>
             </ol>
             <div>
               <label className="label" htmlFor="c-email">Work email</label>
@@ -183,7 +190,7 @@ export function ClaimWizard({ plot, takedown, requestId: initialRequest, landmar
             <input className="input text-center font-display text-3xl tracking-[0.5em] h-16" inputMode="numeric" maxLength={6} value={code} onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 6); setCode(v); if (v.length === 6) void verify(v); }} aria-label="Verification code" />
             {devCode && <button className="text-xs text-[var(--color-gold)] underline" onClick={() => { setCode(devCode); void verify(devCode); }}>Dev mode: your code is {devCode}</button>}
             {error && <p className="text-sm text-[var(--color-coral)]">{error}</p>}
-            <button className="btn-gold btn-lg" disabled={busy || code.length !== 6} onClick={() => void verify()}>{busy && <Spinner />} {PAID_CHECKOUT ? 'Verify and continue to payment' : 'Verify my claim'}</button>
+            <button className="btn-gold btn-lg" disabled={busy || code.length !== 6} onClick={() => void verify()}>{busy && <Spinner />} {free ? 'Verify and claim (free)' : PAID_CHECKOUT ? 'Verify and continue to payment' : 'Verify my claim'}</button>
           </div>
         )}
 
@@ -235,7 +242,7 @@ export function ClaimWizard({ plot, takedown, requestId: initialRequest, landmar
           <div className="flex items-center gap-2 font-semibold"><ShieldAlert size={16} className="text-[var(--color-gold)]" /> Why verification?</div>
           <p className="muted">Showcase plots use real organisation names, so only verified staff can claim them. This protects brands from impersonation.</p>
           <div className="flex items-center gap-2 font-semibold pt-2"><Building2 size={16} className="text-[var(--color-teal)]" /> What you get</div>
-          <p className="muted">Verified badge, Landmark status, the Brand plan for 3 months, team seats and analytics.</p>
+          <p className="muted">{free ? 'A verified badge, Landmark status and your own editable company page, free. Business adds hours, offers, “Open now” on the map and analytics.' : 'Verified badge, Landmark status, the Brand plan for 3 months, team seats and analytics.'}</p>
         </div>
       </aside>
     </div>
