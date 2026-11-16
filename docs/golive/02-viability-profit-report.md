@@ -117,3 +117,61 @@ Evidence: `docs/golive/evidence/round1/` (`live/` and `staging/` screenshots, `a
 **Group 5, after launch (owner-led, tracked in the proof report):** outbound to reserved companies, the first 3 paying customers (logos and quotes, with permission), "Seen by AI" proof per plot, monthly owner reports.
 
 Round 2 scores are appended below after GL3.
+
+---
+
+## 6. Round 2 scores (16 Nov 2026, after GL3–GL9)
+
+**What was tested.** The same Playwright audit (11 pages, desktop 1440×900 and iPhone 12), the release smoke test, the new SEO checker and Lighthouse mobile. They ran against:
+- **staging**, which runs the new build: release `3b435f1`, deployed by CI run 43840928188 (green);
+- **production**, which still runs the old build, because its deploy path is a server step (Launch checklist step 1).
+
+**Evidence** is in `docs/golive/evidence/round2/`:
+- `staging/` and `live/`: screenshots and `audit.json`;
+- `staging-smoke.txt`;
+- `staging-seo-check.txt`;
+- `lighthouse/summary.json`.
+
+**Tests on the build:**
+- 207 API tests (1 skipped without a Stripe test key);
+- 76 web unit tests;
+- the full e2e suite locally, every project (desktop, mobile, matrix-chromium, matrix-webkit): 245 passed, 2 flaky that passed on retry and that are data races between parallel specs, unrelated to these changes, 45 skipped by design;
+- CI green on `3b435f1`.
+
+**What Round 2 found and fixed in the same round:**
+- **R2-1: React hydration error #418 on `/pricing`, `/business` and `/for/*` on staging.** Cloudflare's Email Obfuscation rewrites the support address in the HTML, so the HTML no longer matches what React rendered. Fixed with `components/email-text.tsx` (`<!--email_off-->`), used for the trust block, business emails on plot pages and the legal pages, with a unit test and an e2e check. The manual step to switch the setting off is in MANUAL-STEPS → Launch checklist step 4.
+- **R2-2:** `/pricing` heading order (plan `<h3>` without an `<h2>`). Fixed.
+- **Found by the GL8 SEO checker and fixed in GL8:** two `<h1>` elements on home, a short `/u/` description, and a duplicate "Claim free land" button.
+
+**Staging after the build, against Round 1:**
+
+| Check | Round 1 | Round 2 |
+|---|---|---|
+| Open houses on company pages | 404 console error | 0 errors (`/p/tesla`, desktop and phone) |
+| Weekly leaderboard | 500 console error | 0 errors |
+| Release smoke, staging | not run | 19/19 |
+| Health URL | none | `/api/v1/health` `ok:true` (db 3 ms, redis 2 ms) |
+| Lighthouse mobile, performance | `/business` 100, `/pricing` 100, `/p/tesla` 96 | `/business` 99, `/pricing` 100, `/p/tesla` 95, `/for/local-businesses` 99, `/compare/…` 98 |
+| Lighthouse best practices | 100 | 93 on the pages with the support email: R2-1, fixed after this measurement, staging re-measures on the next deploy |
+| Lighthouse accessibility | 94–96 | 94–100. The remaining item is the staging-only banner's contrast; production has no banner |
+| Lighthouse SEO, staging | 66–69 | 66–69: staging is `noindex` on purpose. The checker reports only `noindex` on staging pages |
+| Buyer pages | /pricing, /business | plus `/for/*` ×3 and `/compare/*` ×3, with FAQPage and BreadcrumbList |
+| Free company claim, upsell, launch offer | none | yes (GL3b) |
+| Trust block (real counts, FAQ, refunds, support) | none | yes (GL3c) |
+| PayPal, Stripe account check | none | built; waiting on the boss (GL4) |
+| Scheduled checks of the live site | none | 3 workflows; waiting on the default-branch switch (GL8) |
+
+**Production on 16 Nov, unchanged:** `/pricing` says "coming soon", `/insights` is 404, the leaderboards return 500, and `llms.txt` is the old "3D Virtual Land… Digital Twin" file. Everything above reaches production with Launch checklist steps 1–2: the server admin turns deploys on and re-renders nginx.
+
+| Role | Round 1 | Round 2 | Why (evidence) | What gets it to 9 (who) |
+|---|---|---|---|---|
+| Senior VC | 3 | **5** | The funnel now exists: free claim → verified page → Business upsell, launch offer, card + PayPal, 30 submission sites and outreach drafts. But revenue is still $0 and production has 1 user plot and 1 explorer (`live/audit.json`, `/api/v1/world/stats`). A VC scores traction, and there is none yet. | 3 paying customers and 50 claimed or published plots within 30 days of launch (owner, Sales agent drafts) |
+| CEO | 4 | **6** | Everything a CEO can't do alone is now a dated, owned step in MANUAL-STEPS. The weekly report and agents exist. But production still can't take money and shows the old site. | Launch checklist steps 1–4 done, and the first weekly report on the live build (server admin, boss) |
+| CTO | 7 | **8** | Health URL, error webhook, uptime worker, edge worker, scheduled QA/SEO/Lighthouse; CI green on `3b435f1`; staging deploys automatically. Minus: the production deploy path is still manual, and the schedules don't run until `v2` is the default branch. | `AUTO_DEPLOY=true` (or the CI secrets) and the default-branch switch (server admin, repo owner) |
+| Product Manager | 5 | **7** | The buyer journey is the hero path: "Claim it free" on every reserved page, verification, then the upsell. Landing pages for 3 buyers; a fresh-only Live panel and one prompt at a time. Minus: the world still feels empty on production. | ≥ 25 real plots in the first launch cities, from the outreach and submissions plan (owner, Marketing agent) |
+| Sales & Marketing Director | 3 | **7** | An offer (free claim + launch offer), proof from real numbers, an FAQ with refunds and cancel, fair comparisons, `03-growth-plan.md` (copy, 30 sites, 30-day calendar), a Sales agent with outreach drafts, and the mewebe.com listing. Minus: no customer proof yet, and nothing submitted until production runs the new build. | The first 10 submissions made and 2 customer stories with permission (owner) |
+| Solutions Architect | 7 | **8** | PayPal Orders v2 with server-side capture checks, the Stripe account and mode checks, an email DNS checker and plan, edge caching and resizing, error and uptime hooks, and the email obfuscation fix. Minus: mail still sends from mail.mewebe.net until the DNS records exist; PayPal and the Stripe webhook are not yet configured. | The GL5 DNS records, Stripe webhook and PayPal app (boss, Fahad) |
+| Lead Developer | 8 | **9** | 207 API + 76 web unit + ~290 e2e tests, green CI, expand-only migrations, every GL change tested. Round 2's own hydration regression was found by measurement and fixed with a test the same day. No known open bug in the code. | — |
+| QA Lead | 6 | **8** | A staging smoke of 19/19, the full suite locally, the device matrix, and three scheduled workflows plus a QA agent. Round 2 found a real regression (R2-1) and it is fixed. Minus: production is still untested on the new build, and the schedules aren't running yet. | The production smoke test (Launch checklist step 7) passing, and the daily workflows running (server admin, repo owner) |
+
+**Average 7.3/10 (Round 1: 5.4).** Lead Developer reaches 9. Each remaining gap needs a person: deploys, keys, DNS, the default branch, customers. Those steps are in `MANUAL-STEPS.md`, and none of them needs more code. Scores were not raised for work that isn't live: production is still the old build, so VC, CEO and QA stay below 9 until it isn't.

@@ -1,0 +1,98 @@
+[
+ {
+  "page": "staging-",
+  "url": "https://staging.flatmeta.io/",
+  "error": null,
+  "scores": {
+   "performance": 64,
+   "accessibility": 100,
+   "best-practices": 100,
+   "seo": 66
+  },
+  "lcp_ms": 1504,
+  "tbt_ms": 11207,
+  "cls": 0,
+  "benchmarkIndex": 2270.5,
+  "fetchTime": "2026-11-16T10:17:55.005Z"
+ },
+ {
+  "page": "staging-business",
+  "url": "https://staging.flatmeta.io/business",
+  "error": null,
+  "scores": {
+   "performance": 99,
+   "accessibility": 96,
+   "best-practices": 93,
+   "seo": 69
+  },
+  "lcp_ms": 1882,
+  "tbt_ms": 85,
+  "cls": 0,
+  "benchmarkIndex": 2351.5,
+  "fetchTime": "2026-11-16T10:18:12.158Z"
+ },
+ {
+  "page": "staging-compare-google-business-profile",
+  "url": "https://staging.flatmeta.io/compare/google-business-profile",
+  "error": null,
+  "scores": {
+   "performance": 98,
+   "accessibility": 100,
+   "best-practices": 100,
+   "seo": 66
+  },
+  "lcp_ms": 1544,
+  "tbt_ms": 151,
+  "cls": 0,
+  "benchmarkIndex": 2280,
+  "fetchTime": "2026-11-16T10:19:06.653Z"
+ },
+ {
+  "page": "staging-for-local-businesses",
+  "url": "https://staging.flatmeta.io/for/local-businesses",
+  "error": null,
+  "scores": {
+   "performance": 99,
+   "accessibility": 95,
+   "best-practices": 93,
+   "seo": 66
+  },
+  "lcp_ms": 2040,
+  "tbt_ms": 61,
+  "cls": 0,
+  "benchmarkIndex": 2582,
+  "fetchTime": "2026-11-16T10:18:53.500Z"
+ },
+ {
+  "page": "staging-p-tesla",
+  "url": "https://staging.flatmeta.io/p/tesla",
+  "error": null,
+  "scores": {
+   "performance": 95,
+   "accessibility": 96,
+   "best-practices": 100,
+   "seo": 69
+  },
+  "lcp_ms": 2277,
+  "tbt_ms": 191,
+  "cls": 0,
+  "benchmarkIndex": 2359,
+  "fetchTime": "2026-11-16T10:18:25.922Z"
+ },
+ {
+  "page": "staging-pricing",
+  "url": "https://staging.flatmeta.io/pricing",
+  "error": null,
+  "scores": {
+   "performance": 100,
+   "accessibility": 94,
+   "best-practices": 93,
+   "seo": 66
+  },
+  "lcp_ms": 1811,
+  "tbt_ms": 51,
+  "cls": 0,
+  "benchmarkIndex": 2259,
+  "fetchTime": "2026-11-16T10:18:40.407Z"
+ }
+]

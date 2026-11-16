@@ -1,0 +1,426 @@
+[
+ {
+  "label": "desktop",
+  "path": "/",
+  "status": 200,
+  "loadMs": 2228,
+  "errors": 0,
+  "firstError": "",
+  "title": "FlatMeta · The world map you can own a piece of",
+  "h1": "The world map you can own a piece of",
+  "hscroll": false,
+  "ctas": [
+   "Sign in",
+   "Sign in",
+   "Claim a plot",
+   "Claim land",
+   "Claim free land",
+   "United AirlinesReserved for its company · unclaimed1,003 km"
+  ],
+  "comingSoon": false,
+  "words": 149
+ },
+ {
+  "label": "desktop",
+  "path": "/pricing",
+  "status": 200,
+  "loadMs": 920,
+  "errors": 2,
+  "firstError": "Loading the script 'https://staging.flatmeta.io/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js' violates",
+  "title": "Pricing · FlatMeta",
+  "h1": "Simple, fair pricing",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Yearly · 2 months free",
+   "Claim your first plot",
+   "Get Plus",
+   "Get Business for my organisation"
+  ],
+  "comingSoon": true,
+  "words": 519
+ },
+ {
+  "label": "desktop",
+  "path": "/business",
+  "status": 200,
+  "loadMs": 422,
+  "errors": 2,
+  "firstError": "Loading the script 'https://staging.flatmeta.io/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js' violates",
+  "title": "FlatMeta for business and brands",
+  "h1": "Be the place people and AI find on the map",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Claim your spot",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 692
+ },
+ {
+  "label": "desktop",
+  "path": "/brands",
+  "status": 200,
+  "loadMs": 448,
+  "errors": 0,
+  "firstError": "",
+  "title": "Companies on FlatMeta",
+  "h1": "Companies on FlatMeta",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "ALAlfa LavalIndustry · Copenhagen · 🇸🇪Reserved · not affiliated with FlatMeta",
+   "AMAmcorIndustry · Zurich · 🇨🇭Reserved · not affiliated with FlatMeta",
+   "ACAmorepacific CorporationIndustry · Seoul · 🇰🇷Reserved · not affiliated with FlatMeta",
+   "AAAssa AbloyIndustry · Stockholm · 🇸🇪Reserved · not affiliated with FlatMeta"
+  ],
+  "comingSoon": false,
+  "words": 910
+ },
+ {
+  "label": "desktop",
+  "path": "/explore",
+  "status": 200,
+  "loadMs": 480,
+  "errors": 0,
+  "firstError": "",
+  "title": "Explore plots · FlatMeta",
+  "h1": "Explore the living map",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 530
+ },
+ {
+  "label": "desktop",
+  "path": "/p/tesla",
+  "status": 200,
+  "loadMs": 377,
+  "errors": 0,
+  "firstError": "",
+  "title": "Tesla on FlatMeta · Fremont, USA",
+  "h1": "Tesla",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Is this your organisation? Claim it",
+   "Claim it",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 329
+ },
+ {
+  "label": "desktop",
+  "path": "/about",
+  "status": 200,
+  "loadMs": 319,
+  "errors": 0,
+  "firstError": "",
+  "title": "About FlatMeta",
+  "h1": "How FlatMeta works",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 304
+ },
+ {
+  "label": "desktop",
+  "path": "/insights",
+  "status": 200,
+  "loadMs": 306,
+  "errors": 0,
+  "firstError": "",
+  "title": "Insights · FlatMeta",
+  "h1": "Insights",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 103
+ },
+ {
+  "label": "desktop",
+  "path": "/login",
+  "status": 200,
+  "loadMs": 332,
+  "errors": 0,
+  "firstError": "",
+  "title": "FlatMeta · The world map you can own a piece of",
+  "h1": "",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 112
+ },
+ {
+  "label": "desktop",
+  "path": "/leaderboards",
+  "status": 200,
+  "loadMs": 371,
+  "errors": 0,
+  "firstError": "",
+  "title": "Leaderboards · FlatMeta",
+  "h1": "Leaderboards",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "My country",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 117
+ },
+ {
+  "label": "desktop",
+  "path": "/marketplace",
+  "status": 200,
+  "loadMs": 352,
+  "errors": 0,
+  "firstError": "",
+  "title": "Marketplace · FlatMeta",
+  "h1": "The marketplace",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 773
+ },
+ {
+  "label": "phone",
+  "path": "/",
+  "status": 200,
+  "loadMs": 796,
+  "errors": 0,
+  "firstError": "",
+  "title": "FlatMeta · The world map you can own a piece of",
+  "h1": "The world map you can own a piece of",
+  "hscroll": false,
+  "ctas": [
+   "Sign in",
+   "Sign in",
+   "Claim a plot",
+   "Claim land",
+   "Claim free land",
+   "United AirlinesReserved for its company · unclaimed1,003 km"
+  ],
+  "comingSoon": false,
+  "words": 29
+ },
+ {
+  "label": "phone",
+  "path": "/pricing",
+  "status": 200,
+  "loadMs": 361,
+  "errors": 2,
+  "firstError": "Loading the script 'https://staging.flatmeta.io/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js' violates",
+  "title": "Pricing · FlatMeta",
+  "h1": "Simple, fair pricing",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Yearly · 2 months free",
+   "Claim your first plot",
+   "Get Plus",
+   "Get Business for my organisation"
+  ],
+  "comingSoon": true,
+  "words": 508
+ },
+ {
+  "label": "phone",
+  "path": "/business",
+  "status": 200,
+  "loadMs": 334,
+  "errors": 2,
+  "firstError": "Loading the script 'https://staging.flatmeta.io/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js' violates",
+  "title": "FlatMeta for business and brands",
+  "h1": "Be the place people and AI find on the map",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Claim your spot",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 681
+ },
+ {
+  "label": "phone",
+  "path": "/brands",
+  "status": 200,
+  "loadMs": 364,
+  "errors": 0,
+  "firstError": "",
+  "title": "Companies on FlatMeta",
+  "h1": "Companies on FlatMeta",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "ALAlfa LavalIndustry · Copenhagen · 🇸🇪Reserved · not affiliated with FlatMeta",
+   "AMAmcorIndustry · Zurich · 🇨🇭Reserved · not affiliated with FlatMeta",
+   "ACAmorepacific CorporationIndustry · Seoul · 🇰🇷Reserved · not affiliated with FlatMeta",
+   "AAAssa AbloyIndustry · Stockholm · 🇸🇪Reserved · not affiliated with FlatMeta"
+  ],
+  "comingSoon": false,
+  "words": 899
+ },
+ {
+  "label": "phone",
+  "path": "/explore",
+  "status": 200,
+  "loadMs": 334,
+  "errors": 0,
+  "firstError": "",
+  "title": "Explore plots · FlatMeta",
+  "h1": "Explore the living map",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 519
+ },
+ {
+  "label": "phone",
+  "path": "/p/tesla",
+  "status": 200,
+  "loadMs": 295,
+  "errors": 0,
+  "firstError": "",
+  "title": "Tesla on FlatMeta · Fremont, USA",
+  "h1": "Tesla",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Is this your organisation? Claim it",
+   "Claim it",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 313
+ },
+ {
+  "label": "phone",
+  "path": "/about",
+  "status": 200,
+  "loadMs": 232,
+  "errors": 0,
+  "firstError": "",
+  "title": "About FlatMeta",
+  "h1": "How FlatMeta works",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 293
+ },
+ {
+  "label": "phone",
+  "path": "/insights",
+  "status": 200,
+  "loadMs": 216,
+  "errors": 0,
+  "firstError": "",
+  "title": "Insights · FlatMeta",
+  "h1": "Insights",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 92
+ },
+ {
+  "label": "phone",
+  "path": "/login",
+  "status": 200,
+  "loadMs": 242,
+  "errors": 0,
+  "firstError": "",
+  "title": "FlatMeta · The world map you can own a piece of",
+  "h1": "",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 101
+ },
+ {
+  "label": "phone",
+  "path": "/leaderboards",
+  "status": 200,
+  "loadMs": 288,
+  "errors": 0,
+  "firstError": "",
+  "title": "Leaderboards · FlatMeta",
+  "h1": "Leaderboards",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "My country",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 106
+ },
+ {
+  "label": "phone",
+  "path": "/marketplace",
+  "status": 200,
+  "loadMs": 309,
+  "errors": 0,
+  "firstError": "",
+  "title": "Marketplace · FlatMeta",
+  "h1": "The marketplace",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 762
+ }
+]

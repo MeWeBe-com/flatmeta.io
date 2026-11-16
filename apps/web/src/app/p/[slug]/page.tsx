@@ -1,3 +1,4 @@
+import { EmailText } from '@/components/email-text';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -190,7 +191,7 @@ export default async function PlotPage({ params }: Params) {
                   <h2 className="text-lg font-bold mb-2">Visit</h2>
                   {p.business.address && <p className="flex gap-2"><MapPin size={16} className="muted shrink-0 mt-0.5" /> {p.business.address}</p>}
                   {p.business.phone && <p className="flex gap-2"><Phone size={16} className="muted" /> <a href={`tel:${p.business.phone}`} className="underline">{p.business.phone}</a></p>}
-                  {p.business.email && <p className="flex gap-2"><Mail size={16} className="muted" /> <a href={`mailto:${p.business.email}`} className="underline">{p.business.email}</a></p>}
+                  {p.business.email && <p className="flex gap-2"><Mail size={16} className="muted" /> <EmailText text={p.business.email} link /></p>}
                   {p.business.bookingUrl && <a href={p.business.bookingUrl} className="btn-ghost mt-2" target="_blank" rel="noopener nofollow"><CalendarCheck size={16} /> Book</a>}
                   {p.business.offer && <p className="rounded-xl p-3 bg-[rgb(255_201_77/.1)] text-[var(--color-gold)] font-semibold">🎁 {p.business.offer}</p>}
                 </div>

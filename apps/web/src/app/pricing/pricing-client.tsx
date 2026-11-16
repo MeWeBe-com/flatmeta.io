@@ -60,6 +60,8 @@ export function PricingClient({ data }: { data: Plans }) {
       {data.launchOffer && (
         <p className="text-center rounded-2xl px-4 py-3 bg-[rgb(255_201_77/.1)] text-[var(--color-gold)] font-semibold" data-testid="launch-offer">{data.launchOffer}</p>
       )}
+      {/* GL3z: the plan cards' <h3> names sit under an <h2> (Lighthouse heading-order). */}
+      <h2 className="sr-only">Plans</h2>
       {/* minmax(0, 1fr): a long button label wraps inside its card instead of widening the page (M11). */}
       <div className="grid grid-cols-[minmax(0,1fr)] md:grid-cols-2 xl:grid-cols-4 gap-4">
         {data.plans.map((p) => {

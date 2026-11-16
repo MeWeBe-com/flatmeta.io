@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { BadgeCheck, CreditCard, Mail, MapPinned, ShieldCheck, Sparkles } from 'lucide-react';
 import { CONTACT_EMAIL, FREE_LAND_CELLS, PAID_CHECKOUT } from '@/lib/config';
 import { JsonLd } from '@/lib/seo';
+import { EmailText } from '@/components/email-text';
 import { serverApi } from '@/lib/server-api';
 
 /**
@@ -134,9 +135,7 @@ export function PaymentTrust() {
       </span>
       <span className="inline-flex items-center gap-2">
         <Mail size={16} className="text-[var(--color-teal)]" /> Questions?{' '}
-        <a className="underline" href={`mailto:${CONTACT_EMAIL}`} data-inline-link>
-          {CONTACT_EMAIL}
-        </a>
+        <EmailText text={CONTACT_EMAIL} link />
       </span>
     </section>
   );

@@ -1,0 +1,424 @@
+[
+ {
+  "label": "desktop",
+  "path": "/",
+  "status": 200,
+  "loadMs": 1488,
+  "errors": 0,
+  "firstError": "",
+  "title": "FlatMeta · The world map you can own a piece of",
+  "h1": "The world map you can own a piece of",
+  "hscroll": false,
+  "ctas": [
+   "Sign in",
+   "Sign in",
+   "Claim land",
+   "Claim free land"
+  ],
+  "comingSoon": false,
+  "words": 156
+ },
+ {
+  "label": "desktop",
+  "path": "/pricing",
+  "status": 200,
+  "loadMs": 358,
+  "errors": 0,
+  "firstError": "",
+  "title": "Pricing · FlatMeta",
+  "h1": "Simple, fair pricing",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Yearly · 2 months free",
+   "Claim your free plot",
+   "Get Plus",
+   "Get Business for my organisation"
+  ],
+  "comingSoon": true,
+  "words": 337
+ },
+ {
+  "label": "desktop",
+  "path": "/business",
+  "status": 200,
+  "loadMs": 298,
+  "errors": 0,
+  "firstError": "",
+  "title": "FlatMeta for business and brands · FlatMeta",
+  "h1": "Be the place people and AI find on the map",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Claim your spot",
+   "Showcase🇦🇺CanvaSurry Hills' design studio, turning blank pages into play 0 3Sydney",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 485
+ },
+ {
+  "label": "desktop",
+  "path": "/brands",
+  "status": 200,
+  "loadMs": 446,
+  "errors": 0,
+  "firstError": "",
+  "title": "Companies on FlatMeta · FlatMeta",
+  "h1": "Companies on FlatMeta",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Alfa LavalIndustry · Copenhagen · 🇸🇪Reserved · not affiliated with FlatMeta",
+   "AmcorIndustry · Zurich · 🇨🇭Reserved · not affiliated with FlatMeta",
+   "América MóvilIndustry · Mexico City · 🇲🇽Reserved · not affiliated with FlatMeta",
+   "Amorepacific CorporationIndustry · Seoul · 🇰🇷Reserved · not affiliated with FlatMeta"
+  ],
+  "comingSoon": false,
+  "words": 843
+ },
+ {
+  "label": "desktop",
+  "path": "/explore",
+  "status": 200,
+  "loadMs": 610,
+  "errors": 0,
+  "firstError": "",
+  "title": "Explore plots · FlatMeta",
+  "h1": "Explore the living map",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 501
+ },
+ {
+  "label": "desktop",
+  "path": "/p/tesla",
+  "status": 200,
+  "loadMs": 736,
+  "errors": 1,
+  "firstError": "Failed to load resource: the server responded with a status of 404 ()",
+  "title": "Tesla on FlatMeta in United States of America · FlatMeta",
+  "h1": "Tesla",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Is this your organisation? Claim it",
+   "Claim it",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 322
+ },
+ {
+  "label": "desktop",
+  "path": "/about",
+  "status": 200,
+  "loadMs": 289,
+  "errors": 0,
+  "firstError": "",
+  "title": "About FlatMeta · FlatMeta",
+  "h1": "How FlatMeta works",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 289
+ },
+ {
+  "label": "desktop",
+  "path": "/insights",
+  "status": 404,
+  "loadMs": 246,
+  "errors": 1,
+  "firstError": "Failed to load resource: the server responded with a status of 404 ()",
+  "title": "FlatMeta · The world map you can own a piece of",
+  "h1": "",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 82
+ },
+ {
+  "label": "desktop",
+  "path": "/login",
+  "status": 200,
+  "loadMs": 245,
+  "errors": 0,
+  "firstError": "",
+  "title": "FlatMeta · The world map you can own a piece of",
+  "h1": "",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 97
+ },
+ {
+  "label": "desktop",
+  "path": "/leaderboards",
+  "status": 200,
+  "loadMs": 322,
+  "errors": 1,
+  "firstError": "Failed to load resource: the server responded with a status of 500 ()",
+  "title": "Leaderboards · FlatMeta",
+  "h1": "Leaderboards",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "My country",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 102
+ },
+ {
+  "label": "desktop",
+  "path": "/marketplace",
+  "status": 200,
+  "loadMs": 325,
+  "errors": 0,
+  "firstError": "",
+  "title": "Marketplace · FlatMeta",
+  "h1": "The marketplace",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 758
+ },
+ {
+  "label": "phone",
+  "path": "/",
+  "status": 200,
+  "loadMs": 994,
+  "errors": 0,
+  "firstError": "",
+  "title": "FlatMeta · The world map you can own a piece of",
+  "h1": "The world map you can own a piece of",
+  "hscroll": false,
+  "ctas": [
+   "Sign in",
+   "Sign in",
+   "Claim land",
+   "Claim free land"
+  ],
+  "comingSoon": false,
+  "words": 87
+ },
+ {
+  "label": "phone",
+  "path": "/pricing",
+  "status": 200,
+  "loadMs": 331,
+  "errors": 0,
+  "firstError": "",
+  "title": "Pricing · FlatMeta",
+  "h1": "Simple, fair pricing",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Yearly · 2 months free",
+   "Claim your free plot",
+   "Get Plus",
+   "Get Business for my organisation"
+  ],
+  "comingSoon": true,
+  "words": 329
+ },
+ {
+  "label": "phone",
+  "path": "/business",
+  "status": 200,
+  "loadMs": 297,
+  "errors": 0,
+  "firstError": "",
+  "title": "FlatMeta for business and brands · FlatMeta",
+  "h1": "Be the place people and AI find on the map",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Claim your spot",
+   "Showcase🇦🇺CanvaSurry Hills' design studio, turning blank pages into play 0 3Sydney",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 477
+ },
+ {
+  "label": "phone",
+  "path": "/brands",
+  "status": 200,
+  "loadMs": 335,
+  "errors": 0,
+  "firstError": "",
+  "title": "Companies on FlatMeta · FlatMeta",
+  "h1": "Companies on FlatMeta",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Alfa LavalIndustry · Copenhagen · 🇸🇪Reserved · not affiliated with FlatMeta",
+   "AmcorIndustry · Zurich · 🇨🇭Reserved · not affiliated with FlatMeta",
+   "América MóvilIndustry · Mexico City · 🇲🇽Reserved · not affiliated with FlatMeta",
+   "Amorepacific CorporationIndustry · Seoul · 🇰🇷Reserved · not affiliated with FlatMeta"
+  ],
+  "comingSoon": false,
+  "words": 835
+ },
+ {
+  "label": "phone",
+  "path": "/explore",
+  "status": 200,
+  "loadMs": 314,
+  "errors": 0,
+  "firstError": "",
+  "title": "Explore plots · FlatMeta",
+  "h1": "Explore the living map",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 493
+ },
+ {
+  "label": "phone",
+  "path": "/p/tesla",
+  "status": 200,
+  "loadMs": 324,
+  "errors": 1,
+  "firstError": "Failed to load resource: the server responded with a status of 404 ()",
+  "title": "Tesla on FlatMeta in United States of America · FlatMeta",
+  "h1": "Tesla",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Is this your organisation? Claim it",
+   "Claim it",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 309
+ },
+ {
+  "label": "phone",
+  "path": "/about",
+  "status": 200,
+  "loadMs": 244,
+  "errors": 0,
+  "firstError": "",
+  "title": "About FlatMeta · FlatMeta",
+  "h1": "How FlatMeta works",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 281
+ },
+ {
+  "label": "phone",
+  "path": "/insights",
+  "status": 404,
+  "loadMs": 238,
+  "errors": 1,
+  "firstError": "Failed to load resource: the server responded with a status of 404 ()",
+  "title": "FlatMeta · The world map you can own a piece of",
+  "h1": "",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 74
+ },
+ {
+  "label": "phone",
+  "path": "/login",
+  "status": 200,
+  "loadMs": 243,
+  "errors": 0,
+  "firstError": "",
+  "title": "FlatMeta · The world map you can own a piece of",
+  "h1": "",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 89
+ },
+ {
+  "label": "phone",
+  "path": "/leaderboards",
+  "status": 200,
+  "loadMs": 297,
+  "errors": 1,
+  "firstError": "Failed to load resource: the server responded with a status of 500 ()",
+  "title": "Leaderboards · FlatMeta",
+  "h1": "Leaderboards",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "My country",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 94
+ },
+ {
+  "label": "phone",
+  "path": "/marketplace",
+  "status": 200,
+  "loadMs": 295,
+  "errors": 0,
+  "firstError": "",
+  "title": "Marketplace · FlatMeta",
+  "h1": "The marketplace",
+  "hscroll": false,
+  "ctas": [
+   "Pricing",
+   "Sign in",
+   "Pricing"
+  ],
+  "comingSoon": false,
+  "words": 750
+ }
+]

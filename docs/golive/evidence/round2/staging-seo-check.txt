@@ -1,0 +1,26 @@
+✗ robots.txt lists the sitemap index · status 200
+✗ robots.txt does not block the whole site
+✓ sitemap index has child sitemaps · 4
+✗ every child sitemap has a lastmod
+✓ /sitemap-pages.xml · 222 URLs
+✓   every URL has a real lastmod
+✓ /sitemap-plots.xml · 1 URLs
+✓   every URL has a real lastmod
+✓ /sitemap-companies.xml · 368 URLs
+✓   every URL has a real lastmod
+✓ /sitemap-insights.xml · 0 URLs
+✓   every URL has a real lastmod
+✓ every sitemap URL is on the canonical host
+✗ 21 sampled pages pass the page checks · 10 with problems
+    - https://staging.flatmeta.io: robots meta says "noindex, nofollow"
+    - https://staging.flatmeta.io/c/ng: robots meta says "noindex, nofollow"
+    - https://staging.flatmeta.io/r/beijing: robots meta says "noindex, nofollow"
+    - https://staging.flatmeta.io/r/bordeaux: robots meta says "noindex, nofollow"
+    - https://staging.flatmeta.io/r/florence: robots meta says "noindex, nofollow"
+    - https://staging.flatmeta.io/r/portland: robots meta says "noindex, nofollow"
+    - https://staging.flatmeta.io/r/kyoto: robots meta says "noindex, nofollow"
+    - https://staging.flatmeta.io/r/bali-denpasar: robots meta says "noindex, nofollow"
+    - https://staging.flatmeta.io/r/adelaide: robots meta says "noindex, nofollow"
+    - https://staging.flatmeta.io/brands/de: robots meta says "noindex, nofollow"
+✓ /llms.txt is the app's own · # FlatMeta
+✓ /llms-full.txt is the app's own · # FlatMeta

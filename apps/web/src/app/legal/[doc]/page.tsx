@@ -1,3 +1,4 @@
+import { EmailText } from '@/components/email-text';
 import type { Metadata } from 'next';
 import { COMPANY_COUNTRY, COMPANY_NAME, CONTACT_EMAIL, FREE_LAND_CELLS, PAID_CHECKOUT, PLAUSIBLE_DOMAIN, SITE_HOST } from '@/lib/config';
 import { notFound } from 'next/navigation';
@@ -78,12 +79,12 @@ export default async function LegalPage({ params }: Params) {
       <article id="main" className="max-w-3xl space-y-6">
         <h1 className="text-4xl font-bold">{d.title}</h1>
         <p className="text-sm muted">Last updated {UPDATED}</p>
-        <p>{d.intro}</p>
+        <p><EmailText text={d.intro} link /></p>
         {d.sections.map(([h, ps]) => (
           <section key={h} className="space-y-2">
             <h2 className="text-xl font-semibold">{h}</h2>
             {ps.map((p) => (
-              <p key={p.slice(0, 40)} className="muted leading-relaxed">{p}</p>
+              <p key={p.slice(0, 40)} className="muted leading-relaxed"><EmailText text={p} link /></p>
             ))}
           </section>
         ))}

@@ -35,3 +35,13 @@ test('pricing has SoftwareApplication with real offers; sitemap index has lastmo
   const llms = await (await request.get('/llms.txt')).text();
   expect(llms).toContain('## Comparisons');
 });
+
+test('GL3z: email addresses in the HTML sit inside email_off markers (Cloudflare obfuscation breaks hydration)', async ({ request }) => {
+  for (const path of ['/pricing', '/business', '/for/local-businesses', '/legal/privacy']) {
+    const html = await (await request.get(path)).text();
+    // Text outside <script> and outside the markers must not hold an address.
+    const outside = html.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<!--email_off-->[\s\S]*?<!--\/email_off-->/g, '');
+    expect(outside.match(/[A-Z0-9._%+-]+@[A-Z0-9-]+\.[A-Z.]{2,}/gi) ?? [], path).toEqual([]);
+    expect(html, path).toContain('<!--email_off-->');
+  }
+});

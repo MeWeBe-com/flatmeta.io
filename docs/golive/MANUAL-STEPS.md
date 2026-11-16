@@ -228,7 +228,8 @@ Do these in order. Steps 1 to 3 are what makes www.flatmeta.io show the build in
 2. Records for the web: `@`, `www` and `staging` → the server IP, **Proxied**.
 3. **SSL/TLS → Overview → Full (strict).** The server already has Let's Encrypt certificates from Hestia. Then **Edge Certificates**: turn on Always Use HTTPS, set Minimum TLS 1.2, and turn on HSTS, but only after the site has worked for a week on HTTPS.
 4. Buy `flatmeta.com` and redirect it, as in "Domains" steps 1 and 2.
-5. Check: `curl -sI https://www.flatmeta.io` → `200`, `server: cloudflare`, plus the app's own `strict-transport-security` and `content-security-policy` headers.
+5. **Security → Settings (Scrape Shield) → Email Address Obfuscation: Off**, for `flatmeta.io` (www and staging). Cloudflare rewrites every address in the HTML into a "[email protected]" span, so the page no longer matches what React rendered and hydration fails. Round 2 found this as React error #418 on `/pricing`, `/business` and `/for/*` on staging. The app's own addresses are now protected with `<!--email_off-->` (`components/email-text.tsx`). Addresses that owners type into their plots are only safe with the setting off.
+6. Check: `curl -sI https://www.flatmeta.io` → `200`, `server: cloudflare`, plus the app's own `strict-transport-security` and `content-security-policy` headers.
 
 **5. Cloudflare Workers (who: Fahad or the owner; optional but recommended).** Deploy `flatmeta-edge`, which resizes and caches images and caches feeds, and `flatmeta-uptime`, which alerts when the site goes down, by the steps in `ops/cloudflare/README.md`. The API token is named `FlatMeta-Workers`.
 
