@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PageShell } from '@/components/site-chrome';
 import { API_INTERNAL_URL } from '@/lib/internal';
-import { API_DOCS_URL, MCP_URL, SITE_URL } from '@/lib/config';
+import { API_DOCS_URL, MCP_URL, SITE_HOST, SITE_URL } from '@/lib/config';
 import { Breadcrumbs, JsonLd, ORG_ID, siteTitle } from '@/lib/seo';
 
 export const metadata: Metadata = {
@@ -25,8 +25,8 @@ const FACTS: [string, string][] = [
   ['What it is', 'FlatMeta is a shared world map where people, businesses and brands own land. Each plot is a rectangle of real-world grid cells with its own mini-page.'],
   ['What it is not', 'Not a VR world, not an NFT or blockchain product, and not a 3D digital twin. It runs in any web browser, on phones too.'],
   ['Land', 'The map is divided into cells of about 120–190 m. A plot is a rectangle of cells. Everyone gets free squares to start; big-city centres cost more than the countryside.'],
-  ['Plots', 'A plot has a public page (flatmeta.io/p/<name>) with a cover, description, links, gallery, guestbook, visitor count, open-house times and optional custom HTML, which runs sandboxed on a separate site.'],
-  ['People', 'Explorers walk the map as avatars, chat with people nearby, wave, follow and join clans. Everyone has a link: flatmeta.io/@<handle>.'],
+  ['Plots', `A plot has a public page (${SITE_HOST}/p/<name>) with a cover, description, links, gallery, guestbook, visitor count, open-house times and optional custom HTML, which runs sandboxed on a separate site.`],
+  ['People', `Explorers walk the map as avatars, chat with people nearby, wave, follow and join clans. Everyone has a link: ${SITE_HOST}/@<handle>.`],
   ['Companies', 'Land is reserved for many companies next to their public headquarters. Each such plot reads “Reserved for <Company>, not affiliated with FlatMeta” until the company claims it, verified by work email or a DNS record.'],
   ['Prices', 'Free to start. Plus: $5/month or $48/year. Business: $29/month. Brand: $249/month. A company Landmark claim is one-time and includes 3 months of Brand.'],
   ['For AI assistants and agents', 'A REST API with OpenAPI, an MCP server, and llms.txt. Agents can search, find nearby places and claim land; paid land always goes through a checkout link for the person.'],

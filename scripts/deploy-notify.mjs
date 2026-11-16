@@ -85,7 +85,8 @@ async function main() {
     console.log(`deploy-notify${dry ? ' (dry run)' : ': no admin addresses'}: ${subject}\nTo: ${to.join(', ') || '–'}\n\n${text}`);
     return;
   }
-  const from = get('MAIL_FROM') || 'FlatMeta <hello@flatmeta.io>';
+  // GL1/GL5: the same default as the API: <APP_NAME> <noreply@<PRODUCTION_DOMAIN>>.
+  const from = get('MAIL_FROM') || `${get('APP_NAME') || 'FlatMeta'} <noreply@${get('PRODUCTION_DOMAIN') || 'flatmeta.io'}>`;
   if (get('RESEND_API_KEY')) {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',

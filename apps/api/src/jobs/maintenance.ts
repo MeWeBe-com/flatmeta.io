@@ -1,4 +1,5 @@
 import { and, eq, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import { config, publicSiteUrl } from '../config.js';
 import { plotIndexChangedById } from '../lib/indexing.js';
 import { db, schema } from '../db/client.js';
 import { logger } from '../lib/logger.js';
@@ -20,7 +21,7 @@ export async function rebuildLeaderboards() {
 
 async function checkUrl(url: string): Promise<boolean> {
   try {
-    let res = await fetch(url, { method: 'HEAD', redirect: 'follow', signal: AbortSignal.timeout(6000), headers: { 'user-agent': 'FlatMeta-LinkCheck/1.0 (+https://flatmeta.io)' } });
+    let res = await fetch(url, { method: 'HEAD', redirect: 'follow', signal: AbortSignal.timeout(6000), headers: { 'user-agent': `${config.APP_NAME}-LinkCheck/1.0 (+${publicSiteUrl()})` } });
     if (res.status === 405 || res.status === 403) res = await fetch(url, { method: 'GET', redirect: 'follow', signal: AbortSignal.timeout(8000) });
     return res.status < 400 || res.status === 403 || res.status === 429;
   } catch {

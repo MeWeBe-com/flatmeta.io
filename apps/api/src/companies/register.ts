@@ -1,5 +1,5 @@
 import { and, desc, eq, gte, ilike, inArray, isNull, lt, sql, type SQL } from 'drizzle-orm';
-import { config, showcaseLocationCheck } from '../config.js';
+import { showcaseLocationCheck, publicSiteUrl } from '../config.js';
 import { db, schema } from '../db/client.js';
 import { emailAdmins, templates } from '../email/index.js';
 import { registrableDomain } from '../services/showcase-claim.js';
@@ -14,12 +14,8 @@ export const REGISTER_STATUSES = ['hidden', 'reserved', 'claim_started', 'claime
 export type RegisterStatus = (typeof REGISTER_STATUSES)[number];
 export const OUTREACH = ['not_contacted', 'contacted', 'replied', 'sold'] as const;
 
-/** Public site links: the canonical www host in production (https://www.flatmeta.io), else APP_URL. */
-export function siteUrl(): string {
-  const u = new URL(config.APP_URL);
-  if (config.APP_ENV === 'production' && u.hostname === config.PRODUCTION_DOMAIN) u.hostname = `www.${config.PRODUCTION_DOMAIN}`;
-  return u.toString().replace(/\/$/, '');
-}
+/** Public site links: the canonical www host in production, else APP_URL (config.publicSiteUrl). */
+export const siteUrl = (): string => publicSiteUrl();
 
 export interface RegisterRow {
   id: string;

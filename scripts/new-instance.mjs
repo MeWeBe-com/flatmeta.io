@@ -45,6 +45,8 @@ function renderNginx(values) {
     .replaceAll('127.0.0.1:3201', `127.0.0.1:${api}`)
     .replaceAll('127.0.0.1:3200', `127.0.0.1:${web}`)
     .replaceAll('__MEDIA_DIR__', media)
+    // GL1/S6: apex → www for the production domain from .env; staging has no apex redirect.
+    .replace(/^if \(\$host = __APEX_DOMAIN__\).*\n/m, env === 'production' ? (m) => m.replaceAll('__APEX_DOMAIN__', values.PRODUCTION_DOMAIN || 'flatmeta.io') : '')
     .replace(/^#   WEB_PORT=3200 .*$/m, `#   WEB_PORT=${web}   Next.js   (rendered for ${env})`)
     .replace(/^#   PORT=3201 .*$/m, `#   PORT=${api}       API (REST, WebSocket, /mcp, /docs)`);
   const fallback = readFileSync(join(root, 'deploy/hestia/nodejs-app-fallback.conf'), 'utf8').replaceAll('127.0.0.1:3200', `127.0.0.1:${web}`);

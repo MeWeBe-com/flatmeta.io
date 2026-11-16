@@ -39,7 +39,9 @@ const schema = z.object({
   SESSION_SECRET: z.string().default('dev-only-insecure-secret'),
   COOKIE_DOMAIN: optional,
   COOKIE_SECURE: bool,
-  SEED_ADMIN_EMAIL: z.string().default('admin@flatmeta.io'),
+  // GL1: the brand, domain and every address come from here (APP_NAME, APP_URL, PRODUCTION_DOMAIN, MAIL_FROM,
+  // CONTACT_EMAIL): switching domain is a .env change. Empty = derived from PRODUCTION_DOMAIN in load().
+  SEED_ADMIN_EMAIL: z.string().default(''),
   GOOGLE_CLIENT_ID: optional,
   GOOGLE_CLIENT_SECRET: optional,
 
@@ -48,7 +50,7 @@ const schema = z.object({
   SMTP_USER: optional,
   SMTP_PASS: optional,
   SMTP_SECURE: bool,
-  MAIL_FROM: z.string().default('FlatMeta <hello@flatmeta.io>'),
+  MAIL_FROM: z.string().default(''),
   MAIL_REPLY_TO: optional,
   // Resend (https://resend.com) is the primary email provider; SMTP is the fallback; neither = log only.
   RESEND_API_KEY: optional,
@@ -114,7 +116,7 @@ const schema = z.object({
   // Legal pages and emails.
   COMPANY_NAME: z.string().default('MeWeBe'),
   COMPANY_COUNTRY: z.string().default('United Kingdom'),
-  CONTACT_EMAIL: z.string().default('hello@flatmeta.io'),
+  CONTACT_EMAIL: z.string().default(''),
 
   AI_TEXT_PROVIDER: z.enum(['anthropic', 'openai', 'gemini', 'heuristic', '']).optional(),
   ANTHROPIC_API_KEY: optional,
@@ -132,7 +134,7 @@ const schema = z.object({
   MODERATION_BLOCKLIST: z.string().default(''),
 
   GEOCODER_URL: z.string().default('https://photon.komoot.io/api'),
-  GEOCODER_USER_AGENT: z.string().default('FlatMeta/2.0 (hello@flatmeta.io)'),
+  GEOCODER_USER_AGENT: z.string().default(''),
 
   // Marketplace (Phase 1 §12.4)
   MARKETPLACE_FEE_BPS: z.coerce.number().int().min(0).max(5000).default(1000), // 10%
@@ -165,6 +167,7 @@ function load(): Config {
   const c = parsed.data;
   c.APP_URL = c.APP_URL.replace(/\/+$/, '');
   c.API_URL = (c.API_URL || `${c.APP_URL}/api`).replace(/\/+$/, '');
+  applyBrandDefaults(c);
   if (c.NODE_ENV === 'test') c.DATABASE_URL = c.DATABASE_URL_TEST;
   if (c.NODE_ENV === 'production' && c.APP_ENV === 'development') {
     // A production build that doesn't say what it is gets the safe answer: production rules (no fake checkout,
@@ -184,6 +187,26 @@ function load(): Config {
   }
   for (const p of stripeProblems(c)) console.warn(`[config] STRIPE: ${p}`);
   return c;
+}
+
+/**
+ * GL1: addresses derived from the brand and the production domain unless set: noreply@ for sending (GL5), hello@ for
+ * contact, admin@ for the seeded admin. A domain switch changes PRODUCTION_DOMAIN (and APP_URL) only.
+ */
+export function applyBrandDefaults(c: Pick<Config, 'APP_NAME' | 'PRODUCTION_DOMAIN' | 'MAIL_FROM' | 'CONTACT_EMAIL' | 'SEED_ADMIN_EMAIL' | 'GEOCODER_USER_AGENT'>) {
+  const domain = c.PRODUCTION_DOMAIN;
+  c.MAIL_FROM ||= `${c.APP_NAME} <noreply@${domain}>`;
+  c.CONTACT_EMAIL ||= `hello@${domain}`;
+  c.SEED_ADMIN_EMAIL ||= `admin@${domain}`;
+  c.GEOCODER_USER_AGENT ||= `${c.APP_NAME}/2.0 (${c.CONTACT_EMAIL})`;
+  return c;
+}
+
+/** The public site's canonical origin: www.<PRODUCTION_DOMAIN> in production when APP_URL is the bare domain. */
+export function publicSiteUrl(c: Pick<Config, 'APP_URL' | 'APP_ENV' | 'PRODUCTION_DOMAIN'> = config): string {
+  const u = new URL(c.APP_URL);
+  if (c.APP_ENV === 'production' && u.hostname === c.PRODUCTION_DOMAIN) u.hostname = `www.${c.PRODUCTION_DOMAIN}`;
+  return u.toString().replace(/\/$/, '');
 }
 
 export const config = load();

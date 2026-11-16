@@ -5,6 +5,11 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:32
 export const APP_ENV = process.env.NEXT_PUBLIC_APP_ENV ?? 'development';
 export const PRODUCTION_DOMAIN = process.env.NEXT_PUBLIC_PRODUCTION_DOMAIN ?? 'flatmeta.io';
 export const STAGING_DOMAIN = process.env.NEXT_PUBLIC_STAGING_DOMAIN ?? 'staging.flatmeta.io';
+/**
+ * GL1: the domain as people see it in copy ("your link: flatmeta.io/@you"): the production domain on production, else
+ * this site's own host, so staging and a renamed domain show their real address. Never hard-code it in components.
+ */
+export const SITE_HOST = APP_ENV === 'production' ? PRODUCTION_DOMAIN : SITE_URL.replace(/^https?:\/\//, '').replace(/^www\./, '');
 export const API_DOCS_URL = process.env.NEXT_PUBLIC_API_DOCS_URL || `${SITE_URL}/api/docs`;
 export const MCP_URL = process.env.NEXT_PUBLIC_MCP_URL || `${SITE_URL}/api/mcp`;
 export const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? '';
@@ -25,4 +30,4 @@ export const COMPANY_NAME = process.env.NEXT_PUBLIC_COMPANY_NAME || 'MeWeBe';
 export const COMPANY_COUNTRY = process.env.NEXT_PUBLIC_COMPANY_COUNTRY || 'United Kingdom';
 /** S4: FlatMeta's own profiles elsewhere (comma-separated URLs), listed as `sameAs` in the site-wide Organization JSON-LD. */
 export const SAME_AS = (process.env.NEXT_PUBLIC_SAME_AS ?? '').split(',').map((s) => s.trim()).filter((s) => /^https:\/\//.test(s));
-export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'hello@flatmeta.io';
+export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || `hello@${PRODUCTION_DOMAIN}`;

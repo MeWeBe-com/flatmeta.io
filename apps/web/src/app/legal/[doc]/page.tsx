@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { COMPANY_COUNTRY, COMPANY_NAME, CONTACT_EMAIL, FREE_LAND_CELLS, PAID_CHECKOUT, PLAUSIBLE_DOMAIN } from '@/lib/config';
+import { COMPANY_COUNTRY, COMPANY_NAME, CONTACT_EMAIL, FREE_LAND_CELLS, PAID_CHECKOUT, PLAUSIBLE_DOMAIN, SITE_HOST } from '@/lib/config';
 import { notFound } from 'next/navigation';
 import { PageShell } from '@/components/site-chrome';
 
@@ -17,7 +17,7 @@ type Section = [heading: string, paragraphs: string[]];
 const DOCS: Record<string, { title: string; intro: string; sections: Section[] }> = {
   terms: {
     title: 'Terms of Service',
-    intro: `These terms apply when you use FlatMeta (flatmeta.io, its apps, API and MCP server), run by ${COMPANY} ("we"). By using FlatMeta you agree to them.`,
+    intro: `These terms apply when you use FlatMeta (${SITE_HOST}, its apps, API and MCP server), run by ${COMPANY} ("we"). By using FlatMeta you agree to them.`,
     sections: [
       ['1. What FlatMeta is', ['FlatMeta is a shared world map where you can claim plots made of grid cells, decorate them with images, text and links, and take part in a game (XP, quests, badges, leaderboards).', 'A plot is a licence to display your content on a part of our map. It is not ownership of any real place, not real estate, and not a financial product, token or investment. Plots have no cash value and cannot be redeemed for money.']],
       ['2. Accounts', ['You can explore as a guest. To claim land, play or buy, you verify an email address. You must be at least 16 (or the age of digital consent where you live). You are responsible for activity on your account. Organisation accounts are managed by their owners and admins.']],

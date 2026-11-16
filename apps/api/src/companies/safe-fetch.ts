@@ -1,4 +1,5 @@
 import { lookup } from 'node:dns';
+import { config, publicSiteUrl } from '../config.js';
 import http from 'node:http';
 import https from 'node:https';
 import { isIP } from 'node:net';
@@ -67,7 +68,7 @@ export const realHop: Hop = (url, opts) =>
     const mod = url.protocol === 'https:' ? https : http;
     const req = mod.get(
       url,
-      { lookup: guardedLookup, timeout: opts.timeoutMs, headers: { accept: opts.accept, 'user-agent': 'FlatMetaBot/1.0 (+https://www.flatmeta.io/about/facts)' } },
+      { lookup: guardedLookup, timeout: opts.timeoutMs, headers: { accept: opts.accept, 'user-agent': `${config.APP_NAME}Bot/1.0 (+${publicSiteUrl()}/about/facts)` } },
       (res) => {
         const chunks: Buffer[] = [];
         let size = 0;

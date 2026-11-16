@@ -1,4 +1,5 @@
 'use client';
+import { SITE_HOST } from '@/lib/config';
 
 import { CheckCircle2, Search, Share2 } from 'lucide-react';
 import { plotMetaDescription, plotTitle, plotUrl } from '@/lib/seo';
@@ -53,7 +54,7 @@ export function SeoPreview({ plot }: { plot: Plot }) {
             <div className="w-full aspect-[1.91/1] bg-gradient-to-br from-[var(--color-teal)]/30 to-[var(--color-violet)]/30" />
           )}
           <div className="p-3">
-            <div className="text-xs muted uppercase">flatmeta.io</div>
+            <div className="text-xs muted uppercase">{SITE_HOST}</div>
             <div className="font-semibold truncate">{title}</div>
             <p className="text-xs muted line-clamp-2">{description}</p>
           </div>
