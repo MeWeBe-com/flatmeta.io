@@ -132,7 +132,7 @@ export function PricingClient({ data }: { data: Plans }) {
               {data.landmarkPriceCents === 0 ? (
                 <>
                   <span><span className="font-semibold">Claim your company’s page</span><span className="block text-xs muted">Land is reserved for many companies next to their headquarters. Verified staff claim it free.</span></span>
-                  <Link href="/brands" className="font-display font-bold text-[var(--color-gold)] underline">Free</Link>
+                  <Link href="/brands" className="tap justify-end font-display font-bold text-[var(--color-gold)] underline">Free</Link>
                 </>
               ) : (
                 <>

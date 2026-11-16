@@ -142,7 +142,7 @@ export default async function PlotPage({ params }: Params) {
             </div>
             {/* M5: wraps (and fills the row) on phones; it used to widen the page to 448 px at 375. */}
             <div className="flex flex-wrap gap-2 md:shrink-0">
-              <Link href={`/claim/${p.slug}`} className="btn-gold flex-1 sm:flex-none">{t(claimFree ? 'plot.claimItFree' : 'plot.claimIt')}</Link>
+              <Link href={`/claim/${p.slug}`} className="btn-gold flex-1 sm:flex-none whitespace-normal text-center h-auto min-h-11 py-2">{t(claimFree ? 'plot.claimItFree' : 'plot.claimIt')}</Link>
               <Link href={`/claim/${p.slug}?takedown=1`} className="btn-ghost flex-1 sm:flex-none">{t('plot.requestRemoval')}</Link>
             </div>
           </div>
