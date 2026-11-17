@@ -88,7 +88,7 @@ export function PricingClient({ data }: { data: Plans }) {
               {p.key === 'free' ? (
                 <Link href="/?claim" className="btn-ghost mt-6">Claim your first plot</Link>
               ) : !PAID_CHECKOUT ? (
-                <ComingSoon compact className="mt-6" text={`${p.name} is coming soon.`} />
+                <ComingSoon compact className="mt-6" text={`${p.name} isn’t open yet. Everything free works today.`} />
               ) : (
                 <button className={clsx('mt-6 whitespace-normal text-center h-auto min-h-11 py-2', highlight ? 'btn-primary' : 'btn-ghost')} disabled={busy === p.key} onClick={() => void subscribe(p.key, p.org)}>
                   {busy === p.key && <Spinner />} {p.org ? `Get ${p.name} for my organisation` : `Get ${p.name}`}
@@ -101,7 +101,7 @@ export function PricingClient({ data }: { data: Plans }) {
       {data.mock && PAID_CHECKOUT && <p className="text-center text-xs text-[var(--color-gold)]">Payments are in test mode on this server. No real charges are made.</p>}
       {!PAID_CHECKOUT && (
         <div className="flex justify-center">
-          <ComingSoon text={`Plans, paid land and boosts are coming soon. Right now everyone can claim up to ${FREE_LAND_CELLS} squares of land for free, and editing, chat and clans are all open.`} />
+          <ComingSoon text={`Paid plans, extra land and boosts aren’t open yet. Right now everyone can claim up to ${FREE_LAND_CELLS} squares of land for free, and editing, chat and clans are all open.`} />
         </div>
       )}
 

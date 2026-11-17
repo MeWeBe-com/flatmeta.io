@@ -93,7 +93,7 @@ export function faqItems(o: { claimFree: boolean }): { q: string; a: string }[] 
       q: 'How do I pay, and is it secure?',
       a: PAID_CHECKOUT
         ? 'Card payments go through Stripe’s hosted checkout: we never see or store your card number. Invoices and receipts are in your billing portal.'
-        : 'Paid plans open soon. Everything free (land, your page, editing, chat and clans) works today.',
+        : 'Paid plans aren’t open yet. Everything free (land, your page, editing, chat and clans) works today.',
     },
   ];
 }

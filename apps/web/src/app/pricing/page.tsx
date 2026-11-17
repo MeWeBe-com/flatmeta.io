@@ -10,7 +10,7 @@ import { CustomerStories, FoundingOffer } from '@/components/social-proof';
 
 export const metadata: Metadata = {
   title: 'Pricing',
-  description: PAID_CHECKOUT ? 'Free Homestead plot for everyone. Buy land by the cell, boost your plot, or get Plus, Business or Brand.' : `Claim up to ${FREE_LAND_CELLS} squares of the world map for free. Paid plans, boosts and more land are coming soon.`,
+  description: PAID_CHECKOUT ? 'Free Homestead plot for everyone. Buy land by the cell, boost your plot, or get Plus, Business or Brand.' : `Claim up to ${FREE_LAND_CELLS} squares of the world map for free. Everything free works today; paid plans open later.`,
   alternates: { canonical: '/pricing' },
 };
 
