@@ -1,5 +1,7 @@
 # GL1: Domain research report (16 Nov 2026)
 
+> **Boss decision, 17 Nov 2026: FlatMeta keeps `flatmeta.io` only. No other domain is bought or planned.** The availability findings below are kept as research only; §3 is updated to match the decision.
+
 **Decision already made by the owner: `flatmeta.io` stays, no rename.** This report checks that decision from three angles (an SEO Director, a Brand Strategist and a Startup VC) and lists defensive domains worth buying because they are cheap.
 
 **How it was checked:**
@@ -34,25 +36,17 @@ All checked by RDAP on 16 Nov 2026 (available = no record at the registry; confi
 
 Also checked: myplotmap.com, plotmap.app, mapplots.com, pinplot.app, plotpin.com/.app, yourplot.app and claimtheglobe.com are **registered** (by others). The full output is in the appendix.
 
-## 3. Recommendation
+## 3. Recommendation (updated 17 Nov 2026)
 
-**Keep `flatmeta.io` as the canonical domain and buy `flatmeta.com` now** (about $10/year), redirecting it with a 301 to `https://www.flatmeta.io`. Add `flatmeta.co.uk` (about $6–10) only if the UK is a sales focus. Buy nothing else.
+**`flatmeta.io` is the one and only domain** (boss decision, 17 Nov). No defensive domains are bought or planned.
 
-**Why this ranks faster and converts better than a rename:**
-- **Ranking:** a rename resets brand searches, inbound links, the 600+ indexed URLs and the sitemaps (S1/S2), and the IndexNow history. Keeping the name keeps all of that, and the zero-competition brand query keeps working. Owning the `.com` closes the only realistic brand-hijack route.
-- **Conversion:** buyers type ".com" by habit. With `flatmeta.com` redirecting, "flatmeta dot com" in a podcast, a flyer or word of mouth still lands on the site, and nobody else can send email from a lookalike domain.
-- **Cost of the alternative:** at this stage a rename costs weeks (domain, email, OAuth callbacks, Stripe and PayPal settings, store listings) for a small trust gain. Revisit it only if a trademark opposition from Meta appears. Then `plotglobe.com` (option 1) is the move, and the switch is a `.env` change (below).
+What keeps the brand safe without extra domains:
+- **Renewal and lock:** turn on auto-renew (it expires 2027-04-21), the registrar lock, and 2FA on the registrar account (MANUAL-STEPS → Domains).
+- **The trademark search** before any PR (MANUAL-STEPS → Domains). A UK word mark is the real protection against lookalikes, more than a parked `.com`.
+- **Say the full address in all marketing:** "flatmeta.io" in copy, voice and print, never "FlatMeta dot com".
+- **Email authentication** (SPF, DKIM, DMARC with `p=quarantine`, GL5), so lookalike senders fail delivery checks.
 
-**Defensive list (only if cheap):**
-
-| Domain | Price (typical) | Buy? | Point it at |
-|---|---|---|---|
-| flatmeta.com | ~$10/yr | **Yes, now** | 301 → https://www.flatmeta.io |
-| flatmeta.co.uk | ~$6–10/yr | If the UK matters | 301 → https://www.flatmeta.io |
-| flatmeta.app | ~$14/yr | Optional (HTTPS-only; useful for a future app) | 301 → https://www.flatmeta.io |
-| flatmeta.uk, .co, .net | $8–30 | No | – |
-
-Buying and redirecting: MANUAL-STEPS.md → "Domains", steps 1–3.
+**Why no rename:** a rename resets brand searches, inbound links, the 600+ indexed URLs, the sitemaps and the IndexNow history, for a small trust gain. Revisit it only if a trademark opposition appears. Then the switch is a `.env` change (§4).
 
 ## 4. Switching domain is a `.env` change (done in GL1)
 

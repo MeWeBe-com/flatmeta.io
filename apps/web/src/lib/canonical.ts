@@ -25,7 +25,7 @@ export function canonicalUrl(env: Record<string, string | undefined>): string {
 export function apexRedirects(env: Record<string, string | undefined>) {
   const domain = env.PRODUCTION_DOMAIN ?? 'flatmeta.io';
   const canonical = env.CANONICAL_URL ? env.CANONICAL_URL.replace(/\/$/, '') : `https://www.${domain}`;
-  // GL6: old or extra domains (REDIRECT_HOSTS=flatmeta.com,www.flatmeta.com, or the previous domain after a switch)
+  // GL6: the previous domain after a domain switch (REDIRECT_HOSTS=old.example,www.old.example)
   // answer every path with a 301 to the same path on the canonical host, whatever the canonical host is.
   const extra = (env.REDIRECT_HOSTS ?? '')
     .split(',')

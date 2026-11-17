@@ -56,8 +56,6 @@ Then confirm the Stripe account. That is the shortest path from 7.3 to 9.
 ## Appendix B: Domain (summary of `01-domain-report.md`)
 
 - **Recommendation:** keep **flatmeta.io**, registered 2022-04-21 and expiring 2027-04-21. Turn on auto-renew and the registrar lock.
-- **Buy `flatmeta.com`** (about $10, unregistered on 16 Nov by RDAP) as a 301 to www.flatmeta.io. It is cheap protection for the most-typed form.
-- **`flatmeta.co.uk`** only if the UK becomes a sales focus. `.app`, `.uk`, `.co` and `.net` are also free, but none is needed.
 - **No rename.** "FlatMeta" has zero brand competition in search. Do the 10-minute trademark search before PR.
 - **Brand from config:** the brand, domain, emails and URLs all come from `.env` (`APP_NAME`, `APP_URL`, `PRODUCTION_DOMAIN`, `MAIL_FROM`). A unit test fails on any hard-coded domain.
 
@@ -109,14 +107,13 @@ Then confirm the Stripe account. That is the shortest path from 7.3 to 9.
 | 3 | Production `.env`: Stripe and PayPal keys, `MAIL_FROM`, `ERROR_WEBHOOK_URL` | Server admin (values from the boss and owner) |
 | 4 | Confirm or create the Stripe account "FlatMeta" in the Organisation; webhook; portal | Boss |
 | 5 | PayPal app `FlatMeta-PayPal`: sandbox, then live | Boss or owner |
-| 6 | Buy `flatmeta.com` and redirect it | Fahad (boss's main Cloudflare account) |
-| 7 | `flatmeta.io` in the boss's Cloudflare account: DNS, SSL Full (strict), Email Obfuscation off | Fahad or owner |
-| 8 | Email: Cloudflare Email Routing (hello@, support@), the Resend domain, SPF and DMARC, then switch `MAIL_FROM` | Fahad or owner, then server admin |
-| 9 | Make `v2` the default branch on GitHub, so the schedules run | Repository owner |
-| 10 | Optional: the `FM_REPORT_API_KEY` secret for revenue numbers in the weekly report | Owner |
-| 11 | Set up the 5 agents in claude.ai or Antigravity, with no payment or posting connectors | Owner |
-| 12 | Deploy the Cloudflare Workers (`ops/cloudflare/`) | Fahad or owner |
-| 13 | Production smoke test on a phone and a laptop; submit the sitemap in Search Console | Owner |
-| 14 | Trademark search; auto-renew and registrar lock on `flatmeta.io` | Owner |
-| 15 | Publish the mewebe.com listing (`mewebe-listing.md`) | Owner or boss |
-| 16 | The first 10 submissions and outreach from the agents' drafts | Owner |
+| 6 | `flatmeta.io` in the boss's Cloudflare account: DNS, SSL Full (strict), Email Obfuscation off | Fahad or owner |
+| 7 | Email: Cloudflare Email Routing (hello@, support@), the Resend domain, SPF and DMARC, then switch `MAIL_FROM` | Fahad or owner, then server admin |
+| 8 | Make `v2` the default branch on GitHub, so the schedules run | Repository owner |
+| 9 | Optional: the `FM_REPORT_API_KEY` secret for revenue numbers in the weekly report | Owner |
+| 10 | Set up the 5 agents in claude.ai or Antigravity, with no payment or posting connectors | Owner |
+| 11 | Deploy the Cloudflare Workers (`ops/cloudflare/`) | Fahad or owner |
+| 12 | Production smoke test on a phone and a laptop; submit the sitemap in Search Console | Owner |
+| 13 | Trademark search; auto-renew and registrar lock on `flatmeta.io` | Owner |
+| 14 | Publish the mewebe.com listing (`mewebe-listing.md`) | Owner or boss |
+| 15 | The first 10 submissions and outreach from the agents' drafts | Owner |

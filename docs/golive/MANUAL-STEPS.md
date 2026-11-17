@@ -5,7 +5,7 @@ Everything here needs a person: a purchase, an account, a key, a DNS record or a
 **Who's who:**
 - **Owner:** the FlatMeta project owner.
 - **Boss:** the Organisation admin (Stripe Organisation, main Cloudflare account, MeWeBe).
-- **Fahad:** buys domains in the boss's main Cloudflare account (top-left account switcher).
+- **Fahad:** works in the boss's main Cloudflare account (top-left account switcher): DNS, email routing, workers.
 - **Server admin:** root on cp2.
 
 **Never paste a key into chat, a ticket or a commit.** Keys go only into the server's `.env` (or the provider's own dashboard).
@@ -14,28 +14,18 @@ Everything here needs a person: a purchase, an account, a key, a DNS record or a
 
 ## Domains (GL1)
 
-**1. Buy `flatmeta.com` (who: Fahad, in the boss's main Cloudflare account).**
-1. Cloudflare dashboard → top-left account switcher → the boss's main account → **Domain Registration → Register Domains**.
-2. Search `flatmeta.com`. It was unregistered on 16 Nov 2026 by RDAP; if Cloudflare shows a premium price, stop and ask the boss.
-3. Buy it for 1 year with **auto-renew on**. It costs about $10.
-4. Optional, only if the UK is a sales focus: `flatmeta.co.uk`. Same steps.
-5. Check: `bash scripts/rdap-check.sh flatmeta.com` now says "registered".
+**Boss decision, 17 Nov 2026: `flatmeta.io` is the only domain. Do not buy or redirect any other domain.**
 
-**2. Redirect it to the live site (who: Fahad or the owner, in the same Cloudflare account).**
-1. `flatmeta.com` → **DNS** → add `A @ 192.0.2.1` and `CNAME www flatmeta.com`, both **Proxied** (orange cloud). The IP is a placeholder: Cloudflare answers the redirect before any server is reached.
-2. **Rules → Redirect Rules → Create rule:** "All incoming requests" → **Dynamic** → expression `concat("https://www.flatmeta.io", http.request.uri.path)` → **301**, preserve query string ✓.
-3. Check: `curl -sI https://flatmeta.com/pricing?x=1` → `301` and `location: https://www.flatmeta.io/pricing?x=1`.
+**1. Keep `flatmeta.io` safe (who: whoever holds the flatmeta.io registrar account).** Turn **auto-renew** on. It expires 2027-04-21. Turn on the registrar lock and 2FA on the registrar account.
 
-**3. Keep `flatmeta.io` safe (who: whoever holds the flatmeta.io registrar account).** Turn **auto-renew** on. It expires 2027-04-21. Turn on the registrar lock and 2FA on the registrar account.
-
-**4. Trademark check before filing (who: owner, 10 minutes).** Search the word "FLATMETA", and "FLAT META" with the gap, in:
+**2. Trademark check before filing (who: owner, 10 minutes).** Search the word "FLATMETA", and "FLAT META" with the gap, in:
 - UKIPO: https://trademarks.ipo.gov.uk/ipo-tmtext
 - USPTO: https://tmsearch.uspto.gov
 - EUIPO: https://euipo.europa.eu/eSearch
 
 If nothing in classes 9, 35, 41 or 42 is identical or near-identical, a UK word mark (classes 9 and 42; £170 online) is worth filing before launch PR. Use a plain description, "online world map on which users claim and publish plots", with no "Meta" logo styling. See `docs/golive/01-domain-report.md` §1 for why "Meta" carries some opposition risk.
 
-**5. Switching domain later (who: owner + server admin).** It is a `.env` change, `APP_URL` and `PRODUCTION_DOMAIN`, plus the external dashboards:
+**3. Switching domain later (who: owner + server admin).** It is a `.env` change, `APP_URL` and `PRODUCTION_DOMAIN`, plus the external dashboards:
 - Stripe webhook URL;
 - PayPal return URLs;
 - the Google OAuth redirect URI;
@@ -219,7 +209,6 @@ Do these in order. Steps 1 to 3 are what makes www.flatmeta.io show the build in
 - `APP_URL=https://www.flatmeta.io`, `PRODUCTION_DOMAIN=flatmeta.io`.
 - Payments, from "Payments (GL4)" above: the `STRIPE_*` keys, `PAYPAL_*` with `PAYPAL_ENV=live` only after the sandbox test passes, and `PAID_CHECKOUT_ENABLED=true`. In production, `auto` means checkout is **off**: it is turned on only by `true`, once the live keys and the webhook pass `npm run payments:check`. `scripts/server/go-live-production.sh` checks the keys and sets `true` for you.
 - `MAIL_FROM`, from "Email from flatmeta.io (GL5)" above, once the domain is verified.
-- `REDIRECT_HOSTS=flatmeta.com,www.flatmeta.com`, only if those domains point at the server instead of using the Cloudflare redirect rule in "Domains" step 2.
 - `ERROR_WEBHOOK_URL`: a Slack, Discord or Google Chat incoming webhook for the team's alerts channel. Name it `FlatMeta-Errors`.
 - Then deploy again (step 1). Check: `npm run payments:check -w flatmeta-api` and `npm run email:check -w flatmeta-api` both end with ✓.
 
@@ -229,7 +218,6 @@ Do these in order. Steps 1 to 3 are what makes www.flatmeta.io show the build in
    - At the registrar, change the nameservers to the two Cloudflare shows.
 2. Records for the web: `@`, `www` and `staging` → the server IP, **Proxied**.
 3. **SSL/TLS → Overview → Full (strict).** The server already has Let's Encrypt certificates from Hestia. Then **Edge Certificates**: turn on Always Use HTTPS, set Minimum TLS 1.2, and turn on HSTS, but only after the site has worked for a week on HTTPS.
-4. Buy `flatmeta.com` and redirect it, as in "Domains" steps 1 and 2.
 5. **Security → Settings (Scrape Shield) → Email Address Obfuscation: Off**, for `flatmeta.io` (www and staging). Cloudflare rewrites every address in the HTML into a "[email protected]" span, so the page no longer matches what React rendered and hydration fails. Round 2 found this as React error #418 on `/pricing`, `/business` and `/for/*` on staging. The app's own addresses are now protected with `<!--email_off-->` (`components/email-text.tsx`). Addresses that owners type into their plots are only safe with the setting off.
 6. Check: `curl -sI https://www.flatmeta.io` → `200`, `server: cloudflare`, plus the app's own `strict-transport-security` and `content-security-policy` headers.
 
