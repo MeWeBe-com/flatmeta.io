@@ -20,6 +20,8 @@ export type EmailType =
   | 'admin_claim_lead'
   | 'admin_takedown'
   | 'weekly_digest'
+  | 'welcome'
+  | 'activation'
   | 'admin_company_digest'
   | 'notice';
 
@@ -185,5 +187,28 @@ export const templates = {
       button: { label: 'Open the register', path: '/admin/company-land' },
     }),
 
+  /** R3e: right after sign-up. One next step: claim the free land (or the company page). */
+  welcome: (name: string, freeCells: number) =>
+    render('welcome', `Welcome to ${config.APP_NAME}: your first land is free`, {
+      title: `Welcome, ${name}`,
+      paragraphs: [
+        `Your first ${freeCells} squares of the world map are free. Pick a spot (where you live, work or create), claim it, and it becomes your own page with a cover, links, a gallery and a guestbook.`,
+        'Running a business? Add your hours, an offer and booking links, and your page becomes structured data that search engines and AI assistants read. Work for a company? It may already have a reserved landmark: search the companies list.',
+        'It takes about three minutes. The AI Designer can write the first version for you.',
+      ],
+      button: { label: 'Claim my free land', path: '/?claim' },
+      footnote: `See a sample page first: ${config.APP_URL}/demo · Companies on the map: ${config.APP_URL}/brands`,
+    }),
+  /** R3e: one nudge, 1–7 days after sign-up, only when no land was claimed. Carries the one-click unsubscribe. */
+  activation: (name: string, freeCells: number, unsubscribe: string) =>
+    render('activation', 'Your free land is still waiting', {
+      title: `${name}, your spot on the map is still free`,
+      paragraphs: [
+        `You signed up but haven't claimed land yet. Your first ${freeCells} squares are free, and once claimed nobody else can take them.`,
+        'Three steps: open the map, drag over the squares you want, then press Claim. Your page is live at once, and you can edit it any time.',
+      ],
+      button: { label: 'Claim my free land', path: '/?claim' },
+      footnote: `This is the only reminder we send. Stop product emails (this and the weekly summary): ${unsubscribe}`,
+    }),
   notice: (subject: string, body: string) => render('notice', subject, { title: subject, paragraphs: body.split(/\n{2,}/) }),
 };

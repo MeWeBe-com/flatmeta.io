@@ -121,6 +121,8 @@ export const JOBS: Record<string, { every?: number; pattern?: string; run: () =>
   'company-digest': { pattern: '43 6 * * *', run: async () => (await import('../companies/register.js')).companyDigest() },
   'company-contacts': { pattern: '29 5 * * *', run: async () => (await import('../companies/register.js')).findContactPages(60) },
   'takedown-sla': { every: 60 * 60_000, run: takedownSla },
+  // R3e: the one activation nudge (1–7 days after sign-up, no land claimed yet), hourly batches.
+  'activation-emails': { pattern: '11 * * * *', run: async () => (await import('../services/onboarding.js')).sendActivationNudges() },
   'open-houses': { every: 60_000, run: async () => (await import('../services/open-houses.js')).announceOpenHouses() },
   'chat-cleanup': { every: 60 * 60_000, run: async () => (await import('../services/chat.js')).purgeOldNearby() },
   payouts: { every: 15 * 60_000, run: payouts },

@@ -1,3 +1,4 @@
+import { sendWelcome } from '../services/onboarding.js';
 import { attachReferrer } from '../services/referrals.js';
 import { and, desc, eq, gt, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -114,6 +115,7 @@ export default async function authRoutes(app: App) {
       if (user.bannedAt) throw badRequest('This account is suspended.');
       if (isNew && (await userCount()) <= 10_000) await unlock(user.id, 'founder');
       if (isNew && req.body.ref) await attachReferrer(user, req.body.ref).catch(() => false);
+      if (isNew) void sendWelcome(user); // R3e
       await createSession(user.id, req, reply);
       const [fresh] = await db.select().from(schema.users).where(eq(schema.users.id, user.id));
       return { user: privateUser(fresh!), isNew };
@@ -216,6 +218,7 @@ export default async function authRoutes(app: App) {
         const { user, isNew } = await findOrCreateUser(info.email, { displayName: info.name });
         if (isNew && info.picture) await db.update(schema.users).set({ avatarUrl: info.picture }).where(eq(schema.users.id, user.id));
         if (isNew && (await userCount()) <= 10_000) await unlock(user.id, 'founder');
+        if (isNew) void sendWelcome(user); // R3e
         await createSession(user.id, req, reply);
         reply.clearCookie('fm_oauth', { path: '/' });
         const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/';

@@ -39,7 +39,7 @@ export default async function growthRoutes(app: App) {
     return reply
       .header('content-type', 'text/html; charset=utf-8')
       .header('cache-control', 'no-store')
-      .send(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unsubscribed</title><body style="font-family:system-ui;background:#0B1020;color:#E8ECF8;display:grid;place-items:center;min-height:90vh"><div style="max-width:420px;text-align:center"><h1 style="color:#2DE2C4">You’re unsubscribed</h1><p>You won’t get the weekly ${config.APP_NAME} email any more. You can turn it back on in Settings.</p><p><a style="color:#2DE2C4" href="${config.APP_URL}/dashboard/settings">Settings</a></p></div></body>`);
+      .send(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unsubscribed</title><body style="font-family:system-ui;background:#0B1020;color:#E8ECF8;display:grid;place-items:center;min-height:90vh"><div style="max-width:420px;text-align:center"><h1 style="color:#2DE2C4">You’re unsubscribed</h1><p>You won’t get the weekly ${config.APP_NAME} summary or product tips any more. Sign-in codes and receipts still arrive. You can turn them back on in Settings.</p><p><a style="color:#2DE2C4" href="${config.APP_URL}/dashboard/settings">Settings</a></p></div></body>`);
   });
   app.post('/v1/email/unsubscribe', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } }, schema: { hide: true, querystring: query } }, async (req) => {
     await handle(req.query);

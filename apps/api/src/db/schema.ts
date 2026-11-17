@@ -93,6 +93,8 @@ export const users = pgTable(
     bonusCellsUsed: integer('bonus_cells_used').notNull().default(0),
     weeklyEmail: boolean('weekly_email').notNull().default(true),
     weeklyEmailSentAt: timestamp('weekly_email_sent_at', { withTimezone: true }),
+    // R3e: when the one activation nudge was sent (null = not yet).
+    activationEmailAt: timestamp('activation_email_at', { withTimezone: true }),
     passwordHash: text('password_hash'),
     bio: text('bio'),
     role: text('role').notNull().default('user'), // user | moderator | admin

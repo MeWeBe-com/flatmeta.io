@@ -99,6 +99,13 @@
       "when": 1794818125502,
       "tag": "0013_paypal_orders",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794904525502,
+      "tag": "0014_activation_email",
+      "breakpoints": true
     }
   ]
 }
