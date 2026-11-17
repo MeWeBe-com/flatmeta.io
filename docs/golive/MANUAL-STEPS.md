@@ -12,6 +12,27 @@ Everything here needs a person: a purchase, an account, a key, a DNS record or a
 
 ---
 
+## Round 3: one action each (17 Nov 2026)
+
+Everything code can do is done. What is left needs a person. Each item below is **one action**: a script, an exact click-path, or copy ready to send. Do them in this order; items 1–3 unblock the rest. The later sections hold the details.
+
+| # | Action (one each) | Who | Unblocks | Done when |
+|---|---|---|---|---|
+| 1 | **Run the go-live scripts on cp2.** As najamussaqib: `bash ~/golive/scripts/server/go-live-production.sh --root /home/flatmeta/web/flatmeta.io/private/flatmeta`, then as root: `sudo bash /home/flatmeta/web/flatmeta.io/private/flatmeta/scripts/server/go-live-production-root.sh`. The first-time fetch of the scripts is in Launch checklist step 1. | Server admin | CEO, CTO, QA, every live score | The root script ends with **ALL OK** (health shows the new release, apex 301, new llms.txt, sitemap index, pages 200) |
+| 2 | **Stripe, one sitting.** In the FlatMeta account inside the Organisation, **Developers → Webhooks → Add endpoint** `https://www.flatmeta.io/api/v1/stripe/webhook` with the 8 events in "Payments (GL4)" step 2.4. Then paste `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` and `STRIPE_WEBHOOK_SECRET` into the production `.env` and re-run item 1. | Boss (keys), server admin (paste) | Taking payments: CEO, VC, Solutions Architect | `npm run payments:check -w flatmeta-api` prints `✓ named exactly "FlatMeta"` and `/api/v1/features` shows `"paidCheckout":true` |
+| 3 | **Cloudflare, one command.** Create the token `FlatMeta-DNS` (the click-path is at the top of the script), then run `CLOUDFLARE_API_TOKEN=… bash scripts/server/cloudflare-zone.sh`. It turns Email Obfuscation off, Email Routing on, and adds DMARC (and SPF if missing). Then the one click it prints: verify the owner's inbox and add the 4 routing rules. | Fahad or owner | Email from flatmeta.io; no hydration errors on any page | The script prints **ALL OK**, and `npm run email:check -w flatmeta-api -- --domain flatmeta.io` is all ✓ |
+| 4 | **Resend, 3 clicks.** resend.com → **Domains → Add** `flatmeta.io` (the DKIM records exist) → **API Keys → Create** `FlatMeta-Resend` → paste it as `RESEND_API_KEY` in the production `.env`; delete `MAIL_FROM` and `MAIL_REPLY_TO`, so the flatmeta.io defaults apply. | Owner | Welcome, activation and sign-in emails from noreply@flatmeta.io | `npm run email:check -w flatmeta-api -- --send <your inbox>` arrives from noreply@flatmeta.io |
+| 5 | **Turn the schedules on, 1 click.** GitHub → repo → **Settings → General → Default branch → ⇄ → v2 → Update**. | Repository owner | Daily QA, daily SEO, weekly CEO report (CTO, QA) | Actions lists the three workflows as scheduled; the first daily run is green |
+| 6 | **Send the first 10 outreach emails.** Use `docs/golive/outreach-first-10.md`: export the CSV, fill the brackets, send from hello@flatmeta.io, set each row to **Contacted**. | Owner | First customers: VC, Sales, PM | 10 rows show Contacted; replies are logged in `docs/golive/drafts/` |
+| 7 | **Ask the first happy customer for a story.** Send the permission email in `docs/golive/case-study-template.md`, then add their approved entry to `apps/web/src/data/customer-stories.ts` (a pull request). | Owner | Real social proof: Sales, VC | The story shows on /business and /pricing |
+| 8 | **Optional founding discount.** Stripe → **Products → Coupons → New**: 50% off for 12 months on Business. Then **Promotion codes → New** `FOUNDING50`. Set `LAUNCH_OFFER="Founding customers: 50% off Business for 12 months with code FOUNDING50"` in `.env` and re-run item 1. | Boss | A sharper offer in the founding block | /pricing shows the offer text in the founding block |
+| 9 | **Set up the five agents.** Paste each `ops/agents/*.md` prompt into claude.ai scheduled tasks (or Antigravity) at the time in its header, connected to this repository only. | Owner | Daily drafts and reports: CEO, Marketing, Sales, QA | Each agent opens its first pull request |
+| 10 | **Search engines, 2 clicks each.** Google Search Console and Bing Webmaster Tools → add `https://www.flatmeta.io` → **Sitemaps → submit** `https://www.flatmeta.io/sitemap.xml`. | Owner | Indexing of the new pages (SEO) | Both consoles show the sitemap as "Success" |
+
+**What each role needs, after these:** see `02-viability-profit-report.md` §7, "Round 3 scores".
+
+---
+
 ## Domains (GL1)
 
 **Boss decision, 17 Nov 2026: `flatmeta.io` is the only domain. Do not buy or redirect any other domain.**
