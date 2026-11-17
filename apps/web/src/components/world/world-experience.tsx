@@ -1,4 +1,5 @@
 'use client';
+import { track } from '@/lib/funnel';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -117,6 +118,10 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
   const tour = useTourState();
   const touch = useTouch();
   const [claimMode, setClaimMode] = useState(false);
+  // R3f: starting a claim is a funnel step (counted once per tab session, cookie-free).
+  useEffect(() => {
+    if (claimMode) track('claim_start');
+  }, [claimMode]);
   const [selection, setSelection] = useState<Rect | null>(null);
   const [selState, setSelState] = useState<SelectionState>('idle');
   const [openPlot, setOpenPlot] = useState<string | null>(null);

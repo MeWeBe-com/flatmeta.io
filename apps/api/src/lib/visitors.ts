@@ -47,3 +47,21 @@ export async function uniqueVisitors(plotId: string): Promise<{ today: number; w
   const [today, week] = await Promise.all([redis.pfcount(key('uv', 'd', plotId, day)), redis.pfcount(key('uv', 'w', plotId, weekKey(day)))]);
   return { today, week };
 }
+
+/**
+ * R3f: site-wide funnel events, counted the same cookie-free way: one HyperLogLog per event per day of the daily
+ * salted hashes, so a number is "unique people that day". Nothing about the person or the page is stored.
+ */
+export const FUNNEL_EVENTS = ['visit', 'demo_view', 'claim_start'] as const;
+export type FunnelEvent = (typeof FUNNEL_EVENTS)[number];
+
+export async function countFunnelEvent(event: FunnelEvent, hash: string, day = dayKey()) {
+  const k = key('funnel', event, day);
+  await redis.multi().pfadd(k, hash).expire(k, 400 * 86400).exec();
+}
+
+/** The sum of daily unique counts for one event over these days. */
+export async function funnelEventTotal(event: FunnelEvent, days: string[]): Promise<{ total: number; byDay: Record<string, number> }> {
+  const counts = await Promise.all(days.map((d) => redis.pfcount(key('funnel', event, d)).catch(() => 0)));
+  return { total: counts.reduce((a, b) => a + b, 0), byDay: Object.fromEntries(days.map((d, i) => [d, counts[i] ?? 0])) };
+}

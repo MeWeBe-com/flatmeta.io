@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Bot, CalendarCheck, Eye, Heart, MapPinned, MessageSquare, Sparkles, Tag } from 'lucide-react';
 import { PageShell } from '@/components/site-chrome';
 import { OpenNowBadge } from '@/components/plot/open-now';
+import { FunnelBeacon } from '@/components/funnel-beacon';
 import { Breadcrumbs, siteTitle } from '@/lib/seo';
 import { SAMPLE, sampleStructuredData } from '@/lib/demo';
 
@@ -28,6 +29,7 @@ export default function DemoPage() {
   return (
     <PageShell wide>
       <Breadcrumbs trail={[{ name: 'Demo', path: '/demo' }]} />
+      <FunnelBeacon event="demo_view" />
       <div id="main" className="space-y-12">
         <header className="text-center max-w-3xl mx-auto pt-4 space-y-4">
           <span className="chip chip-teal">30-second demo</span>

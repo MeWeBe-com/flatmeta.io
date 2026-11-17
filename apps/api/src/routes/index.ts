@@ -18,11 +18,12 @@ import socialRoutes from './social.js';
 import sandboxRoutes from './sandbox.js';
 import openHouseRoutes from './open-houses.js';
 import growthRoutes from './growth.js';
+import funnelRoutes from './funnel.js';
 import brandRoutes from './brands.js';
 import askRoutes from './ask.js';
 
 export async function registerRoutes(app: App) {
-  for (const r of [authRoutes, meRoutes, plotRoutes, regionRoutes, sitemapRoutes, socialRoutes, chatRoutes, clanRoutes, emailRoutes, marketplaceRoutes, searchRoutes, orgRoutes, billingRoutes, aiRoutes, showcaseRoutes, adminRoutes, liveRoutes, sandboxRoutes, openHouseRoutes, growthRoutes, brandRoutes, askRoutes]) {
+  for (const r of [authRoutes, meRoutes, plotRoutes, regionRoutes, sitemapRoutes, socialRoutes, chatRoutes, clanRoutes, emailRoutes, marketplaceRoutes, searchRoutes, orgRoutes, billingRoutes, aiRoutes, showcaseRoutes, adminRoutes, liveRoutes, sandboxRoutes, openHouseRoutes, growthRoutes, brandRoutes, askRoutes, funnelRoutes]) {
     await r(app);
   }
 }

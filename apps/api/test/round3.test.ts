@@ -90,3 +90,31 @@ describe('R3e onboarding emails', () => {
     expect(got(due)).toBe(1);
   });
 });
+
+describe('R3f funnel', () => {
+  it('counts events per unique person per day, skips bots, Do Not Track and GPC, and shows the four steps to staff', async () => {
+    const before = JSON.parse((await app.inject({ url: '/v1/admin/funnel?days=1', headers: (await login(undefined, 'admin')).headers })).body);
+    const visits0 = before.steps[0].n;
+    const ua = { 'user-agent': `Mozilla/5.0 r3f-${Date.now()}` };
+    const post = (headers: Record<string, string>, name = 'visit') => app.inject({ method: 'POST', url: '/v1/events', headers, payload: { name } });
+    expect((await post(ua)).statusCode).toBe(204);
+    expect((await post(ua)).statusCode).toBe(204); // same person, same day: counted once
+    await post({ 'user-agent': 'Googlebot/2.1' });
+    await post({ ...ua, 'user-agent': `${ua['user-agent']}-dnt`, dnt: '1' });
+    await post({ ...ua, 'user-agent': `${ua['user-agent']}-gpc`, 'sec-gpc': '1' });
+    expect((await post(ua, 'not_an_event')).statusCode).toBe(400);
+    await post(ua, 'demo_view');
+
+    const anon = await app.inject({ url: '/v1/admin/funnel' });
+    expect(anon.statusCode).toBe(401);
+    const user = await login();
+    expect((await app.inject({ url: '/v1/admin/funnel', headers: user.headers })).statusCode).toBe(403);
+    const admin = await login(undefined, 'admin');
+    const f = JSON.parse((await app.inject({ url: '/v1/admin/funnel?days=1', headers: admin.headers })).body);
+    expect(f.steps.map((s: { key: string }) => s.key)).toEqual(['visit', 'signup', 'first_value', 'paid']);
+    expect(f.steps[0].n).toBe(visits0 + 1);
+    expect(f.side.demoViews).toBeGreaterThanOrEqual(1);
+    expect(f.steps[1].n).toBeGreaterThan(0); // the accounts this test file made today
+    expect(f.steps[1].rate === null || typeof f.steps[1].rate === 'number').toBe(true);
+  });
+});
