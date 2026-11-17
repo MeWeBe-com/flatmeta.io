@@ -14,7 +14,8 @@ test('the /insights hub lists the articles, newest first, at its own canonical U
   expect(html).toMatch(/<title>Insights · FlatMeta<\/title>/);
   expect(html).toMatch(/<link rel="canonical" href="[^"]+\/insights"/);
   const order = [...html.matchAll(/href="(\/insights\/[^"]+\.html)"/g)].map((m) => m[1]);
-  expect(order).toEqual(['/insights/2026-11-13-newest-virtual-reality-headset-for-libraries-and-schools.html', '/insights/2026-11-12-local-shops-on-a-world-map.html']);
+  // QA3: the off-topic fixture (a VR headset article) is not listed.
+  expect(order).toEqual(['/insights/2026-11-12-local-shops-on-a-world-map.html']);
   // At least two links to FlatMeta pages, and the breadcrumb ends at the hub.
   expect(html).toMatch(/href="\/explore"/);
   expect(html).toMatch(/"@type":"BreadcrumbList".*"name":"Insights","item":"[^"]+\/insights"/);
@@ -33,6 +34,7 @@ test('the insights sitemap lists the hub (dated by its newest article) and every
   expect(locs[0]).toBe('/insights');
   expect(locs).toContain('/insights/2026-11-12-local-shops-on-a-world-map.html');
   expect(locs).not.toContain('/insights/'); // the automation's old index redirects to the hub
+  expect(locs.some((l) => /virtual-reality/.test(l))).toBe(false); // QA3: off-topic articles are never listed
 });
 
 test('admins see which articles break the rules; nobody else sees the page', async ({ browser }) => {

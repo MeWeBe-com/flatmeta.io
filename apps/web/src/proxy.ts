@@ -79,7 +79,8 @@ export const config = {
   matcher: [
     {
       // Pages only: not the API (proxied), static chunks, media, icons or prefetches.
-      source: '/((?!api/|_next/static|_next/image|media/|icons/|favicon|sw.js|manifest.webmanifest|robots.txt|sitemap).*)',
+      // QA3: /insights/<file>.html are articles with their own CSP (app/insights/[file]/route.ts), not app pages.
+      source: '/((?!api/|_next/static|_next/image|media/|icons/|favicon|sw.js|manifest.webmanifest|robots.txt|sitemap|insights/[^/]+html).*)',
       missing: [
         { type: 'header', key: 'next-router-prefetch' },
         { type: 'header', key: 'purpose', value: 'prefetch' },

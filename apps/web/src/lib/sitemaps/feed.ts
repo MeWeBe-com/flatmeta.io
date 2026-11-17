@@ -1,7 +1,7 @@
 import { serverApi } from '@/lib/server-api';
 import { SITE_URL } from '@/lib/config';
 import { LANDING_PATHS } from '@/lib/landing';
-import { insightArticles } from '@/lib/insights';
+import { insightArticles, offTopicWord } from '@/lib/insights';
 
 export interface SitemapFeed {
   /** company: a company (showcase) plot, listed in sitemap-companies.xml instead of sitemap-plots.xml. */
@@ -51,7 +51,7 @@ export const pageCount = (n: number) => Math.max(1, Math.ceil(n / PLOTS_PER_SITE
 export async function sitemapIndex() {
   const feed = await sitemapFeed();
   const paged = (file: string, n: number) => Array.from({ length: pageCount(n) }, (_, i) => abs(i === 0 ? file : `${file}?page=${i + 1}`));
-  const articles = await insightArticles().catch(() => []);
+  const articles = (await insightArticles().catch(() => [])).filter((a) => a.path !== '/insights/' && !offTopicWord(a));
   const people = plotsOf(feed, false);
   const companies = plotsOf(feed, true);
   const pagesLastmod = newest([BUILD_TIME, ...(feed?.users ?? []).map((u) => u.updatedAt), ...(feed?.orgs ?? []).map((o) => o.updatedAt), ...Object.values(feed?.lastmod?.countries ?? {}), ...Object.values(feed?.lastmod?.brands ?? {})]);

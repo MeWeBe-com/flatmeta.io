@@ -1,4 +1,4 @@
-import { insightArticles } from '@/lib/insights';
+import { insightArticles, offTopicWord } from '@/lib/insights';
 import { abs, xmlEscape, xmlResponse } from '@/lib/sitemaps/feed';
 
 /**
@@ -8,7 +8,8 @@ import { abs, xmlEscape, xmlResponse } from '@/lib/sitemaps/feed';
  */
 export async function GET() {
   const all = await insightArticles();
-  const articles = all.filter((a) => a.path !== '/insights/');
+  // QA3: off-topic articles answer 410 and are never listed.
+  const articles = all.filter((a) => a.path !== '/insights/' && !offTopicWord(a));
   const newest = articles.reduce((m, a) => (a.lastmod > m ? a.lastmod : m), '');
   const rows = [...(articles.length ? [{ path: '/insights', lastmod: newest }] : []), ...articles];
   const body = rows.map((a) => `  <url><loc>${xmlEscape(abs(a.path))}</loc><lastmod>${a.lastmod}</lastmod></url>`).join('\n');

@@ -20,6 +20,8 @@ export interface InsightArticle {
   internalLinks: number;
   /** The article's date (from its file name, YYYY-MM-DD-…; else its modification time). */
   date: string;
+  /** QA3: the first <h1>, checked for off-topic words like the title. */
+  h1?: string | null;
 }
 
 /**
@@ -34,7 +36,16 @@ export const INSIGHT_RULES = {
   minInternalLinks: 2,
   offTopic: /\b(metaverse|virtual reality|vr|headsets?|nfts?|blockchain|crypto(currency)?|digital twin)\b/i,
 };
-export function articleProblems(a: Pick<InsightArticle, 'title' | 'description' | 'lang' | 'ogImage' | 'internalLinks'>): string[] {
+/**
+ * QA3: the off-topic word an article uses, from its title, description, first heading or file name (the slug
+ * "newest-virtual-reality-headset" is off-topic even if the title were not), or null.
+ */
+export function offTopicWord(a: Partial<Pick<InsightArticle, 'path' | 'title' | 'description' | 'h1'>>): string | null {
+  const slug = (a.path ?? '').replace(/^.*\//, '').replace(/\.html$/, '').replace(/[-_]+/g, ' ');
+  return `${a.title ?? ''} ${a.description ?? ''} ${a.h1 ?? ''} ${slug}`.match(INSIGHT_RULES.offTopic)?.[0] ?? null;
+}
+
+export function articleProblems(a: Pick<InsightArticle, 'title' | 'description' | 'lang' | 'ogImage' | 'internalLinks'> & Partial<Pick<InsightArticle, 'path' | 'h1'>>): string[] {
   const r = INSIGHT_RULES;
   const out: string[] = [];
   if (!a.title) out.push('no <title>');
@@ -45,8 +56,8 @@ export function articleProblems(a: Pick<InsightArticle, 'title' | 'description' 
   if (!a.ogImage) out.push('no og:image');
   else if (!/^https:\/\//.test(a.ogImage)) out.push('og:image is not an absolute https URL');
   if (a.internalLinks < r.minInternalLinks) out.push(`${a.internalLinks} link${a.internalLinks === 1 ? '' : 's'} to FlatMeta pages (at least ${r.minInternalLinks})`);
-  const topic = `${a.title ?? ''} ${a.description ?? ''}`.match(r.offTopic);
-  if (topic) out.push(`off-topic for FlatMeta ("${topic[0]}")`);
+  const topic = offTopicWord(a);
+  if (topic) out.push(`off-topic for FlatMeta ("${topic}"): hidden from the hub and the sitemap, and the URL answers 410`);
   return out;
 }
 
@@ -55,6 +66,11 @@ export async function insightList(dir?: string) {
   return (await insightArticles(dir)).filter((a) => a.path !== '/insights/').sort((x, y) => (x.date < y.date ? 1 : x.date > y.date ? -1 : x.path < y.path ? 1 : -1));
 }
 export const INSIGHTS_PER_PAGE = 20;
+
+/** QA3: what the hub and /sitemap-insights.xml list: every article except off-topic ones (those answer 410). */
+export async function publishedInsights(dir?: string) {
+  return (await insightList(dir)).filter((a) => !offTopicWord(a));
+}
 
 const TTL = 10 * 60_000;
 let cache: { at: number; dir: string; list: InsightArticle[] } | null = null;
@@ -79,6 +95,7 @@ export function parseArticle(html: string) {
     lang: pick(html, /<html[^>]*\slang=["']([^"']+)["']/i),
     ogImage: pick(html, /<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i),
     internalLinks: internal.size,
+    h1: pick(html, /<h1[^>]*>([\s\S]*?)<\/h1>/i)?.replace(/<[^>]+>/g, '').trim() ?? null,
   };
 }
 

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PageShell } from '@/components/site-chrome';
-import { INSIGHTS_PER_PAGE, insightList } from '@/lib/insights';
+import { INSIGHTS_PER_PAGE, publishedInsights } from '@/lib/insights';
 import { Breadcrumbs } from '@/lib/seo';
 
 /**
@@ -17,7 +17,7 @@ const fmt = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-GB'
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const page = pageOf((await searchParams).page);
-  const any = (await insightList()).length > 0;
+  const any = (await publishedInsights()).length > 0;
   return {
     title: page > 1 ? `Insights · page ${page}` : 'Insights',
     description: 'Articles about finding places on a map, small-business visibility, link-in-bio pages, brands near their headquarters and AI agents that recommend places.',
@@ -29,7 +29,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 
 export default async function InsightsPage({ searchParams }: Props) {
   const page = pageOf((await searchParams).page);
-  const all = await insightList();
+  const all = await publishedInsights();
   const pages = Math.max(1, Math.ceil(all.length / INSIGHTS_PER_PAGE));
   if (page > pages) notFound();
   const list = all.slice((page - 1) * INSIGHTS_PER_PAGE, page * INSIGHTS_PER_PAGE);

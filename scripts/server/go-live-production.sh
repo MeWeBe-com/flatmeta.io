@@ -135,6 +135,8 @@ set_env REQUIRE_CI true
 set_env HEALTH_URLS "http://127.0.0.1:${WEB_PORT:-3250}/ http://127.0.0.1:${PORT:-3251}/v1/me"
 # Every canonical URL, sitemap entry and robots.txt line is built from APP_URL: it must be the www host.
 set_env APP_URL "$WWW"
+# QA3: the app serves and checks the insights articles from this folder (off-topic ones answer 410).
+if [ -d "$PUBLIC_HTML/insights" ]; then set_env INSIGHTS_DIR "$PUBLIC_HTML/insights"; else info "no $PUBLIC_HTML/insights folder: INSIGHTS_DIR left as is"; fi
 if [ "$PAYMENTS" = yes ]; then set_env PAID_CHECKOUT_ENABLED true; else info "PAID_CHECKOUT_ENABLED left as ${PAID_CHECKOUT_ENABLED:-auto} (off in production)"; fi
 
 # ── 4. Deploy ──

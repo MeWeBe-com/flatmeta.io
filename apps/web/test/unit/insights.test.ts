@@ -31,8 +31,17 @@ describe('insights articles', () => {
       '<html lang> is "en-GB" (must be "en")',
       'no og:image',
       '0 links to FlatMeta pages (at least 2)',
-      'off-topic for FlatMeta ("virtual reality")',
+      'off-topic for FlatMeta ("virtual reality"): hidden from the hub and the sitemap, and the URL answers 410',
     ]);
     expect(articleProblems({ title: 'Brands near their headquarters', description: 'x'.repeat(120), lang: 'en', ogImage: 'http://x/y.png', internalLinks: 1 })).toEqual(['og:image is not an absolute https URL', '1 link to FlatMeta pages (at least 2)']);
+  });
+
+  it('QA3: the file name and the first heading count for the topic too; the hub lists only on-topic articles', async () => {
+    const { offTopicWord, publishedInsights } = await import('../../src/lib/insights');
+    expect(offTopicWord({ path: '/insights/2026-11-17-digital-twin-building-platform.html', title: 'A building platform guide' })).toBe('digital twin');
+    expect(offTopicWord({ path: '/insights/2026-11-17-x.html', title: 'Fine', h1: 'Our metaverse plans' })).toBe('metaverse');
+    expect(offTopicWord({ path: '/insights/2026-11-17-local-cafes-on-the-map.html', title: 'Local cafés on the map' })).toBeNull();
+    const list = await publishedInsights(path.resolve(__dirname, '../fixtures/insights'));
+    expect(list.map((a) => a.path)).toEqual(['/insights/2026-11-12-local-shops-on-a-world-map.html']);
   });
 });
