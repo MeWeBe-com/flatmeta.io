@@ -16,7 +16,7 @@ export function StagingBanner() {
   const [show, setShow] = useState(false);
   useEffect(() => setShow(APP_ENV === 'staging' || location.hostname === STAGING_DOMAIN), []);
   if (!show) return null;
-  return <div className="fixed bottom-0 inset-x-0 z-[80] text-center text-xs font-semibold bg-[var(--color-coral)] text-white py-0.5">STAGING · {STAGING_DOMAIN} · test payments only</div>;
+  return <div className="fixed bottom-0 inset-x-0 z-[80] text-center text-xs font-semibold bg-[var(--color-coral)] text-[#1a0f14] py-0.5">STAGING · {STAGING_DOMAIN} · test payments only</div>;
 }
 
 let deferredPrompt: (Event & { prompt: () => Promise<void> }) | null = null;

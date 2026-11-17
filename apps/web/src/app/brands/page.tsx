@@ -25,7 +25,9 @@ export default async function BrandsPage({ searchParams }: Props) {
   return (
     <PageShell>
       <Breadcrumbs trail={[{ name: 'Companies', path: '/brands' }, ...(page > 1 ? [{ name: `Page ${page}`, path: `/brands?page=${page}` }] : [])]} />
-      <BrandsDirectory data={data} q={q} page={page} />
+      <div id="main">
+        <BrandsDirectory data={data} q={q} page={page} />
+      </div>
     </PageShell>
   );
 }

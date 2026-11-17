@@ -40,7 +40,9 @@ export default async function BrandsCountryPage({ params, searchParams }: Props)
           ...(page > 1 ? [{ name: `Page ${page}`, path: `/brands/${country.toLowerCase()}?page=${page}` }] : []),
         ]}
       />
-      <BrandsDirectory data={data} country={country.toUpperCase()} q={q} page={page} />
+      <div id="main">
+        <BrandsDirectory data={data} country={country.toUpperCase()} q={q} page={page} />
+      </div>
     </PageShell>
   );
 }

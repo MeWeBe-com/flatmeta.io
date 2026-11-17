@@ -31,9 +31,11 @@ function LoginInner() {
 export default function LoginPage() {
   return (
     <PageShell>
-      <Suspense>
-        <LoginInner />
-      </Suspense>
+      <div id="main">
+        <Suspense>
+          <LoginInner />
+        </Suspense>
+      </div>
     </PageShell>
   );
 }

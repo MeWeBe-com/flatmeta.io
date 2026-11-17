@@ -156,14 +156,15 @@ export function KindChip({ plot }: { plot: Pick<Plot, 'kind' | 'business' | 'own
   return null;
 }
 
-export function PlotCard({ plot, compactView = false }: { plot: Plot; compactView?: boolean }) {
+/** `priority`: the first cards of a grid are above the fold on phones, so they load at once (R3b: LCP on /explore). */
+export function PlotCard({ plot, compactView = false, priority = false }: { plot: Plot; compactView?: boolean; priority?: boolean }) {
   return (
     <Link
       href={`/p/${plot.slug}`}
       className={clsx('group surface overflow-hidden flex flex-col transition hover:-translate-y-0.5 hover:border-[var(--line-strong)]', plot.spotlight && 'ring-1 ring-[var(--color-gold)]')}
     >
       <div className="relative aspect-[3/2] overflow-hidden bg-[var(--color-night-3)]">
-        {plot.coverImageUrl && <img src={plot.thumbUrl && compactView ? plot.thumbUrl : plot.coverImageUrl} alt="" loading="lazy" className="size-full object-cover transition duration-500 group-hover:scale-[1.04]" />}
+        {plot.coverImageUrl && <img src={plot.thumbUrl && compactView ? plot.thumbUrl : plot.coverImageUrl} alt="" loading={priority ? 'eager' : 'lazy'} fetchPriority={priority ? 'high' : 'auto'} className="size-full object-cover transition duration-500 group-hover:scale-[1.04]" />}
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/70 to-transparent" />
         <div className="absolute left-3 top-3 flex gap-1.5">
           <KindChip plot={plot} />
@@ -194,8 +195,8 @@ export function PlotGrid({ plots, empty }: { plots: Plot[]; empty?: ReactNode })
   if (!plots.length) return <>{empty ?? null}</>;
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {plots.map((p) => (
-        <PlotCard key={p.id} plot={p} />
+      {plots.map((p, i) => (
+        <PlotCard key={p.id} plot={p} priority={i < 2} />
       ))}
     </div>
   );

@@ -103,7 +103,10 @@ export function ExploreClient({ initial, countries, page = 1 }: { initial: Plot[
       {loading && !plots.length ? (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="skeleton aspect-[3/4]" />)}</div>
       ) : (
-        <PlotGrid plots={plots} empty={<EmptyState title="Nothing here yet" body="Try another filter, or claim the first plot yourself." />} />
+        <>
+          <h2 className="sr-only">Plots</h2>
+          <PlotGrid plots={plots} empty={<EmptyState title="Nothing here yet" body="Try another filter, or claim the first plot yourself." />} />
+        </>
       )}
       {loading && plots.length > 0 && <div className="text-center"><Spinner /></div>}
       {next !== null && !loading && <div className="text-center"><button className="btn-ghost" onClick={() => void more()}>Load more</button></div>}
