@@ -25,6 +25,7 @@ Key facts:
 - [Companies on FlatMeta](${s}/brands): reserved company land, by country
 - [Pricing](${s}/pricing)
 - [For business](${s}/business)
+- [30-second demo](${s}/demo): a sample business page and the structured data an AI assistant reads from it
 ${FOR_PAGES.map((p) => `- [${p.chip}](${s}/for/${p.slug}): ${p.description}`).join('\n')}
 
 ## Comparisons

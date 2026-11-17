@@ -590,7 +590,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
           </div>
           <div className="flex gap-2 mt-3">
             <button className="btn-primary btn-sm" onClick={startClaim}><Compass size={14} /> Claim free land</button>
-            <Link href="/explore" className="btn-ghost btn-sm"><Users size={14} /> Explore</Link>
+            <Link href="/demo" className="btn-ghost btn-sm"><Sparkles size={14} /> 30-second demo</Link>
           </div>
         </div>
       )}

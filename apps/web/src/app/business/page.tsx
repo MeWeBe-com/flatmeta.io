@@ -45,6 +45,7 @@ export default async function BusinessPage() {
             <Link href="/pricing" className="btn-primary btn-lg">See Business plans</Link>
             <Link href="/?claim" className="btn-ghost btn-lg">Claim your spot</Link>
           </div>
+            <Link href="/demo" className="btn-ghost btn-lg">See a sample page</Link>
         </section>
         <TrustStats />
         <HowItWorks audience="business" />

@@ -168,6 +168,7 @@ export function SiteFooter() {
           <Link href="/business" className="tap muted hover:text-[var(--text)]">{t('nav.business')}</Link>
           <Link href="/pricing" className="tap muted hover:text-[var(--text)]">{t('nav.pricing')}</Link>
           <Link href="/brands" className="tap muted hover:text-[var(--text)]">Companies</Link>
+          <Link href="/demo" className="tap muted hover:text-[var(--text)]">30-second demo</Link>
           <Link href="/for/local-businesses" className="tap muted hover:text-[var(--text)]">For local businesses</Link>
           <Link href="/compare/google-business-profile" className="tap muted hover:text-[var(--text)]">vs Google Business Profile</Link>
         </div>

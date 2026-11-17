@@ -21,7 +21,7 @@ export const BUILD_TIME = process.env.BUILD_TIME || new Date(0).toISOString();
 
 /** Sitemaps hold at most 50,000 URLs and 50 MB: split at 40,000 (plot entries are well under 1 KB each). */
 export const PLOTS_PER_SITEMAP = 40_000;
-export const STATIC_PAGES = ['', '/explore', '/leaderboards', '/marketplace', '/clans', '/pricing', '/business', '/brands', '/about', '/about/facts', '/legal/terms', '/legal/privacy', '/legal/refunds', ...LANDING_PATHS];
+export const STATIC_PAGES = ['', '/explore', '/leaderboards', '/marketplace', '/clans', '/pricing', '/business', '/brands', '/about', '/about/facts', '/legal/terms', '/legal/privacy', '/legal/refunds', '/demo', ...LANDING_PATHS];
 
 /** The API's list of public URLs (plots visible on the map, countries, cities, owners, organisations). */
 export async function sitemapFeed(): Promise<SitemapFeed | null> {

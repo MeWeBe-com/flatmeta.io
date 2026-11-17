@@ -35,9 +35,10 @@ export function HomeFirstPaint({ stats, behind = false }: { stats: Stats; behind
             )}
             {!behind && (
             <nav className="mt-6 flex flex-wrap justify-center gap-2" aria-label="Start here">
-              <Link href="/explore" className="btn-primary min-h-11">Explore places</Link>
-              <Link href="/brands" className="btn-ghost min-h-11">Companies on the map</Link>
-              <Link href="/pricing" className="btn-ghost min-h-11">Pricing</Link>
+              {/* R3c: one clear first action, then the 30-second demo for people who want to see before they claim. */}
+              <Link href="/?claim" className="btn-primary min-h-11">Claim your free plot</Link>
+              <Link href="/demo" className="btn-ghost min-h-11">See a 30-second demo</Link>
+              <Link href="/explore" className="btn-ghost min-h-11">Explore places</Link>
             </nav>
             )}
             <p className="mt-6 text-xs muted" role="status">Loading the live map…</p>
