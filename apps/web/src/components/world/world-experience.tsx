@@ -1,5 +1,6 @@
 'use client';
 import { track } from '@/lib/funnel';
+import { scheduleMapStart } from '@/lib/lazy-map';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -81,7 +82,13 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
   const [mapReady, setMapReady] = useState(false);
   // Decided in the browser before the map's code is requested: without WebGL it isn't downloaded at all.
   const [webgl, setWebgl] = useState<boolean | null>(null);
-  useEffect(() => setWebgl(webglAvailable()), []);
+  // QA4: the map (and the WebGL check, which creates a context) starts after first paint: on the first interaction,
+  // a deep link, or once the page is idle (lib/lazy-map.ts). Until then the server-rendered hero is the screen.
+  const [mapStart, setMapStart] = useState(false);
+  useEffect(() => scheduleMapStart(() => setMapStart(true)), []);
+  useEffect(() => {
+    if (mapStart) setWebgl(webglAvailable());
+  }, [mapStart]);
   const pending = useRef<((m: WorldMapHandle) => void)[] | null>([]);
   const whenMap = useCallback((fn: (m: WorldMapHandle) => void) => {
     if (pending.current === null && map.current) fn(map.current);
