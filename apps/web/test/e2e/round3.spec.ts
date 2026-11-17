@@ -22,3 +22,16 @@ test('R3c: the home page leads with one first action, then the demo', async ({ r
   expect(claim).toBeGreaterThan(0);
   expect(demo).toBeGreaterThan(claim);
 });
+
+test('R3d: the founding block shows real places left; no invented stories or logos', async ({ page, request }) => {
+  const plans = (await (await request.get('/api/v1/billing/plans')).json()) as { founding: { total: number; left: number } | null };
+  for (const path of ['/business', '/pricing']) {
+    await page.goto(path);
+    if (plans.founding && plans.founding.left > 0) {
+      await expect(page.getByTestId('founding-left')).toHaveText(`${plans.founding.left} of ${plans.founding.total} places left`);
+    } else {
+      await expect(page.getByTestId('founding-offer')).toHaveCount(0);
+    }
+    await expect(page.getByTestId('customer-stories')).toHaveCount(0); // none have permission yet
+  }
+});
