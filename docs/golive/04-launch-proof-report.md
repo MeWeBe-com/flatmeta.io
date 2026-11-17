@@ -1,39 +1,48 @@
 # FlatMeta: launch and 9/10 proof report (GL10)
 
-16 Nov 2026 · branch `v2` · build `93dbf39` · repository MeWeBe-com/flatmeta.io
+17 Nov 2026 (Round 3) · branch `v2` · staging build `9592742` · repository MeWeBe-com/flatmeta.io · domain: **flatmeta.io only** (boss decision, 17 Nov)
 
 ## One page
 
 **Where we are.** The go-live build is finished, tested and running on **staging**:
-- **Selling:** a free company claim with a Business upsell and a launch offer; a trust block, FAQ and refunds; buyer pages and fair comparisons.
+- **Selling:**
+  - a free company claim with a Business upsell;
+  - founding places counted from the database, and customer stories shown only with permission;
+  - a trust block, FAQ and refunds; buyer pages and fair comparisons;
+  - a 30-second demo, and one clear first action on the home page.
+- **Activation:** a welcome email, one activation nudge, helpful errors, and a cookie-free funnel at `/admin/funnel` (Visitors > Sign-ups > First value > Paid).
 - **Payments:** Stripe with an account check, and PayPal Checkout.
-- **Operations:** email from the project's domain, a health URL, error alerts, Cloudflare Workers, and daily QA and SEO checks with a weekly CEO report.
-- **Promotion:** five agents with guardrails, a growth plan with 30 submission sites and a 30-day calendar, and the mewebe.com listing.
+- **Operations:**
+  - one-command scripts for production go-live and for Cloudflare;
+  - a health URL, error alerts and Cloudflare Workers;
+  - daily QA and SEO checks and a weekly CEO report.
+- **Promotion:** five agents with guardrails, a growth plan, ready-to-send outreach for the first 10 customers, and the mewebe.com listing.
 
-CI is green and staging deploys automatically. The release smoke test passes 19/19 on staging.
+CI is green on `9592742` and staging deploys automatically. On staging:
+- **Lighthouse mobile:** accessibility 100 and best practices 100 on all 11 measured pages; performance 93–100 on every content page. The map home page is 63 in headless Chrome, which draws its WebGL in software.
+- **No console errors** on 24 page loads (12 pages × desktop and phone).
+- **The release smoke test** passes 19/19.
 
-**What is not live yet, and why.** **www.flatmeta.io still runs an old build.** It shows "coming soon" on pricing, `/insights` is 404, the leaderboards return 500, and `llms.txt` is the old "Digital Twin" text. The cause is not the code. The production deploy path is switched off: CI has no `PROD_DEPLOY_*` secrets and the server has `AUTO_DEPLOY=false`. Payments, email and the schedules also wait on accounts, keys, DNS and one GitHub setting. Every one of these is a numbered step with an owner in `MANUAL-STEPS.md`.
+**What is not live yet, and why.** **www.flatmeta.io still runs the old build**: `/insights` is 404, `/p/tesla` and `/leaderboards` show console errors, and `llms.txt` is the old "Digital Twin" text. That is not a code problem: the build reaches production when the go-live scripts run on the server. Payments, email from flatmeta.io and the daily schedules wait on accounts, keys and settings too. Each is one action with an owner in `MANUAL-STEPS.md` → "Round 3: one action each".
 
-**The score.** Round 1 averaged 5.4/10 and Round 2 averages 7.3/10.
+**The score:** 5.4 → 7.3 → **7.6**/10.
 - Lead Developer is at 9.
-- No role was scored up for work that isn't live. VC, CEO and QA stay below 9 until production runs the build and takes money.
-- The last points come from people, not code: deploying, adding keys, and winning the first customers.
+- No role was scored up for work that isn't live, or for customers who don't exist yet.
+- Each remaining point needs a person: running the scripts, adding keys, and winning the first customers.
 
-**The decision for the boss.** Two server steps make everything above live, in about 30 minutes:
-1. Turn production deploys on, with `AUTO_DEPLOY=true` or the CI secrets.
-2. Re-render nginx.
+**The decision for the boss.** Run Round 3 item 1, the two go-live scripts on cp2 (about 30 minutes). Then item 2, the Stripe webhook and keys. Together they make everything above live and able to take money.
 
-Then confirm the Stripe account. That is the shortest path from 7.3 to 9.
-
-| | Before (Round 1) | After (Round 2) |
-|---|---|---|
-| Average score | 5.4 | **7.3** |
-| Production can take payments | No | Built; waits on Launch checklist steps 1–3 and Payments steps 1–5 |
-| Real bugs on company pages and leaderboards | 2 (404, 500) | 0 on staging |
-| Buyer and comparison pages | 2 | 8 |
-| Scheduled checks of the live site | 0 | 3 workflows, waiting on the default branch |
-| Agents | 0 | 5, with guardrails |
-| Tests | 195 API + 55 web unit + ~240 e2e | 207 API + 76 web unit + ~295 e2e, CI green |
+| | Round 1 | Round 2 | Round 3 |
+|---|---|---|---|
+| Average score | 5.4 | 7.3 | **7.6** |
+| Lighthouse mobile accessibility (staging) | 94–100 | 94–100 | **100 on 11 pages** |
+| Console errors (12 pages × 2 devices, staging) | errors on 2 pages | errors on 2 pages | **0** |
+| First-visit path | map only | map + buyer pages | **one first action + 30-second demo** |
+| Activation | none | none | **welcome + one nudge; funnel measured** |
+| Social proof | none | real counts | **founding places, permission-only stories, case-study kit** |
+| Person-only blockers | scattered | listed with owners | **one action each, 3 of them scripts** |
+| Production can take payments | No | Built; waits on keys | Built; waits on Round 3 items 1–2 |
+| Tests | 195 API + 55 unit + ~240 e2e | 207 + 76 + ~295 | **221 + 85 + ~300, CI green** |
 
 ---
 
@@ -61,6 +70,8 @@ Then confirm the Stripe account. That is the shortest path from 7.3 to 9.
 
 ## Appendix C: Scores before and after, with evidence
 
+The Round 3 table, with what blocks 9 for each role, is in `02-viability-profit-report.md` §7. The Round 2 table follows.
+
 | Role | Round 1 | Round 2 | Main evidence | To reach 9 (who) |
 |---|---|---|---|---|
 | Senior VC | 3 | 5 | The funnel exists, but $0 revenue and 1 user plot on production | 3 paying customers and 50 claimed or published plots in 30 days (owner) |
@@ -73,7 +84,7 @@ Then confirm the Stripe account. That is the shortest path from 7.3 to 9.
 | QA Lead | 6 | 8 | Staging smoke 19/19, full e2e, scheduled workflows, the QA agent | The production smoke test, and the schedules running (server admin, repo owner) |
 
 **Where the evidence is:**
-- `docs/golive/evidence/round1/` and `round2/`, each with `staging/` and `live/` screenshots and `audit.json`, plus Lighthouse `summary.json`;
+- `docs/golive/evidence/round1/`, `round2/` and `round3/`, each with `staging/` and `live/` screenshots and `audit.json`, plus Lighthouse `summary.json`;
 - `round2/staging-smoke.txt` and `round2/staging-seo-check.txt`;
 - CI run 43840928188, green on `3b435f1`;
 - `docs/golive/weekly/2026-11-16.md`, the first weekly report, taken from production.
@@ -90,15 +101,16 @@ Then confirm the Stripe account. That is the shortest path from 7.3 to 9.
 ## Appendix E: What is live, and what waits on whom
 
 **Live now:**
-- **Staging (`staging.flatmeta.io`, release `3b435f1`; `93dbf39` deploys after its CI):**
-  - the new build: health, buyer pages, the free claim and the trust block;
-  - the GL3a fixes and the Round 2 fixes.
+- **Staging (`staging.flatmeta.io`, release `9592742`):**
+  - the full go-live build: health, buyer pages, the free claim, the trust block and the founding places;
+  - the demo, the onboarding emails and the funnel;
+  - the Round 2 and Round 3 fixes.
 - **Production (`www.flatmeta.io`):**
   - the old build: the map, plots, 369 reserved company plots and sign-in;
   - not the go-live build.
 - **GitHub:** CI with a deploy to staging. The three scheduled workflows are committed but not yet scheduled.
 
-**Waits on people:** these are the full numbered steps in `MANUAL-STEPS.md`.
+**Waits on people:** the short version is `MANUAL-STEPS.md` → "Round 3: one action each" (10 rows). The full list follows.
 
 | # | Step | Who |
 |---|---|---|

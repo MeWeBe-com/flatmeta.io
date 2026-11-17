@@ -1,0 +1,189 @@
+[
+ {
+  "page": "staging-",
+  "url": "https://staging.flatmeta.io/",
+  "error": null,
+  "scores": {
+   "performance": 63,
+   "accessibility": 100,
+   "best-practices": 100,
+   "seo": 66
+  },
+  "lcp_ms": 1369,
+  "tbt_ms": 14757,
+  "cls": 0,
+  "failing": [],
+  "benchmarkIndex": 2184.5,
+  "fetchTime": "2026-11-17T09:05:48.346Z"
+ },
+ {
+  "page": "staging-about",
+  "url": "https://staging.flatmeta.io/about",
+  "error": null,
+  "scores": {
+   "performance": 99,
+   "accessibility": 100,
+   "best-practices": 100,
+   "seo": 66
+  },
+  "lcp_ms": 1660,
+  "tbt_ms": 128,
+  "cls": 0,
+  "failing": [],
+  "benchmarkIndex": 2448,
+  "fetchTime": "2026-11-17T09:08:04.359Z"
+ },
+ {
+  "page": "staging-brands",
+  "url": "https://staging.flatmeta.io/brands",
+  "error": null,
+  "scores": {
+   "performance": 98,
+   "accessibility": 100,
+   "best-practices": 100,
+   "seo": 69
+  },
+  "lcp_ms": 1903,
+  "tbt_ms": 151,
+  "cls": 0,
+  "failing": [],
+  "benchmarkIndex": 2304.5,
+  "fetchTime": "2026-11-17T09:07:15.836Z"
+ },
+ {
+  "page": "staging-business",
+  "url": "https://staging.flatmeta.io/business",
+  "error": null,
+  "scores": {
+   "performance": 97,
+   "accessibility": 100,
+   "best-practices": 100,
+   "seo": 69
+  },
+  "lcp_ms": 2145,
+  "tbt_ms": 154,
+  "cls": 0,
+  "failing": [],
+  "benchmarkIndex": 2281,
+  "fetchTime": "2026-11-17T09:06:34.413Z"
+ },
+ {
+  "page": "staging-compare-linktree",
+  "url": "https://staging.flatmeta.io/compare/linktree",
+  "error": null,
+  "scores": {
+   "performance": 99,
+   "accessibility": 100,
+   "best-practices": 100,
+   "seo": 66
+  },
+  "lcp_ms": 1807,
+  "tbt_ms": 98,
+  "cls": 0,
+  "failing": [],
+  "benchmarkIndex": 2202.5,
+  "fetchTime": "2026-11-17T09:07:02.244Z"
+ },
+ {
+  "page": "staging-demo",
+  "url": "https://staging.flatmeta.io/demo",
+  "error": null,
+  "scores": {
+   "performance": 97,
+   "accessibility": 100,
+   "best-practices": 100,
+   "seo": 66
+  },
+  "lcp_ms": 1840,
+  "tbt_ms": 185,
+  "cls": 0,
+  "failing": [],
+  "benchmarkIndex": 2247.5,
+  "fetchTime": "2026-11-17T09:06:07.041Z"
+ },
+ {
+  "page": "staging-explore",
+  "url": "https://staging.flatmeta.io/explore",
+  "error": null,
+  "scores": {
+   "performance": 98,
+   "accessibility": 100,
+   "best-practices": 100,
+   "seo": 69
+  },
+  "lcp_ms": 2329,
+  "tbt_ms": 82,
+  "cls": 0,
+  "failing": [],
+  "benchmarkIndex": 2510,
+  "fetchTime": "2026-11-17T09:07:33.738Z"
+ },
+ {
+  "page": "staging-for-local-businesses",
+  "url": "https://staging.flatmeta.io/for/local-businesses",
+  "error": null,
+  "scores": {
+   "performance": 99,
+   "accessibility": 100,
+   "best-practices": 100,
+   "seo": 66
+  },
+  "lcp_ms": 1720,
+  "tbt_ms": 101,
+  "cls": 0,
+  "failing": [],
+  "benchmarkIndex": 2491.5,
+  "fetchTime": "2026-11-17T09:06:48.839Z"
+ },
+ {
+  "page": "staging-login",
+  "url": "https://staging.flatmeta.io/login",
+  "error": null,
+  "scores": {
+   "performance": 100,
+   "accessibility": 100,
+   "best-practices": 100,
+   "seo": 63
+  },
+  "lcp_ms": 1461,
+  "tbt_ms": 83,
+  "cls": 0,
+  "failing": [],
+  "benchmarkIndex": 2301,
+  "fetchTime": "2026-11-17T09:08:17.969Z"
+ },
+ {
+  "page": "staging-p-tesla",
+  "url": "https://staging.flatmeta.io/p/tesla",
+  "error": null,
+  "scores": {
+   "performance": 93,
+   "accessibility": 100,
+   "best-practices": 100,
+   "seo": 69
+  },
+  "lcp_ms": 2246,
+  "tbt_ms": 265,
+  "cls": 0,
+  "failing": [],
+  "benchmarkIndex": 1999,
+  "fetchTime": "2026-11-17T09:07:49.368Z"
+ },
+ {
+  "page": "staging-pricing",
+  "url": "https://staging.flatmeta.io/pricing",
+  "error": null,
+  "scores": {
+   "performance": 100,
+   "accessibility": 100,
+   "best-practices": 100,
+   "seo": 66
+  },
+  "lcp_ms": 1385,
+  "tbt_ms": 77,
+  "cls": 0,
+  "failing": [],
+  "benchmarkIndex": 2510,
+  "fetchTime": "2026-11-17T09:06:20.999Z"
+ }
+]

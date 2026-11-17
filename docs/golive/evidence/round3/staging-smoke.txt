@@ -1,0 +1,21 @@
+PASS  CSP with nonce + strict-dynamic · default-src 'self'; script-src 'self' 'nonce-MTg4ZDUwZjYtOWQ0NS00ZGE5LThjNTgtM2M
+PASS  frame-ancestors 'none' / X-Frame-Options DENY
+PASS  HSTS · max-age=31536000; includeSubDomains
+PASS  nosniff + Referrer-Policy
+PASS  /@handle redirects to the owner’s plot · /@flatmeta → /p/flatmeta-hq
+PASS  share link: plot page with og:image + canonical · /p/mettler-toledo
+PASS  reserved company plot shows the label · /p/abb-group
+PASS  claim page (email + DNS options) · /claim/abb-group
+PASS  /brands directory · 20 countries
+PASS  sandbox preview needs sign-in
+PASS  unknown preview token is 404
+PASS  llms.txt describes FlatMeta accurately · # FlatMeta
+PASS  /about/facts
+PASS  WebSite + SearchAction JSON-LD on the home page
+PASS  Ask FlatMeta answers · search: Here are 3 places on FlatMeta for “banks in Abu Dhabi”: Louvre Abu Dhabi, NYU Abu Dhabi an
+PASS  two players see each other (live presence) · 2 avatars on B's map
+PASS  WASD walks the avatar · -28.50000 → -28.49517
+PASS  emote reaches the other player · 👋
+PASS  chat is for signed-in players (guest sees the sign-in prompt)
+
+19/19 passed

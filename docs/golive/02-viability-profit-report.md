@@ -175,3 +175,64 @@ Round 2 scores are appended below after GL3.
 | QA Lead | 6 | **8** | A staging smoke of 19/19, the full suite locally, the device matrix, and three scheduled workflows plus a QA agent. Round 2 found a real regression (R2-1) and it is fixed. Minus: production is still untested on the new build, and the schedules aren't running yet. | The production smoke test (Launch checklist step 7) passing, and the daily workflows running (server admin, repo owner) |
 
 **Average 7.3/10 (Round 1: 5.4).** Lead Developer reaches 9. Each remaining gap needs a person: deploys, keys, DNS, the default branch, customers. Those steps are in `MANUAL-STEPS.md`, and none of them needs more code. Scores were not raised for work that isn't live: production is still the old build, so VC, CEO and QA stay below 9 until it isn't.
+
+---
+
+## 7. Round 3 scores (17 Nov 2026, after R3a–R3h)
+
+**Boss decision, 17 Nov:** flatmeta.io only; no other domains (R3a).
+
+**What was tested:**
+- **staging** runs the Round 3 build: release `9592742`, deployed by CI run 44047420072 (all jobs green);
+- **production** is unchanged on the old build: Round 3 cannot change it until the go-live scripts are run on the server (MANUAL-STEPS → Round 3, item 1).
+
+**Evidence** is in `docs/golive/evidence/round3/`:
+- `staging/` and `live/`: screenshots and `audit.json`, 12 pages × desktop 1440×900 and iPhone 12;
+- `staging-smoke.txt`;
+- `lighthouse/summary.json`: Lighthouse mobile, 11 pages.
+
+**Tests:**
+- 221 API tests (1 skipped without a Stripe test key) and 85 web unit tests;
+- the full e2e suite locally, every project: 253 passed, 0 failed, 0 flaky, 45 skipped by design;
+- CI green on `9592742`.
+
+**Built in Round 3, from the blockers each role named:**
+
+| ID | What | For whom |
+|---|---|---|
+| R3b | Skip-link targets on `/brands` and `/login` (with a test that checks every page); heading order on `/explore`; the first plot images load at once (they were `/explore`'s lazy LCP image); the staging banner's contrast | QA, PM |
+| R3c | `/demo`: a 30-second, clearly labelled sample business page next to what an AI assistant reads from it. On the home page, one first action ("Claim your free plot"), then the demo | PM, VC, Sales |
+| R3d | Founding places counted from the database: 50 places; taken = verified company claims + active Business/Brand subscriptions. Customer stories that render only with recorded written permission (none yet, so none show). A case-study template with the permission email | Sales, VC |
+| R3e | A welcome email at sign-up. One activation nudge 1–7 days later, only without land and only with product emails on, never twice. An expand-only migration (`0014`) | PM, CEO |
+| R3f | Funnel analytics without cookies (visits, demo views and claims started, counted as unique people per day; Do Not Track and GPC honoured) and `/admin/funnel`: Visitors > Sign-ups > First value > Paid, with conversion rates | CEO, VC, PM |
+| R3g | Helpful errors: no JSON parse errors or raw status codes reach people (offline, proxy error pages, rate limits, 5xx) | QA, PM |
+| R3h | Every person-only blocker reduced to one action: `scripts/server/cloudflare-zone.sh` (Cloudflare in one command), the ready-to-send outreach for the first 10 customers, and MANUAL-STEPS → "Round 3: one action each" | CEO, Sales, SA |
+| deps | Next.js 16.4.5. `next build` now refuses 16.4.3 (GHSA-mfr8-8qww-v76h, moderate). Without the upgrade every CI run would have been red | CTO, Lead Dev |
+
+**Staging measurements, Round 2 → Round 3:**
+
+| Check | Round 2 | Round 3 |
+|---|---|---|
+| Lighthouse mobile, accessibility (11 pages) | 94–96 on most pages | **100 on all 11** |
+| Lighthouse mobile, best practices | 100 (after the R2-1 fix) | **100 on all 11** |
+| Lighthouse mobile, performance, content pages | 95–100; `/explore` 86 | **93–100 on all 10 content pages**; `/explore` 98, `/demo` 97 |
+| Lighthouse mobile, performance, home (`/`) | 64 | **63**. Unchanged: headless Chrome draws the WebGL map in software (TBT 14.8 s). CI's budget measures home without WebGL and passes (TBT 121 ms measured on 92bec5a; green again on 9592742). A phone with a GPU was not measured. **Not fixed, and not hidden.** |
+| Lighthouse SEO, staging | 66–69 | 63–69: staging is `noindex` on purpose. It is measured on production after go-live |
+| Console errors, 12 pages × 2 devices | 2 pages with errors | **0 on all 24 loads** |
+| Release smoke, staging | 19/19 | 19/19 |
+| Production (`live/audit.json`) | old build | still the old build: `/insights` 404, console errors on `/p/tesla` and `/leaderboards`, old `llms.txt` |
+
+**Scores.** Round 3 scores the work as it stands: built, tested and running on staging. Production is unchanged, so no score includes "it is live", and nothing counts customers or revenue that don't exist.
+
+| Role | R1 | R2 | R3 | Why (evidence) | Blocks 9 (who; MANUAL-STEPS → Round 3) |
+|---|---|---|---|---|---|
+| Senior VC | 3 | 5 | **5** | The funnel is complete and now measured (`/admin/funnel`), with activation emails and a founding offer. Traction is unchanged: $0 revenue, 1 user plot and 1 explorer on production. Product work can't raise this score; only customers can. | Production live (item 1), then **3 paying customers and 50 claimed or published plots** within 30 days (items 2, 6, 7) |
+| CEO | 4 | 6 | **7** | Every remaining blocker is now one action with an owner and a "done when" (10 rows). The funnel page shows where people drop. Minus: production still can't take money. | Items 1, 2 and 4 done, then the first weekly report on the live build (server admin, boss, owner) |
+| CTO | 7 | 8 | **8** | Security upgrade within the day, a green CI, staging deploys itself, health and alerts, idempotent go-live and Cloudflare scripts with tests. Minus: production deploys still wait on item 1, and the schedules on item 5. | Items 1 and 5 (server admin, repository owner) |
+| Product Manager | 5 | 7 | **8** | A first visit now has one first action plus a 30-second demo, onboarding and activation emails, helpful errors and good empty states. Minus: the world on production is still empty, and activation is unmeasured until production runs. | ≥ 25 real plots in the launch cities, and a measured visit → first-value rate on `/admin/funnel` (items 1 and 6) |
+| Sales & Marketing Director | 3 | 7 | **8** | An offer (free claim, founding places counted live), a permission-safe story pipeline, ready-to-send outreach for 10 customers, comparisons and the growth plan. Minus: no customer proof yet, and nothing sent. | 10 outreach emails sent and 1 published customer story (items 6 and 7, owner) |
+| Solutions Architect | 7 | 8 | **8** | Cloudflare setup is now one tested command; payments, email and edge are all scripted or documented. Minus: Stripe webhook, Resend domain and routing are not configured yet. | Items 2, 3 and 4 (boss, Fahad, owner) |
+| Lead Developer | 8 | 9 | **9** | 221 API + 85 web unit + ~300 e2e tests, all green; every R3 item has tests, and its migration is expand-only. | (at 9) |
+| QA Lead | 6 | 8 | **8** | Accessibility 100 and best practices 100 on 11 staging pages; 0 console errors on 24 page loads; full e2e green; a staging smoke of 19/19. Minus: production is untested on the new build, the daily checks don't run yet, and home performance is 63 in headless Chrome. | Items 1 and 5, then the production smoke test and a green daily run; home performance measured on a real phone |
+
+**Average 7.6 (Round 1: 5.4; Round 2: 7.3).** Lead Developer holds 9. Every other role's gap to 9 is a person's action in MANUAL-STEPS → Round 3, and none of them needs more code. The single most valuable next step is item 1, running the go-live scripts on cp2. It moves CEO, CTO and QA, and makes every live measurement possible.
