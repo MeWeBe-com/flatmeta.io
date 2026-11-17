@@ -8,6 +8,10 @@ import { PricingLoader } from './pricing-loader';
 import { Faq, HowItWorks, PaymentTrust, TrustStats } from '@/components/trust';
 import { CustomerStories, FoundingOffer } from '@/components/social-proof';
 
+// QA2: rendered per request (the API data is still cached for 5 minutes). A page built during a deploy would
+// otherwise keep the previous API's plans and prices in the build until the cache gave way.
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Pricing',
   description: PAID_CHECKOUT ? 'Free Homestead plot for everyone. Buy land by the cell, boost your plot, or get Plus, Business or Brand.' : `Claim up to ${FREE_LAND_CELLS} squares of the world map for free. Everything free works today; paid plans open later.`,

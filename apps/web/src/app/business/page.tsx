@@ -10,6 +10,10 @@ import { usd } from '@/lib/format';
 import { serverApi } from '@/lib/server-api';
 import type { Plot } from '@/lib/types';
 
+// QA2: rendered per request (the API data is still cached for 5 minutes). A page built during a deploy would
+// otherwise keep the previous API's plans and prices in the build until the cache gave way.
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   alternates: { canonical: '/business' },
   title: siteTitle('FlatMeta for business and brands'),
