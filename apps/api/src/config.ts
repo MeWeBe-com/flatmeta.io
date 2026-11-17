@@ -132,6 +132,9 @@ const schema = z.object({
   // GL3b: a launch offer shown on /pricing and after a claim (plain text, e.g. "Founding companies: 50% off the first
   // year of Business with code FOUNDING50"). The code itself is a Stripe promotion code (Checkout accepts codes).
   LAUNCH_OFFER: z.string().default(''),
+  // R3d: founding customers. FOUNDING_SEATS places (0 hides the block); a place is taken by each verified company claim
+  // and each active Business or Brand subscription, counted from the database (never invented).
+  FOUNDING_SEATS: z.coerce.number().int().min(0).default(50),
 
   AI_TEXT_PROVIDER: z.enum(['anthropic', 'openai', 'gemini', 'heuristic', '']).optional(),
   ANTHROPIC_API_KEY: optional,

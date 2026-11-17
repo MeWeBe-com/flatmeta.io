@@ -6,6 +6,7 @@ import { serverApi } from '@/lib/server-api';
 import { PricingClient, type Plans } from './pricing-client';
 import { PricingLoader } from './pricing-loader';
 import { Faq, HowItWorks, PaymentTrust, TrustStats } from '@/components/trust';
+import { CustomerStories, FoundingOffer } from '@/components/social-proof';
 
 export const metadata: Metadata = {
   title: 'Pricing',
@@ -27,6 +28,8 @@ export default async function PricingPage() {
         {data ? <PricingClient data={data} /> : <PricingLoader />}
         {/* GL3c: what buyers check before paying. */}
         <PaymentTrust />
+        <FoundingOffer founding={data?.founding} launchOffer={data?.launchOffer} />
+        <CustomerStories />
         <TrustStats />
         <HowItWorks audience="everyone" />
         <Faq claimFree={(data?.landmarkPriceCents ?? 0) === 0} />

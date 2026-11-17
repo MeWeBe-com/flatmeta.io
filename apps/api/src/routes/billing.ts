@@ -1,6 +1,6 @@
 import { key, redis } from '../lib/redis.js';
 import { isSafeReturnPath } from '../services/billing.js';
-import { desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq, inArray } from 'drizzle-orm';
 import type Stripe from 'stripe';
 import { z } from 'zod';
 import type { App } from '../app.js';
@@ -24,6 +24,23 @@ const PLAN_FEATURES = {
 };
 
 export default async function billingRoutes(app: App) {
+  /** R3d: founding places taken = verified company claims + active Business/Brand subscriptions (cached 5 min). */
+  async function foundingSeats(): Promise<{ total: number; taken: number; left: number } | null> {
+    if (!config.FOUNDING_SEATS) return null;
+    const cacheKey = key('founding-seats');
+    const cached = await redis.get(cacheKey).catch(() => null);
+    let taken = cached === null ? NaN : Number(cached);
+    if (!Number.isFinite(taken)) {
+      const [[claims], [subs]] = await Promise.all([
+        db.select({ n: count() }).from(schema.claimRequests).where(eq(schema.claimRequests.status, 'completed')),
+        db.select({ n: count() }).from(schema.subscriptions).where(and(inArray(schema.subscriptions.plan, ['business', 'brand']), inArray(schema.subscriptions.status, ['active', 'trialing']))),
+      ]);
+      taken = Number(claims?.n ?? 0) + Number(subs?.n ?? 0);
+      await redis.set(cacheKey, String(taken), 'EX', 300).catch(() => undefined);
+    }
+    return { total: config.FOUNDING_SEATS, taken: Math.min(taken, config.FOUNDING_SEATS), left: Math.max(0, config.FOUNDING_SEATS - taken) };
+  }
+
   app.get('/v1/billing/plans', { schema: { tags: ['billing'], summary: 'Plans, land tiers and upgrade prices' } }, async () => {
     const prices = await getPrices();
     return {
@@ -39,6 +56,7 @@ export default async function billingRoutes(app: App) {
       upgrades: Object.entries(UPGRADES).map(([key, u]) => ({ key, label: u.label, priceCents: u.priceCents })),
       landmarkPriceCents: claimPriceCents(),
       launchOffer: config.LAUNCH_OFFER || null,
+      founding: await foundingSeats(),
     };
   });
 

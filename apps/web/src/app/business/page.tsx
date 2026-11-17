@@ -5,6 +5,7 @@ import { PageShell } from '@/components/site-chrome';
 import { Breadcrumbs, siteTitle } from '@/lib/seo';
 import { PlotGrid } from '@/components/ui';
 import { Faq, HowItWorks, PaymentTrust, TrustStats } from '@/components/trust';
+import { CustomerStories, FoundingOffer } from '@/components/social-proof';
 import { usd } from '@/lib/format';
 import { serverApi } from '@/lib/server-api';
 import type { Plot } from '@/lib/types';
@@ -29,7 +30,7 @@ const FEATURES = [
 export default async function BusinessPage() {
   const [showcase, plans] = await Promise.all([
     serverApi<{ plots: Plot[] }>('/plots?kind=showcase&sort=loved&limit=8', { auth: false, revalidate: 300 }).catch(() => null),
-    serverApi<{ landmarkPriceCents: number; plans: { key: string; month: number; year: number }[]; launchOffer?: string | null }>('/billing/plans', { auth: false, revalidate: 300 }).catch(() => null),
+    serverApi<{ landmarkPriceCents: number; plans: { key: string; month: number; year: number }[]; launchOffer?: string | null; founding?: { total: number; taken: number; left: number } | null }>('/billing/plans', { auth: false, revalidate: 300 }).catch(() => null),
   ]);
   const claimFree = (plans?.landmarkPriceCents ?? 0) === 0;
   const business = plans?.plans.find((p) => p.key === 'business');
@@ -44,10 +45,12 @@ export default async function BusinessPage() {
           <div className="flex flex-wrap justify-center gap-3 mt-8">
             <Link href="/pricing" className="btn-primary btn-lg">See Business plans</Link>
             <Link href="/?claim" className="btn-ghost btn-lg">Claim your spot</Link>
-          </div>
             <Link href="/demo" className="btn-ghost btn-lg">See a sample page</Link>
+          </div>
         </section>
         <TrustStats />
+        <FoundingOffer founding={plans?.founding} launchOffer={plans?.launchOffer} />
+        <CustomerStories />
         <HowItWorks audience="business" />
         <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {FEATURES.map((f) => (

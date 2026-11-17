@@ -19,6 +19,8 @@ export interface Plans {
   landmarkPriceCents: number;
   /** GL3b: an optional launch offer (LAUNCH_OFFER on the API). */
   launchOffer?: string | null;
+  /** R3d: founding places (real counts from the API). */
+  founding?: { total: number; taken: number; left: number } | null;
 }
 
 export function PricingClient({ data }: { data: Plans }) {
