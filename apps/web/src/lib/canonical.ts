@@ -35,3 +35,25 @@ export function apexRedirects(env: Record<string, string | undefined>) {
   if (env.CANONICAL_WWW === 'false' || env.CANONICAL_URL) return extra;
   return [{ source: '/:path*', has: [{ type: 'host' as const, value: domain }], destination: `https://www.${domain}/:path*`, statusCode: 301 as const }, ...extra];
 }
+
+/**
+ * QA1: the paths people (and crawlers, and other sites' footers) type for legal pages answer a 301 to ours instead of
+ * a 404. /cookies lands on the cookies section of the privacy policy.
+ */
+export const LEGAL_ALIASES: Record<string, string> = {
+  '/privacy': '/legal/privacy',
+  '/privacy-policy': '/legal/privacy',
+  '/terms': '/legal/terms',
+  '/terms-of-service': '/legal/terms',
+  '/terms-and-conditions': '/legal/terms',
+  '/tos': '/legal/terms',
+  '/refunds': '/legal/refunds',
+  '/refund-policy': '/legal/refunds',
+  '/cookies': '/legal/privacy#cookies-and-analytics',
+  '/cookie-policy': '/legal/privacy#cookies-and-analytics',
+  '/legal': '/legal/terms',
+};
+
+export function legalRedirects() {
+  return Object.entries(LEGAL_ALIASES).map(([source, destination]) => ({ source, destination, statusCode: 301 as const }));
+}

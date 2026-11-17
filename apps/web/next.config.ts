@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { loadEnvConfig } from '@next/env';
 import type { NextConfig } from 'next';
 import { securityHeaders } from './src/lib/csp';
-import { apexRedirects, canonicalUrl } from './src/lib/canonical';
+import { apexRedirects, canonicalUrl , legalRedirects } from './src/lib/canonical';
 
 // One .env at the repo root configures both apps. Load it before reading any variable.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -47,7 +47,7 @@ const nextConfig: NextConfig = {
   // In production the Hestia nginx proxy routes /api and /media before they reach Next; these rewrites make dev (and a bare `next start`) work the same way.
   // S6: flatmeta.io/<anything> → 301 → www.flatmeta.io/<anything>.
   async redirects() {
-    return apexRedirects(env);
+    return [...apexRedirects(env), ...legalRedirects()];
   },
   async rewrites() {
     return [

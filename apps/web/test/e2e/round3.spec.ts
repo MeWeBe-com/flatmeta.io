@@ -35,3 +35,31 @@ test('R3d: the founding block shows real places left; no invented stories or log
     await expect(page.getByTestId('customer-stories')).toHaveCount(0); // none have permission yet
   }
 });
+
+test('QA1: common legal paths answer 301 to the legal pages', async ({ request }) => {
+  const cases: [string, string][] = [['/privacy', '/legal/privacy'], ['/terms', '/legal/terms'], ['/refunds', '/legal/refunds'], ['/cookies', '/legal/privacy#cookies-and-analytics'], ['/privacy-policy', '/legal/privacy']];
+  for (const [from, to] of cases) {
+    const r = await request.get(from, { maxRedirects: 0 });
+    expect(r.status(), from).toBe(301);
+    expect(new URL(r.headers().location!, 'http://x').pathname + (new URL(r.headers().location!, 'http://x').hash)).toBe(to);
+  }
+  expect((await request.get('/privacy')).status()).toBe(200);
+});
+
+test('QA2: the pricing page never says "coming soon"', async ({ request }) => {
+  const html = await (await request.get('/pricing')).text();
+  expect(html).not.toMatch(/coming soon/i);
+  expect(html).not.toMatch(/Campaign tools/);
+});
+
+test('QA3: an off-topic article answers 410 with noindex; an on-topic one is served with a strict CSP', async ({ request }) => {
+  const ok = await request.get('/insights/2026-11-12-local-shops-on-a-world-map.html');
+  test.skip(ok.status() === 404, 'no INSIGHTS_DIR on this server');
+  expect(ok.status()).toBe(200);
+  expect(ok.headers()['content-security-policy']).toContain("script-src 'none'");
+  expect(await ok.text()).toContain('Local shops on a shared world map');
+  const off = await request.get('/insights/2026-11-13-newest-virtual-reality-headset-for-libraries-and-schools.html');
+  expect(off.status()).toBe(410);
+  expect(off.headers()['x-robots-tag']).toBe('noindex');
+  expect((await request.get('/insights/..%2F..%2Fpackage.json')).status()).toBe(404);
+});

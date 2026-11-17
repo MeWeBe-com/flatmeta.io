@@ -82,7 +82,7 @@ export default async function LegalPage({ params }: Params) {
         <p><EmailText text={d.intro} link /></p>
         {d.sections.map(([h, ps]) => (
           <section key={h} className="space-y-2">
-            <h2 className="text-xl font-semibold">{h}</h2>
+            <h2 id={h.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')} className="text-xl font-semibold scroll-mt-20">{h}</h2>
             {ps.map((p) => (
               <p key={p.slice(0, 40)} className="muted leading-relaxed"><EmailText text={p} link /></p>
             ))}
