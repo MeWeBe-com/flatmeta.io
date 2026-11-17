@@ -111,6 +111,8 @@ test('without WebGL the page says so, keeps its first screen, and never download
   const worker: string[] = [];
   page.on('request', (r) => r.url().includes('maplibre-gl-worker') && worker.push(r.url()));
   await page.goto('/');
+  // QA4: the map (and the WebGL check) starts on the first interaction, a deep link, or once the page is idle.
+  await page.keyboard.press('Shift');
   await expect(page.getByRole('status').filter({ hasText: 'can’t draw the live map' })).toBeVisible();
   await expect(page.getByText('The world map you can own a piece of').first()).toBeVisible();
   await page.waitForTimeout(1500);

@@ -97,6 +97,7 @@ test('signed-in player: starts at their last saved position on any device', asyn
   test.skip(!devCode, 'needs on-screen sign-in codes');
   expect((await first.ctx.request.post('/api/v1/auth/verify-code', { data: { email, code: devCode } })).ok()).toBeTruthy();
   await first.page.goto('/');
+  await first.page.keyboard.press('Shift'); // QA4: the map starts on the first interaction (or when idle)
   const ask = first.page.getByRole('dialog', { name: 'Start where you are?' });
   if (await ask.isVisible().catch(() => false)) await ask.getByRole('button', { name: 'Use my location' }).click();
   await expect.poll(async () => near(await myPos(first.page), { lat: BARCELONA.latitude, lng: BARCELONA.longitude }, 0.001), { timeout: 15_000 }).toBe(true);
@@ -113,6 +114,7 @@ test('signed-in player: starts at their last saved position on any device', asyn
     }, { timeout: 15_000 })
     .toBe(true);
   await second.page.goto('/');
+  await second.page.keyboard.press('Shift');
   await expect.poll(async () => myPos(second.page), { timeout: 15_000 }).toMatchObject({ lat: expect.closeTo(BARCELONA.latitude, 3), lng: expect.closeTo(BARCELONA.longitude, 3) });
   await expect(second.page.getByRole('button', { name: /Approximate location/ })).toHaveCount(0);
   expect(second.errors).toEqual([]);
