@@ -75,6 +75,10 @@ WWW="https://www.$DOMAIN"
 APEX="https://$DOMAIN"
 SITE_DIR="$(cd "$ROOT/../.." && pwd)"            # /home/<user>/web/<domain>
 PUBLIC_HTML="$SITE_DIR/public_html"
+# AD2: with the auto-deploy installed (scripts/autodeploy/install.sh), it owns deploys and cron; this script then
+# only sets .env, renders nginx and asks it to deploy. .env is then shared/.env behind a symlink: write through it.
+AD="$SITE_DIR/private/bin/autodeploy.sh"
+ENVF="$(readlink -f "$ROOT/.env" 2>/dev/null || echo "$ROOT/.env")"
 [ -n "$STAGING_ROOT" ] || STAGING_ROOT="$(dirname "$SITE_DIR")/staging.$DOMAIN/private/flatmeta"
 
 # ── 2. Keys ──
@@ -113,24 +117,24 @@ set_env() {
   if [ "$current" = "$value" ]; then ok "$key already $value"; return; fi
   if [ "$DRY" = 1 ]; then dry "set $key=$value (now: ${current/__unset__/unset})"; return; fi
   if [ "$BACKED_UP" = 0 ]; then
-    local bak; bak="$ROOT/.env.bak-$(date -u +%Y%m%dT%H%M%SZ)"
-    cp -p "$ROOT/.env" "$bak" && chmod 600 "$bak" && BACKED_UP=1 && info "backup: $bak"
+    local bak; bak="$ENVF.bak-$(date -u +%Y%m%dT%H%M%SZ)"
+    cp -p "$ENVF" "$bak" && chmod 600 "$bak" && BACKED_UP=1 && info "backup: $bak"
   fi
-  local tmp line; tmp="$(mktemp "$ROOT/.env.tmp.XXXXXX")"
+  local tmp line; tmp="$(mktemp "$ENVF.tmp.XXXXXX")"
   # Values with spaces are written in double quotes (the .env parser removes them again).
   if [[ "$value" == *" "* ]]; then line="$key=\"$value\""; else line="$key=$value"; fi
   # Replace every "KEY=" line, or append. Other lines (and secrets) are copied byte for byte.
-  if grep -qE "^[[:space:]]*(export[[:space:]]+)?$key=" "$ROOT/.env"; then
-    awk -v k="$key" -v l="$line" 'BEGIN{re="^[[:space:]]*(export[[:space:]]+)?" k "="} $0 ~ re {if (!done) print l; done=1; next} {print}' "$ROOT/.env" > "$tmp"
+  if grep -qE "^[[:space:]]*(export[[:space:]]+)?$key=" "$ENVF"; then
+    awk -v k="$key" -v l="$line" 'BEGIN{re="^[[:space:]]*(export[[:space:]]+)?" k "="} $0 ~ re {if (!done) print l; done=1; next} {print}' "$ENVF" > "$tmp"
   else
-    cat "$ROOT/.env" > "$tmp"; printf '%s\n' "$line" >> "$tmp"
+    cat "$ENVF" > "$tmp"; printf '%s\n' "$line" >> "$tmp"
   fi
-  chmod 600 "$tmp" && mv "$tmp" "$ROOT/.env"
+  chmod 600 "$tmp" && mv "$tmp" "$ENVF"
   printf -v "$key" '%s' "$value"
   ok "set $key=$value"
 }
 set_env AUTO_DEPLOY true
-set_env DEPLOY_BRANCH v2
+if [ -f "$AD" ]; then set_env DEPLOY_BRANCH production; else set_env DEPLOY_BRANCH v2; fi
 set_env REQUIRE_CI true
 set_env HEALTH_URLS "http://127.0.0.1:${WEB_PORT:-3250}/ http://127.0.0.1:${PORT:-3251}/v1/me"
 # Every canonical URL, sitemap entry and robots.txt line is built from APP_URL: it must be the www host.
@@ -141,6 +145,13 @@ if [ "$PAYMENTS" = yes ]; then set_env PAID_CHECKOUT_ENABLED true; else info "PA
 
 # ── 4. Deploy ──
 step "4. Deploy ${COMMIT:0:7} to production"
+if [ -f "$AD" ]; then
+  # AD2: the auto-deploy deploys what is approved (the branch 'production'): build and tests in a new release folder.
+  if [ "$DRY" = 1 ]; then dry "bash $AD deploy   (the tip of the branch 'production')"
+  elif bash "$AD" deploy; then ok "the auto-deploy deployed the tip of 'production'"
+  else warn "the auto-deploy did not deploy: see the lines above ($SITE_DIR/private/shared/logs/autodeploy.log). Without the branch 'production' on GitHub there is nothing approved yet"; fi
+  LIVE="$(cat "$SITE_DIR/private/shared/state/current" 2>/dev/null || true)"; COMMIT="${LIVE:-$COMMIT}"
+else
 LIVE="$(cat "$ROOT/logs/current" 2>/dev/null || true)"
 # A changed .env needs a deploy too: APP_URL and PAID_CHECKOUT_ENABLED are built into the web app.
 if [ -n "$LIVE" ] && [[ "$LIVE" == "$COMMIT"* ]] && [ "$BACKED_UP" = 0 ]; then
@@ -161,6 +172,7 @@ else
   else
     die "The deploy failed and was rolled back to ${LIVE:0:7}. Your .env changes are kept (backup next to it). The reason is at the end of $ROOT/logs/deploy.log (tail -n 60 $ROOT/logs/deploy.log)."
   fi
+fi
 fi
 
 # ── 5. nginx include files ──
@@ -187,6 +199,7 @@ fi
 
 # ── 7. Cron ──
 step "7. Automatic deploys from cron"
+if [ -f "$AD" ]; then ok "managed by the auto-deploy ($AD, installed with scripts/autodeploy/install.sh)"; else
 STATE_DIR="${DEPLOY_STATE_DIR:-$HOME/flatmeta-deploy-state}"
 if [ -d "$STATE_DIR" ]; then ok "state folder $STATE_DIR"; elif [ "$DRY" = 1 ]; then dry "mkdir -m 700 $STATE_DIR"; else mkdir -p "$STATE_DIR" && chmod 700 "$STATE_DIR" && ok "created $STATE_DIR"; fi
 CRON_NOW="$(crontab -l 2>/dev/null || true)"
@@ -200,6 +213,7 @@ add_cron() {
 add_cron "*/2 * * * * bash $ROOT/scripts/auto-deploy.sh --cron"
 if [ -f "$STAGING_ROOT/scripts/auto-deploy.sh" ]; then add_cron "*/2 * * * * bash $STAGING_ROOT/scripts/auto-deploy.sh --cron"; else warn "staging checkout not found at $STAGING_ROOT; its cron line was not checked (pass --staging-root)"; fi
 info "production takes a new commit only after it has been healthy on staging for ${DEPLOY_STAGING_SOAK:-600} s with a passing smoke test"
+fi
 
 # ── 8. Smoke ──
 if [ "$DRY" = 1 ]; then
