@@ -132,9 +132,15 @@ function setup(envName: 'staging' | 'production' = 'staging') {
 describe('autodeploy (release folders)', { timeout: 180_000 }, () => {
   it('install converts the old checkout into the first release, keeps the path, adds cron, never prints the token', async () => {
     const t = setup();
+    // The old in-place auto-deploy's cron line, and another job that must be kept.
+    writeFileSync(path.join(t.home, 'crontab.txt'), `*/2 * * * * bash ${t.app}/scripts/auto-deploy.sh --cron\n17 3 * * * echo other-job\n`);
+    mkdirSync(path.join(t.app, '.deploy'), { recursive: true });
     const r = await t.run(path.join(REPO, 'scripts/autodeploy/install.sh'), ['staging', t.base]);
     expect(r.code, r.out).toBe(0);
     expect(readlinkSync(t.app)).toBe(`releases/${t.firstSha}`);
+    const cron = readFileSync(path.join(t.home, 'crontab.txt'), 'utf8');
+    expect(cron).not.toContain('scripts/auto-deploy.sh');
+    expect(cron).toContain('echo other-job');
     expect(readFileSync(path.join(t.base, 'shared/.env'), 'utf8')).toMatch(/AUTO_DEPLOY=true[\s\S]*DEPLOY_BRANCH=v2/);
     expect(t.state('current')).toBe(t.firstSha);
     expect(readFileSync(path.join(t.home, 'crontab.txt'), 'utf8')).toContain(`*/2 * * * * bash ${t.base}/bin/autodeploy.sh --cron`);

@@ -45,6 +45,18 @@ do_ "mkdir -p '$SHARED/logs/runs' '$STATE' '$REL' '$BIN'"
 if [ -L "$APP" ]; then
   ok "$APP is already a release link → $(readlink "$APP")"
 elif [ -d "$APP/.git" ]; then
+  # The old in-place auto-deploy must not run while (or after) the checkout moves: drop its cron line first, then
+  # wait for any deploy it is running (its lock).
+  OLDCRON="$(crontab -l 2>/dev/null || true)"
+  if printf '%s\n' "$OLDCRON" | grep -qF "$APP/scripts/auto-deploy.sh"; then
+    if [ "$DRY" = 1 ]; then dry "remove the old auto-deploy cron line for $APP"; else
+      printf '%s\n' "$OLDCRON" | { grep -vF "$APP/scripts/auto-deploy.sh" || true; } | sed '/^$/d' | crontab -
+      ok "old auto-deploy cron line for $APP removed"
+    fi
+  fi
+  if [ "$DRY" = 0 ] && [ -d "$APP/.deploy" ]; then
+    exec 8>>"$APP/.deploy/lock"; flock -w 1200 8 || die "an old deploy has been running for 20 minutes in $APP: wait for it, then run again"
+  fi
   SHA="$(git -C "$APP" rev-parse HEAD)"
   echo "      the existing checkout is at ${SHA:0:7}: it becomes the first release"
   if [ -f "$APP/.env" ] && [ ! -L "$APP/.env" ]; then
