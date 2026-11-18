@@ -6,7 +6,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { parseEnv } = require('node:util');
 
-const root = __dirname;
+// AD2: the auto-deploy starts the apps from the stable `current` symlink (FM_APP_ROOT), so a reload after a switch
+// picks up the new release with zero downtime. By hand, the folder this file is in.
+const root = process.env.FM_APP_ROOT || __dirname;
 const envFile = path.join(root, '.env');
 const fileEnv = fs.existsSync(envFile) ? parseEnv(fs.readFileSync(envFile, 'utf8')) : {};
 const env = { ...fileEnv, ...process.env };
@@ -14,7 +16,7 @@ const appEnv = env.APP_ENV || 'production';
 const suffix = appEnv === 'development' ? '' : `-${appEnv}`;
 // Values already in the shell (e.g. `APP_URL=… pm2 start`) win over the file, like dotenv; unrelated shell variables are left alone.
 const overrides = Object.fromEntries(Object.entries(process.env).filter(([k]) => k in fileEnv));
-const base = { ...fileEnv, ...overrides, NODE_ENV: 'production', APP_ENV: appEnv };
+const base = { ...fileEnv, ...overrides, NODE_ENV: 'production', APP_ENV: appEnv, ...(process.env.RELEASE_SHA ? { RELEASE_SHA: process.env.RELEASE_SHA } : {}) };
 
 module.exports = {
   apps: [

@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadEnvConfig } from '@next/env';
@@ -11,6 +12,15 @@ loadEnvConfig(root, process.env.NODE_ENV !== 'production');
 
 const env = process.env;
 const API = (env.API_INTERNAL_URL || 'http://127.0.0.1:3201').replace(/\/$/, '');
+// AD1: the commit this build is made from, shown by /readyz (the auto-deploy checks it after every switch).
+const BUILD_SHA = (() => {
+  if (env.RELEASE_SHA) return env.RELEASE_SHA.slice(0, 12);
+  try {
+    return execSync('git rev-parse --short=12 HEAD', { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+  } catch {
+    return 'unknown';
+  }
+})();
 
 // APP_URL must be the public origin; in production it may not be a local address.
 if (env.NODE_ENV === 'production' && /\/\/(localhost|127\.0\.0\.1)/.test(env.APP_URL ?? '')) {
@@ -25,6 +35,7 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
   // Browser-visible values derive from the shared root .env (APP_URL etc.), so there is one place to configure them.
   env: {
+    BUILD_SHA,
     NEXT_PUBLIC_APP_NAME: env.APP_NAME ?? 'FlatMeta',
     NEXT_PUBLIC_APP_URL: canonicalUrl(env),
     NEXT_PUBLIC_APP_ENV: env.APP_ENV ?? 'development',

@@ -63,3 +63,14 @@ test('QA3: an off-topic article answers 410 with noindex; an on-topic one is ser
   expect(off.headers()['x-robots-tag']).toBe('noindex');
   expect((await request.get('/insights/..%2F..%2Fpackage.json')).status()).toBe(404);
 });
+
+test('AD1: /readyz says ready, with the web build and the API on the same commit', async ({ request }) => {
+  const r = await request.get('/readyz');
+  expect(r.status()).toBe(200);
+  expect(r.headers()['cache-control']).toContain('no-store');
+  const body = (await r.json()) as { ok: boolean; release: string; api: { ok: boolean; release: string }; sameRelease: boolean };
+  expect(body.ok).toBe(true);
+  expect(body.release).toMatch(/^[0-9a-f]{12}$/);
+  expect(body.api.ok).toBe(true);
+  expect(body.sameRelease).toBe(true);
+});
