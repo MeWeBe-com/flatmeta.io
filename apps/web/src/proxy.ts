@@ -12,6 +12,11 @@ const CONNECT = originsOf([
   process.env.NEXT_PUBLIC_APP_URL?.replace(/^http/, 'ws'),
   process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN ? 'https://plausible.io' : undefined,
 ]);
+// GA4 (only when NEXT_PUBLIC_GA_ID is set; the script itself loads only after consent, see cookie-notice.tsx). The
+// gtag loader is trusted through 'strict-dynamic'; its beacons need these connect origins.
+if (/^G-[A-Z0-9]{4,20}$/.test((process.env.NEXT_PUBLIC_GA_ID ?? '').trim())) {
+  CONNECT.push('https://www.googletagmanager.com', 'https://*.google-analytics.com', 'https://*.analytics.google.com');
+}
 const FRAMES = originsOf([
   process.env.NEXT_PUBLIC_USERCONTENT_URL,
   'https://www.youtube-nocookie.com',

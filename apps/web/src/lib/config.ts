@@ -18,6 +18,9 @@ export const MAP_GLYPHS_URL = process.env.NEXT_PUBLIC_MAP_GLYPHS_URL || 'https:/
 export const MAP_STYLE_URL = process.env.NEXT_PUBLIC_MAP_STYLE_URL || '';
 export const MAP_ATTRIBUTION = process.env.NEXT_PUBLIC_MAP_ATTRIBUTION || '© OpenStreetMap contributors · OpenFreeMap';
 export const PLAUSIBLE_DOMAIN = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN ?? '';
+// Google Analytics 4 (e.g. G-XXXXXXX). Optional. Loads only after the visitor allows analytics cookies (PECR/GDPR).
+const GA_RAW = (process.env.NEXT_PUBLIC_GA_ID ?? '').trim();
+export const GA_ID = /^G-[A-Z0-9]{4,20}$/.test(GA_RAW) ? GA_RAW : '';
 export const GOOGLE_AUTH = process.env.NEXT_PUBLIC_GOOGLE_AUTH === 'true';
 
 /** Paid purchases (land beyond the free allowance, plans, upgrades, marketplace, Landmarks). Off at launch in production. */
