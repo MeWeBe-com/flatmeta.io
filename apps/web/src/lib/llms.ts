@@ -33,7 +33,7 @@ ${COMPARE_PAGES.map((c) => `- [FlatMeta vs ${c.other}](${s}/compare/${c.slug}): 
 
 ## For developers and agents
 - [REST API (OpenAPI)](${s}/api/openapi.json) · [API docs](${s}/api/docs)
-- [MCP server](${s}/api/mcp): tools ask_flatmeta, search_plots, find_nearby, list_companies, list_open_houses, get_plot, check_availability, claim_plot. Read tools need no key; claiming and editing need an API key from ${s}/dashboard/developers.
+- [MCP server](${s}/api/mcp) (streamable HTTP; server card at ${s}/.well-known/mcp.json): read tools ask_flatmeta, search_plots, find_nearby, suggest_plots, get_plot, check_availability, list_companies, list_open_houses, list_countries, get_country, get_region, get_leaderboard; account tools list_my_plots, update_plot, claim_plot. Read tools need no key; claiming and editing need an API key from ${s}/dashboard/developers.
 - [Ask FlatMeta](${s}/api/v1/ask?q=cafes%20in%20Lisbon): a short answer with matching places, as JSON.
 - Agents never pay on someone's behalf: paid land returns a checkout link for the human.
 
