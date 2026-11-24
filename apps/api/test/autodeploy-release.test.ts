@@ -193,6 +193,14 @@ describe('autodeploy (release folders)', { timeout: 180_000 }, () => {
     const two = t.push('two (fixes it)', { VERSION: '2\n' });
     await t.ad('--cron');
     expect(t.state('current')).toBe(two);
+    // rebuild: the live commit built again in a new folder (after a .env change), swapped in, still live.
+    writeFileSync(path.join(t.base, 'releases', two, 'OLD_BUILD_MARK'), '1');
+    const rbd = await t.ad('rebuild');
+    expect(rbd.code, rbd.out).toBe(0);
+    expect(t.state('current')).toBe(two);
+    expect(existsSync(path.join(t.base, 'releases', two, 'OLD_BUILD_MARK'))).toBe(false); // a fresh folder
+    expect(existsSync(path.join(t.base, 'releases', `${two}.old`))).toBe(false);
+    expect(t.state('history')).toMatch(new RegExp(`${two} rebuilt`));
     // One command rolls back to the previous release, without a build.
     const rb = await t.ad('rollback');
     expect(rb.code, rb.out).toBe(0);

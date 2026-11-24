@@ -22,7 +22,7 @@ shared/logs/autodeploy.log      one line per event; shared/logs/runs/ has each d
 bin/autodeploy.sh               the runner
 ```
 
-Production deploys the branch `production`; merging `v2` into it is the approval. Staging deploys `v2`. The cron checks every 2 minutes.
+Since 20 Nov 2026 both production and staging follow `v2` (`DEPLOY_BRANCH=v2` in each `shared/.env`), so **pushing `v2` is the production deploy**. The cron checks every 2 minutes.
 
 ## The only safe commands (as najamussaqib)
 
@@ -33,6 +33,7 @@ Replace `<site>` with `flatmeta.io` (production) or `staging.flatmeta.io`.
 | See what is live, what failed, and `/readyz` | `bash /home/flatmeta/web/<site>/private/bin/autodeploy.sh status` |
 | Deploy the branch tip now (also a commit that failed before) | `bash /home/flatmeta/web/<site>/private/bin/autodeploy.sh deploy` |
 | Deploy one commit of the branch | `bash /home/flatmeta/web/<site>/private/bin/autodeploy.sh deploy <sha>` |
+| Rebuild the live commit (after a `shared/.env` change) | `bash /home/flatmeta/web/<site>/private/bin/autodeploy.sh rebuild` |
 | Go back to the previous release (no build, seconds) | `bash /home/flatmeta/web/<site>/private/bin/autodeploy.sh rollback` |
 | Go back to an older kept release | `bash /home/flatmeta/web/<site>/private/bin/autodeploy.sh rollback <sha>` |
 | Stop automatic deploys (e.g. during an incident) | `bash /home/flatmeta/web/<site>/private/bin/autodeploy.sh pause` |
@@ -40,7 +41,7 @@ Replace `<site>` with `flatmeta.io` (production) or `staging.flatmeta.io`.
 
 **After a rollback, pause first** if you want to stay there. Otherwise the next tick deploys the branch tip again, unless that commit is in `failed-shas`.
 
-**A changed `.env`** (a new key, `NEXT_PUBLIC_*`) needs a rebuild, because `NEXT_PUBLIC_*` values are built into the web app. Edit `shared/.env`, then run `autodeploy.sh deploy`. The tip is already live, so this rebuilds it in a new folder, tests it and switches. A plain restart is not enough.
+**A changed `.env`** (a new key, `NEXT_PUBLIC_*`) needs a rebuild, because `NEXT_PUBLIC_*` values are built into the web app. Edit `shared/.env`, then run `autodeploy.sh rebuild`. It builds and tests the live commit again in a new folder and swaps it in; if the new build does not come up, the old one is put back. A plain restart is not enough, and `deploy` does nothing when the tip is already live.
 
 ## What not to do, and why
 
@@ -64,4 +65,4 @@ Replace `<site>` with `flatmeta.io` (production) or `staging.flatmeta.io`.
 
 1. Run `status`. Then `tail -n 50 shared/logs/autodeploy.log`, and open the newest file in `shared/logs/runs/`.
 2. A failed deploy has already been undone: the live release was kept, or switched back. The admins got an email naming the failing step.
-3. Fix it on GitHub (a new commit on `v2`, then merge it into `production`) and let the cron deploy it. For an urgent production problem, `rollback` first, then fix.
+3. Fix it on GitHub (a new commit on `v2`) and let the cron deploy it. For an urgent production problem, `rollback` first, then fix.

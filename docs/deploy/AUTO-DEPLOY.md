@@ -9,9 +9,9 @@ This replaces the old in-place `scripts/auto-deploy.sh` / `scripts/deploy.sh` an
 | Instance | Follows | How a change gets there |
 |---|---|---|
 | staging (`staging.flatmeta.io`) | `v2` | Merge (or push) to `v2`: live on staging within about 10 minutes |
-| production (`www.flatmeta.io`) | `production` | **The owner approves** by merging `v2` into `production` on GitHub: open a pull request from `v2` to `production` and press **Merge**. The very first time, create the branch: GitHub → Branches → **New branch** → name `production`, source `v2` |
+| production (`www.flatmeta.io`) | `v2` (since 20 Nov 2026) | Push or merge to `v2`: pushing `v2` **is** the production deploy |
 
-Production never takes a commit from `v2` directly. Until the branch `production` exists, the production cron waits, and says so once in its log.
+As installed on 18 Nov, production followed a separate `production` branch. Since 20 Nov, production's `shared/.env` has `DEPLOY_BRANCH=v2` and there is no `production` branch flow. To bring the approval step back, set `DEPLOY_BRANCH=production` there and merge `v2` into `production` to deploy.
 
 ## What a deploy does
 
@@ -54,6 +54,7 @@ Replace `<domain>` with `staging.flatmeta.io` or `flatmeta.io`.
 | **Roll back** to the previous release (no build, about 10 s) | `bash /home/flatmeta/web/<domain>/private/bin/autodeploy.sh rollback` |
 | Roll back to an older kept release | `bash …/bin/autodeploy.sh rollback <sha>` |
 | Deploy the tip now, even a commit that failed before | `bash …/bin/autodeploy.sh deploy` |
+| **Rebuild** the live commit after a `shared/.env` change (`NEXT_PUBLIC_*` values are built in) | `bash …/bin/autodeploy.sh rebuild` |
 | **Pause** automatic deploys | `bash …/bin/autodeploy.sh pause` |
 | Resume | `bash …/bin/autodeploy.sh resume` |
 | Follow the log | `tail -f /home/flatmeta/web/<domain>/private/shared/logs/autodeploy.log` |
@@ -76,7 +77,7 @@ The install script asks for the token at a hidden prompt when neither is set. Pr
 | Key | Default | Meaning |
 |---|---|---|
 | `AUTO_DEPLOY` | `true` (install sets it) | `false`: cron deploys nothing |
-| `DEPLOY_BRANCH` | staging `v2`, production `production` | the branch it follows |
+| `DEPLOY_BRANCH` | `v2` (both, since 20 Nov) | the branch it follows |
 | `DEPLOY_TESTS` | `quick` | `quick`, `full` or `off` |
 | `KEEP_RELEASES` | `2` | older releases kept for rollback (each is about 1 GB with node_modules) |
 | `READYZ_URL` | `http://127.0.0.1:$WEB_PORT/readyz` | what must show the new commit |

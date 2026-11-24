@@ -5,6 +5,8 @@
 #
 #   bash <BASE>/bin/autodeploy.sh --cron        # cron, every 2 minutes: deploy the branch tip if it is new
 #   bash <BASE>/bin/autodeploy.sh deploy [sha]  # now: the tip (or one commit), even one that failed before
+#   bash <BASE>/bin/autodeploy.sh rebuild       # rebuild + test the LIVE commit in a new folder and swap it in
+#                                               # (after a shared/.env change: NEXT_PUBLIC_* is built in)
 #   bash <BASE>/bin/autodeploy.sh rollback [sha]   # back to the previous release (or a kept one): no build
 #   bash <BASE>/bin/autodeploy.sh status        # live release, branch tip, failed commits, kept releases
 #   bash <BASE>/bin/autodeploy.sh pause | resume   # stop or restart automatic deploys (manual ones still work)
@@ -46,7 +48,7 @@ mkdir -p "$STATE" "$LOGS/runs" "$RELEASES"
 MODE="cron"; ARG=""
 case "${1:-}" in
   --cron | "") MODE="cron" ;;
-  deploy | rollback | status | pause | resume) MODE="$1"; ARG="${2:-}" ;;
+  deploy | rebuild | rollback | status | pause | resume) MODE="$1"; ARG="${2:-}" ;;
   -h | --help) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
   *) echo "Unknown command: $1 (see --help)" >&2; exit 2 ;;
 esac
@@ -150,7 +152,7 @@ switch_to() { # sha: atomic symlink swap
 prune() {
   local keep="${KEEP_RELEASES:-2}" cur prev
   cur="$(live_sha)"; prev="$(cat "$STATE/previous" 2>/dev/null || true)"
-  ls -1t "$RELEASES" 2>/dev/null | grep -v '\.tmp$' | while read -r d; do
+  ls -1t "$RELEASES" 2>/dev/null | grep -Ev '\.(tmp|old)$' | while read -r d; do
     [ "$d" = "$cur" ] || [ "$d" = "$prev" ] && continue
     keep=$(( keep - 1 )); [ $keep -ge 0 ] && continue
     rm -rf "${RELEASES:?}/$d"
@@ -227,6 +229,46 @@ deploy() { # sha
   return 1
 }
 
+rebuild() { # the live commit, built again (e.g. after a NEXT_PUBLIC_* change in shared/.env)
+  SHA="$(live_sha)"; STARTED=$SECONDS
+  [ -n "$SHA" ] && [ -d "$RELEASES/$SHA" ] || { echo "Nothing is live to rebuild."; return 2; }
+  local rel="$RELEASES/$SHA" tmp="$RELEASES/$SHA.tmp" old="$RELEASES/$SHA.old" STEP="checkout"
+  RUN_LOG="$LOGS/runs/$(date -u +%Y%m%dT%H%M%SZ)-rebuild-${SHA:0:7}.log"
+  log "→ rebuilding the live ${SHA:0:7} on $APP_ENV; log: $RUN_LOG"
+  (
+    set -o pipefail
+    rm -rf "$tmp"
+    git clone -q --shared --no-checkout "$REPO" "$tmp" && git -C "$tmp" checkout -q --detach "$SHA" || { echo "STEP=checkout"; exit 1; }
+    ln -sfn "$SHARED/.env" "$tmp/.env"; rm -rf "$tmp/logs"; ln -sfn "$LOGS" "$tmp/logs"
+    cd "$tmp" || exit 1
+    export RELEASE_SHA="$SHA" NPM_CONFIG_INCLUDE=dev
+    echo "== install"; run_install || { echo "STEP=install"; exit 1; }
+    echo "== build"; run_build || { echo "STEP=build"; exit 1; }
+    echo "== tests (${DEPLOY_TESTS:-quick})"; run_tests || { echo "STEP=tests"; exit 1; }
+    touch .ad-built
+  ) > "$RUN_LOG" 2>&1
+  if [ $? -ne 0 ]; then
+    STEP="$(grep -o 'STEP=[a-z]*' "$RUN_LOG" | tail -n 1 | cut -d= -f2)"
+    rm -rf "$tmp"
+    log "✗ the rebuild of ${SHA:0:7} failed at ${STEP:-build}: the live release was not touched (tail -n 50 $RUN_LOG)"
+    notify aborted "The rebuild failed at '${STEP:-build}'; the live release was not touched." "${STEP:-build}" "$SHA"
+    return 1
+  fi
+  # Swap the folders behind the live link (the running apps keep the old files until the reload).
+  rm -rf "$old"; mv "$rel" "$old" && mv "$tmp" "$rel"
+  if (cd "$APP_LINK" && run_reload "$SHA") >> "$RUN_LOG" 2>&1 && readyz_shows "$SHA" >> "$RUN_LOG" 2>&1; then
+    rm -rf "$old"
+    printf '%s %s %s\n' "$(ts)" "$SHA" "rebuilt" >> "$STATE/history"
+    log "✓ ${SHA:0:7} rebuilt and live ($(( SECONDS - STARTED )) s); /readyz shows it"
+    return 0
+  fi
+  rm -rf "$rel"; mv "$old" "$rel"
+  (cd "$APP_LINK" && run_reload "$SHA") >> "$RUN_LOG" 2>&1
+  log "✗ the rebuilt ${SHA:0:7} did not come up: the previous build of it is back (tail -n 50 $RUN_LOG)"
+  notify rolled_back "The rebuilt release did not come up; the previous build was put back." readyz "$SHA"
+  return 1
+}
+
 rollback() { # [sha]
   local target="${1:-$(cat "$STATE/previous" 2>/dev/null)}" prev; prev="$(live_sha)"
   if [ -n "$target" ] && [ ! -d "$RELEASES/$target" ]; then target="$(ls -1 "$RELEASES" | grep "^$target" | grep -v '\.tmp$' | head -n 1)"; fi
@@ -263,6 +305,7 @@ esac
 lock || { [ "$MODE" = cron ] && exit 0; echo "Another deploy is running (tail -f $LOGS/autodeploy.log)."; exit 2; }
 
 if [ "$MODE" = rollback ]; then rollback "$ARG"; exit $?; fi
+if [ "$MODE" = rebuild ]; then fetch || true; rebuild; exit $?; fi
 
 # Daily database backup, also while paused (from the live release's own script).
 if [ "$MODE" = cron ] && [ -f "$APP_LINK/scripts/deploy-backup.sh" ] && [ -z "${AD_BACKUP_CMD:-}" ]; then
