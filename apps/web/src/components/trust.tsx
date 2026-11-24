@@ -41,7 +41,7 @@ export function HowItWorks({ audience }: { audience: 'business' | 'everyone' }) 
           { icon: Sparkles, title: 'Get found', body: 'Your page is structured data (schema.org) in our sitemaps and readable by AI agents over our MCP server, and it glows on the map.' },
         ]
       : [
-          { icon: MapPinned, title: 'Claim land', body: `Everyone gets their first ${FREE_LAND_CELLS} squares free. Pick a spot on the real-world map.` },
+          { icon: MapPinned, title: 'Claim land', body: PAID_CHECKOUT ? 'Your first plot is free: up to 2×2 squares outside city centres. Pick a spot on the real-world map.' : `Everyone gets their first ${FREE_LAND_CELLS} squares free. Pick a spot on the real-world map.` },
           { icon: Sparkles, title: 'Make it yours', body: 'Add a cover, text, links and a gallery, or let the AI Designer make a first version.' },
           { icon: BadgeCheck, title: 'Share it', body: 'Your plot has its own page and link. Upgrade only if you want more land, reach or business tools.' },
         ];

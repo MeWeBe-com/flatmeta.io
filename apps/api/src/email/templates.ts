@@ -1,4 +1,12 @@
-import { config } from '../config.js';
+import { config, paidCheckout } from '../config.js';
+
+/** One free-land rule everywhere: with paid checkout on, the free Homestead plot (pricing.ts HOMESTEAD_MAX_CELLS);
+ * before payments open, the FREE_LAND_CELLS allowance. Matches /pricing and the terms. */
+function freeLandSentence(freeCells: number): string {
+  return paidCheckout()
+    ? 'Your first plot is free: up to 2×2 squares outside city centres.'
+    : `Your first ${freeCells} squares of the world map are free.`;
+}
 
 /** Every outgoing email has a type: it becomes a Resend tag and decides the queue priority. */
 export type EmailType =
@@ -192,7 +200,7 @@ export const templates = {
     render('welcome', `Welcome to ${config.APP_NAME}: your first land is free`, {
       title: `Welcome, ${name}`,
       paragraphs: [
-        `Your first ${freeCells} squares of the world map are free. Pick a spot (where you live, work or create), claim it, and it becomes your own page with a cover, links, a gallery and a guestbook.`,
+        `${freeLandSentence(freeCells)} Pick a spot (where you live, work or create), claim it, and it becomes your own page with a cover, links, a gallery and a guestbook.`,
         'Running a business? Add your hours, an offer and booking links, and your page becomes structured data that search engines and AI assistants read. Work for a company? It may already have a reserved landmark: search the companies list.',
         'It takes about three minutes. The AI Designer can write the first version for you.',
       ],
@@ -204,7 +212,7 @@ export const templates = {
     render('activation', 'Your free land is still waiting', {
       title: `${name}, your spot on the map is still free`,
       paragraphs: [
-        `You signed up but haven't claimed land yet. Your first ${freeCells} squares are free, and once claimed nobody else can take them.`,
+        `You signed up but haven't claimed land yet. ${freeLandSentence(freeCells)} Once claimed, nobody else can take it.`,
         'Three steps: open the map, drag over the squares you want, then press Claim. Your page is live at once, and you can edit it any time.',
       ],
       button: { label: 'Claim my free land', path: '/?claim' },
