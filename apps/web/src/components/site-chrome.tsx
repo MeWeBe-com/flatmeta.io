@@ -180,7 +180,11 @@ export function SiteFooter() {
           <Link href="/legal/refunds" className="tap muted hover:text-[var(--text)]">{t('footer.refunds')}</Link>
         </div>
       </div>
-      <div className="text-center text-xs muted pb-8">© {new Date().getFullYear()} FlatMeta · Map data © OpenStreetMap contributors</div>
+      <div className="text-center text-xs muted pb-8 px-4 space-y-1">
+        <p>© {new Date().getFullYear()} FlatMeta · Map data © OpenStreetMap contributors</p>
+        {/* UK trading disclosure (Companies (Trading Disclosures) Regulations 2008): the company behind FlatMeta. */}
+        <p>MeWeBe Limited · Company No. 13864849 · Registered in England &amp; Wales · 167-169 Great Portland Street, Fifth Floor, London W1W 5PF</p>
+      </div>
     </footer>
   );
 }
