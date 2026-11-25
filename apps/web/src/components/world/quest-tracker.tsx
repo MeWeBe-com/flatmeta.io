@@ -32,7 +32,7 @@ export function QuestTracker() {
     return (
       <div className="glass rounded-2xl p-4">
         <div className="flex items-center gap-2 font-display font-bold"><Trophy size={16} className="text-[var(--color-gold)]" /> {t('hud.questsTitle')}</div>
-        <p className="text-sm muted mt-1">Sign in to track quests, earn XP and claim your free Homestead.</p>
+        <p className="text-sm muted mt-1">Sign in to track quests, earn XP and claim your free plot.</p>
         <button className="btn-primary w-full mt-3" onClick={() => openSignIn()}>{t('nav.signIn')}</button>
       </div>
     );

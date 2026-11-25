@@ -12,6 +12,12 @@ import type { GameResult, Me } from '@/lib/types';
 import { useGame, useSession } from './providers';
 import { Modal, NamedIcon, Spinner, clsx } from './ui';
 
+/** C1: Google sign-in comes back to the page it started on (the API accepts only same-site paths as `next`). */
+function googleHref() {
+  if (typeof window === 'undefined') return '/api/v1/auth/google';
+  return `/api/v1/auth/google?next=${encodeURIComponent(location.pathname + location.search)}`;
+}
+
 function Toasts() {
   const { toasts, dismiss } = useGame();
   return (
@@ -139,20 +145,25 @@ function SignInDialog() {
           }}
           className="space-y-3"
         >
+          {/* C1: one tap with Google comes first when it is on; it returns to this page, where a plot drawn before
+              signing in reopens (lib/claim-draft.ts). */}
+          {GOOGLE_AUTH && (
+            <>
+              <a href={googleHref()} className="btn-primary w-full btn-lg">
+                {t('auth.google')}
+              </a>
+              <p className="text-xs muted text-center">or use your email</p>
+            </>
+          )}
           <p className="muted text-sm">{t('auth.subtitle')}</p>
           <label className="label" htmlFor="si-email">
             {t('auth.email')}
           </label>
           <input id="si-email" type="email" required autoComplete="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
           {error && <p className="text-sm text-[var(--color-coral)]">{error}</p>}
-          <button className="btn-primary w-full btn-lg" disabled={busy || !email}>
+          <button className={clsx('w-full', GOOGLE_AUTH ? 'btn-ghost' : 'btn-primary btn-lg')} disabled={busy || !email}>
             {busy ? <Spinner /> : <Mail size={18} />} {t('auth.sendCode')}
           </button>
-          {GOOGLE_AUTH && (
-            <a href="/api/v1/auth/google" className="btn-ghost w-full">
-              {t('auth.google')}
-            </a>
-          )}
           <p className="text-xs muted text-center">By continuing you agree to our <Link className="underline" href="/legal/terms">Terms</Link> and <Link className="underline" href="/legal/privacy">Privacy policy</Link>.</p>
         </form>
       ) : (

@@ -1,6 +1,7 @@
 'use client';
 import { track } from '@/lib/funnel';
 import { scheduleMapStart } from '@/lib/lazy-map';
+import { clearClaimDraft, loadClaimDraft } from '@/lib/claim-draft';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -315,6 +316,23 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
     }
   }, [params, whenMap, revealSelection]);
 
+  // C1: a plot drawn before signing in (saved by the claim panel) reopens here after a reload or the Google round
+  // trip, with its name, so the visitor confirms it with one tap. Only when no link asks for something else.
+  const [draftTitle, setDraftTitle] = useState<string | undefined>(undefined);
+  const draftChecked = useRef(false);
+  useEffect(() => {
+    if (draftChecked.current) return;
+    draftChecked.current = true;
+    if (['plot', 'claim', 'visit', 'at', 'dm'].some((k) => params.has(k))) return;
+    const d = loadClaimDraft();
+    if (!d) return;
+    setDraftTitle(d.title);
+    setMapStart(true); // a saved plot names a place, like a ?claim= link: start the map at once
+    setClaimMode(true);
+    setSelection(d.rect);
+    setTimeout(() => revealSelection(d.rect, 16), 400);
+  }, [params, revealSelection]);
+
   // Keyboard: / or ⌘K search, c claim, Esc close
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -325,6 +343,8 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
         setSearchOpen(true);
       } else if (e.key === 'c') setClaimMode((c) => !c);
       else if (e.key === 'Escape') {
+        // C1: Esc in the sign-in box (or any other modal) closes only that box, not the plot being claimed.
+        if (document.querySelector('[aria-modal="true"]')) return;
         setOpenPlot(null);
         setClaimMode(false);
       }
@@ -541,13 +561,15 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
           selection={selection}
           onSheetMove={onSheetMove}
           zoom={zoom}
-          initialTitle={params.get('title') ?? undefined}
+          initialTitle={params.get('title') ?? draftTitle}
           onClose={() => {
+            clearClaimDraft();
             setClaimMode(false);
             setSelection(null);
           }}
           onState={setSelState}
           onClaimed={() => {
+            clearClaimDraft();
             setClaimMode(false);
             setSelection(null);
             map.current?.reload();

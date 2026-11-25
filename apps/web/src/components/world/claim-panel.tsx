@@ -14,6 +14,7 @@ import { useAfterSignIn, useGame, useSession } from '../providers';
 import { Spinner, clsx } from '../ui';
 import type { SelectionState } from '../map/world-map';
 import { useVisualViewport } from '@/lib/viewport';
+import { clearClaimDraft, saveClaimDraft } from '@/lib/claim-draft';
 
 interface Suggestion { rect: Rect; center: { lat: number; lng: number }; near: string; neighbours: number; reason: string; quote: Quote }
 
@@ -81,16 +82,22 @@ export function ClaimPanel({
   const [afterSignIn, signedInGo] = useAfterSignIn();
   const claim = async () => {
     if (!selection || !quote) return;
-    if (!me.user) return openSignIn(quote.free ? 'Sign in to claim your free Homestead. It takes 20 seconds.' : 'Sign in to buy this land.', afterSignIn);
+    if (!me.user) {
+      // C1: keep the plot on this device, so it survives a reload or the Google round trip while signing in.
+      saveClaimDraft(selection, title);
+      return openSignIn(quote.free ? 'Sign in to claim your free plot. It takes 20 seconds.' : 'Sign in to buy this land.', afterSignIn);
+    }
     setBusy(true);
     setError(null);
     try {
       const r = await post<{ plot?: Plot; game?: GameResult; checkoutUrl?: string }>('/plots/claim', { rect: selection, ...(title.trim().length >= 2 ? { title: title.trim() } : {}) });
       if (r.checkoutUrl) {
+        clearClaimDraft();
         window.location.assign(r.checkoutUrl);
         return;
       }
       if (r.plot) {
+        clearClaimDraft();
         confetti();
         handleGame(r.game);
         toast({ kind: 'success', title: `${r.plot.title} is yours!`, body: 'Plot claimed' });
