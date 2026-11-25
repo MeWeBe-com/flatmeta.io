@@ -59,6 +59,9 @@ describe('R3e onboarding emails', () => {
     expect(welcome).toHaveLength(1);
     expect(welcome[0]!.text).toContain('/?claim');
     expect(welcome[0]!.subject).toMatch(/your first land is free/);
+    // 0004: one free-land rule. Tests run with paid checkout on, so the Homestead rule, not the old allowance.
+    expect(welcome[0]!.text).toContain('Your first plot is free: up to 2×2 squares outside city centres.');
+    expect(welcome[0]!.text).not.toMatch(/first \d+ squares/);
     await signIn();
     await settle();
     expect(outbox.filter((m) => m.to === email && m.type === 'welcome')).toHaveLength(1);
