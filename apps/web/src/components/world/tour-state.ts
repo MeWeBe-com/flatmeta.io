@@ -24,14 +24,8 @@ export function useTourState() {
       history.replaceState(null, '', location.pathname);
       return;
     }
-    try {
-      if (!localStorage.getItem(TOUR_KEY)) {
-        const id = setTimeout(() => setOpen(true), 1600);
-        return () => clearTimeout(id);
-      }
-    } catch {
-      /* ignore */
-    }
+    // C2: the tour no longer opens by itself on a first visit. It covered the page and swallowed the first click on
+    // "Claim free land" (conversion walk, 24 Nov). It opens from Help (?) and "Replay tour" (/?tour=1).
   }, []);
   return {
     open,

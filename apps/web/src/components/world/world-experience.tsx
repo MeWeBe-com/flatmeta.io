@@ -120,15 +120,20 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
   const params = useSearchParams();
   const router = useRouter();
   const { theme } = useTheme();
-  const { me } = useSession();
+  const { me, loading: sessionLoading, openSignIn } = useSession();
   const live = useLive();
   const { online } = live;
   const tour = useTourState();
   const touch = useTouch();
   const [claimMode, setClaimMode] = useState(false);
   // R3f: starting a claim is a funnel step (counted once per tab session, cookie-free).
+  // C2: until the visitor has tried a claim, the phone offer card shows and the location prompt waits.
+  const [claimTried, setClaimTried] = useState(false);
+  const [phoneCardClosed, setPhoneCardClosed] = useState(false);
   useEffect(() => {
-    if (claimMode) track('claim_start');
+    if (!claimMode) return;
+    track('claim_start');
+    setClaimTried(true);
   }, [claimMode]);
   const [selection, setSelection] = useState<Rect | null>(null);
   const [selState, setSelState] = useState<SelectionState>('idle');
@@ -271,8 +276,13 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
       // A deep link (?at=, ?plot=, ?claim=) decides the camera; I still start at my own spot, not the link's.
       whenMap((m) => m.startMeAt(s.lng, s.lat));
       const free = !deepLink && !params.get('dm');
+      // C2: a bare /?claim link (the "Claim your free plot" buttons on /pricing, /demo, /business, the dashboard)
+      // opens the claim panel; start close enough to draw cells when we know roughly where the visitor is.
+      const bareClaim = params.has('claim') && !params.get('claim');
+      const near = s.source === 'saved' || s.source === 'device' || s.source === 'ip' || s.source === 'precise';
+      const startZoom = bareClaim && near ? Math.max(s.zoom, 15) : s.zoom;
       // The first view is placed at once: a flight from the globe would draw hundreds of frames while the page loads.
-      if (free) whenMap((m) => m.jumpTo(s.lng, s.lat, s.zoom));
+      if (free) whenMap((m) => m.jumpTo(s.lng, s.lat, startZoom));
       setSpawn(s);
       if (!wantsPrecise(s)) return;
       const consent = geoConsent();
@@ -281,7 +291,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
       const autoPrecise = perm !== 'denied' && (consent === 'granted' || perm === 'granted');
       // A new visitor somewhere without plots would look at an empty map: show the nearest group of plots (M2),
       // unless their precise location is about to move the camera (or does so while this runs).
-      if (free && !autoPrecise && (s.source === 'ip' || s.source === 'country')) {
+      if (free && !bareClaim && !autoPrecise && (s.source === 'ip' || s.source === 'country')) {
         void showNearestContent(s, (fn) => !cancelled && !preciseMoved.current && whenMap(fn)).then((n) => !cancelled && n && setNearestNote(n));
       }
       if (perm === 'denied') return;
@@ -313,6 +323,11 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
       setSelection(rect);
       // M8: fly to the selection so that all of it sits above the claim sheet (not under it).
       setTimeout(() => revealSelection(rect, 16), 400);
+    } else if (params.has('claim')) {
+      // C2: a bare /?claim opens the claim panel (it used to be ignored, and the tour showed instead).
+      setOpenPlot(null);
+      setSelection(null);
+      setClaimMode(true);
     }
   }, [params, whenMap, revealSelection]);
 
@@ -370,6 +385,8 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
     if (a.lat !== null && a.lng !== null) map.current?.flyTo(a.lng, a.lat, 15.5);
     if (a.plotId) setOpenPlot(a.plotId);
   };
+
+  const showPhoneCard = !sessionLoading && !me.user && mapReady && !claimMode && !claimTried && !openPlot && !mobilePanel && !phoneCardClosed && !tour.open;
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-[var(--bg)]">
@@ -443,7 +460,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
       )}
 
       {/* Start where you are? (asked once, in the app, before the browser's own prompt) */}
-      {askGeo && !claimMode && tour.seen && !tour.open && (
+      {askGeo && !claimMode && (tour.seen || claimTried) && !tour.open && (
         <div className="absolute z-30 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 top-[64px] sm:top-[156px] sm:w-[22rem] glass rounded-2xl p-3 animate-pop" role="dialog" aria-label="Start where you are?">
           <div className="flex items-start gap-3">
             <span className="size-9 shrink-0 rounded-xl grid place-items-center bg-[rgb(45_226_196/.12)] text-[var(--color-teal)]"><MapPin size={18} /></span>
@@ -459,8 +476,25 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
         </div>
       )}
       {/* Status chips under the search bar, stacked so they never overlap. */}
-      {!askGeo && !claimMode && (spawn?.approximate || nearestNote) && (
+      {!askGeo && !claimMode && (showPhoneCard || spawn?.approximate || nearestNote) && (
         <div className="absolute z-20 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 top-[64px] sm:top-[156px] flex flex-col items-start sm:items-center gap-2 pointer-events-none">
+          {/* C2: phones had no headline, no offer and no visible Sign in once the map drew (the desktop welcome card
+              is hidden below 640 px). A small card says it, above the chips, until the visitor tries a claim or closes it. */}
+          {showPhoneCard && (
+            <div className="sm:hidden pointer-events-auto w-full glass rounded-2xl p-3 animate-rise" data-testid="phone-offer">
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="font-display font-bold leading-tight">{t('app.tagline')}</p>
+                  <p className="text-xs muted mt-0.5">Your first plot is free.</p>
+                </div>
+                <button type="button" className="icon-btn size-9 shrink-0 -mr-1 -mt-1" aria-label="Close the welcome card" onClick={() => setPhoneCardClosed(true)}><X size={14} /></button>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button className="btn-primary btn-sm" onClick={startClaim}><Compass size={14} /> Claim free land</button>
+                <button className="btn-ghost btn-sm" onClick={() => openSignIn()}>{t('nav.signIn')}</button>
+              </div>
+            </div>
+          )}
           {spawn?.approximate && (
             <button className="pointer-events-auto glass rounded-full min-h-11 px-3 text-xs inline-flex items-center gap-1.5 max-w-full" onClick={() => void goPrecise(true)}>
               <MapPin size={12} className="shrink-0" /> <span className="truncate">{spawn.source === 'home' ? 'Starting at FlatMeta Home' : `Approximate location${spawn.city ? ` · ${spawn.city}` : ''}`}</span>

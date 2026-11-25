@@ -15,7 +15,7 @@ import path from 'node:path';
  */
 
 export const PAGES = [
-  { id: 'home-tour', path: '/' }, // first visit: the guided tour is open
+  { id: 'home-tour', path: '/?tour=1' }, // the guided tour, open (C2: it no longer opens by itself on a first visit)
   { id: 'home', path: '/' }, // the map once the tour is done
   { id: 'home-walk', path: '/?at=51.5029,-0.1206,15' }, // walk mode (Land level): joystick and emotes on touch screens
   { id: 'plot', path: '/p/tesla' },

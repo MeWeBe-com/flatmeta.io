@@ -37,7 +37,7 @@ test.describe('guided tour on every device', () => {
         document.addEventListener('DOMContentLoaded', () => document.head.appendChild(Object.assign(document.createElement('style'), { textContent: css })));
       });
       const page = await ctx.newPage();
-      await page.goto('/');
+      await page.goto('/?tour=1'); // C2: the tour opens from Help or Replay tour, not by itself
       const dialog = page.getByRole('dialog', { name: 'Guided tour' });
       await expect(dialog).toBeVisible({ timeout: 10_000 });
       await expect(dialog).toHaveAttribute('aria-modal', 'true');
@@ -85,7 +85,7 @@ test.describe('guided tour on every device', () => {
 test.describe('guided tour: keyboard, Back, replay', () => {
   test('arrows move, Back goes back, Esc skips, and the help menu replays it', async ({ page, browserName }) => {
     test.skip(browserName !== 'chromium', 'keyboard behaviour: once is enough');
-    await page.goto('/');
+    await page.goto('/?tour=1'); // C2: the tour opens from Help or Replay tour, not by itself
     const dialog = page.getByRole('dialog', { name: 'Guided tour' });
     await expect(dialog).toBeVisible({ timeout: 10_000 });
     await expect(dialog.getByRole('button', { name: 'Next' })).toBeFocused();
