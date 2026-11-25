@@ -135,8 +135,13 @@ describe('apex → www (S6)', () => {
   it('sends every path on the bare production domain to www with a 301', async () => {
     const { apexRedirects } = await import('../../src/lib/canonical');
     expect(apexRedirects({ PRODUCTION_DOMAIN: 'flatmeta.io' })).toEqual([
-      { source: '/:path*', has: [{ type: 'host', value: 'flatmeta.io' }], destination: 'https://www.flatmeta.io/:path*', statusCode: 301 },
+      { source: '/:path((?!\\.well-known/mcp-registry-auth$).*)', has: [{ type: 'host', value: 'flatmeta.io' }], destination: 'https://www.flatmeta.io/:path', statusCode: 301 },
     ]);
+    // The pattern keeps every path but the MCP Registry proof (checked as a regular expression too).
+    const re = /^\/((?!\.well-known\/mcp-registry-auth$).*)$/;
+    expect(re.test('/pricing')).toBe(true);
+    expect(re.test('/.well-known/mcp.json')).toBe(true);
+    expect(re.test('/.well-known/mcp-registry-auth')).toBe(false);
     // Off when the site's canonical host is not www.
     expect(apexRedirects({ CANONICAL_WWW: 'false' })).toEqual([]);
     expect(apexRedirects({ CANONICAL_URL: 'https://flatmeta.io' })).toEqual([]);
@@ -148,7 +153,7 @@ describe('old and extra domains (GL6)', () => {
     const { apexRedirects } = await import('../../src/lib/canonical');
     const r = apexRedirects({ PRODUCTION_DOMAIN: 'flatmeta.io', REDIRECT_HOSTS: 'flatmeta.com, www.flatmeta.com,not a host,www.flatmeta.io' });
     expect(r.map((x) => [x.has[0]!.value, x.destination, x.statusCode])).toEqual([
-      ['flatmeta.io', 'https://www.flatmeta.io/:path*', 301],
+      ['flatmeta.io', 'https://www.flatmeta.io/:path', 301],
       ['flatmeta.com', 'https://www.flatmeta.io/:path*', 301],
       ['www.flatmeta.com', 'https://www.flatmeta.io/:path*', 301],
     ]);

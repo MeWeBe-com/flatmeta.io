@@ -22,6 +22,9 @@ export function canonicalUrl(env: Record<string, string | undefined>): string {
  * string kept. nginx does the same before a request reaches the app (deploy/hestia/nodejs-app.conf); this covers a
  * request that reaches Next.js on the bare host anyway. Off when the canonical host is not www.
  */
+/** Every path except /.well-known/mcp-registry-auth (path-to-regexp: a named param with a negative lookahead). */
+export const APEX_SOURCE = '/:path((?!\\.well-known/mcp-registry-auth$).*)';
+
 export function apexRedirects(env: Record<string, string | undefined>) {
   const domain = env.PRODUCTION_DOMAIN ?? 'flatmeta.io';
   const canonical = env.CANONICAL_URL ? env.CANONICAL_URL.replace(/\/$/, '') : `https://www.${domain}`;
@@ -33,7 +36,9 @@ export function apexRedirects(env: Record<string, string | undefined>) {
     .filter((h) => /^[a-z0-9.-]+\.[a-z]{2,}$/.test(h) && h !== new URL(canonical).hostname)
     .map((h) => ({ source: '/:path*', has: [{ type: 'host' as const, value: h }], destination: `${canonical}/:path*`, statusCode: 301 as const }));
   if (env.CANONICAL_WWW === 'false' || env.CANONICAL_URL) return extra;
-  return [{ source: '/:path*', has: [{ type: 'host' as const, value: domain }], destination: `https://www.${domain}/:path*`, statusCode: 301 as const }, ...extra];
+  // 25 Nov 2026: one path answers on the bare domain itself: the Official MCP Registry checks
+  // https://<domain>/.well-known/mcp-registry-auth and may not follow redirects. Everything else keeps the 301.
+  return [{ source: APEX_SOURCE, has: [{ type: 'host' as const, value: domain }], destination: `https://www.${domain}/:path`, statusCode: 301 as const }, ...extra];
 }
 
 /**
