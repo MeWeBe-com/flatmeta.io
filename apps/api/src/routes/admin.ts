@@ -4,7 +4,7 @@ import { plotIndexChanged, plotIndexChangedById, sitemapChanged } from '../lib/i
 import { and, count, desc, eq, gte, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import type { App } from '../app.js';
-import { config, paidCheckout, paymentsMock, showcaseLocationCheck, stripeMode, stripeProblems, stripeTestKeyOnProduction } from '../config.js';
+import { config, paidCheckout, paymentsMock, showcaseLocationCheck, stripeAccountName, stripeMode, stripeProblems, stripeTestKeyOnProduction } from '../config.js';
 import { db, schema } from '../db/client.js';
 import type { ShowcaseInfo } from '../db/schema.js';
 import { requireAdmin, requireStaff } from '../lib/auth.js';
@@ -155,12 +155,12 @@ export default async function adminRoutes(app: App) {
         else prices[k] = (await resolvePrice(plan, interval).catch(() => undefined)) ? 'lookup' : 'missing';
       }
     const missing = Object.entries(prices).filter(([, v]) => v === 'missing').map(([k]) => k);
-    // GL4: the account the keys belong to (name, id, mode); it must be the one named exactly APP_NAME.
+    // GL4: the account the keys belong to (name, id, mode); it must be the one named exactly STRIPE_ACCOUNT_NAME (or APP_NAME).
     const { stripeAccountInfo } = await import('../services/billing.js');
     const { paypalEnabled } = await import('../services/paypal.js');
     const account = await stripeAccountInfo().catch(() => null);
     const accountProblems: string[] = [];
-    if (account && !account.nameMatches) accountProblems.push(`The Stripe keys belong to "${account.name ?? '(no name)'}" (${account.id}), not an account named "${config.APP_NAME}". Use the ${config.APP_NAME} account inside the Organisation: docs/golive/MANUAL-STEPS.md → Payments.`);
+    if (account && !account.nameMatches) accountProblems.push(`The Stripe keys belong to "${account.name ?? '(no name)'}" (${account.id}), not an account named "${stripeAccountName()}". Use that account inside the Organisation, or set STRIPE_ACCOUNT_NAME to the account's exact name: docs/golive/MANUAL-STEPS.md → Payments.`);
     if (account && !account.chargesEnabled) accountProblems.push(`Stripe account ${account.id} cannot take charges yet: finish its activation in the Stripe dashboard.`);
     if (missing.length) problems.push(`No Stripe price for ${missing.join(', ')}: run scripts/stripe-sync.ts or set STRIPE_PRICE_* (lookup keys ${lookupKeyFor('plus', 'month').replace('plus_month', '<plan>_<interval>')}).`);
     return {

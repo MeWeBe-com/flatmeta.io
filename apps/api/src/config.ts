@@ -91,6 +91,9 @@ const schema = z.object({
   // <prefix>_<plan>_<interval>, e.g. flatmeta_plus_month.
   STRIPE_LOOKUP_PREFIX: z.string().regex(/^[a-z0-9_]+$/).default('flatmeta'),
   CURRENCY: z.string().default('usd'),
+  // The exact name of the Stripe account the keys must belong to (payments:check and Admin → Overview check it).
+  // Empty = APP_NAME. Set it when several sites share one account, e.g. STRIPE_ACCOUNT_NAME=Mewebe.com Sites.
+  STRIPE_ACCOUNT_NAME: z.string().trim().default(''),
   // Show sign-in codes on screen (and in the log) instead of emailing them. auto = only when no SMTP is set
   // and APP_ENV is not production. Never allowed in production.
   DEV_CODE_ECHO: z.enum(['auto', 'true', 'false']).default('auto'),
@@ -310,3 +313,8 @@ export const moderationProvider = (): 'openai' | 'anthropic' | 'heuristic' => {
   if (config.ANTHROPIC_API_KEY) return 'anthropic';
   return 'heuristic';
 };
+
+/** The Stripe account name the keys must belong to: STRIPE_ACCOUNT_NAME, or APP_NAME when that is empty. */
+export function stripeAccountName(c: Pick<Config, 'STRIPE_ACCOUNT_NAME' | 'APP_NAME'> = config): string {
+  return c.STRIPE_ACCOUNT_NAME || c.APP_NAME;
+}

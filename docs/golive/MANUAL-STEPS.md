@@ -69,7 +69,7 @@ Then re-render nginx: `node scripts/new-instance.mjs production --nginx-only`. D
 - A test-key-on-production guard.
 - An account check that says which Stripe account the keys belong to.
 
-**1. Confirm the Stripe account (who: boss, 5 minutes).** The keys must come from **one account named exactly "FlatMeta" inside the boss's Stripe Organisation**, never a standalone account.
+**1. Confirm the Stripe account (who: boss, 5 minutes).** The keys must come from **one account named exactly "FlatMeta" inside the boss's Stripe Organisation**, never a standalone account. Since 25 Nov the expected name is a setting: `STRIPE_ACCOUNT_NAME` in `.env` (empty = `APP_NAME`, "FlatMeta"). For the shared account set `STRIPE_ACCOUNT_NAME="Mewebe.com Sites"`; see `docs/ops/go-live-25nov.md`.
 1. https://dashboard.stripe.com → top-left account switcher. Is there an account **FlatMeta** under the Organisation?
    - **Yes:** open it, go to **Settings → Business → Account details**, and check the public business name is "FlatMeta".
    - **No, or the live keys came from a standalone account:** follow step 2.

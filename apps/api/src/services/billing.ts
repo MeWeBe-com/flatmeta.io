@@ -1,7 +1,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type Stripe from 'stripe';
 import { capturePaypalOrder, createPaypalOrder, paypalEnabled } from './paypal.js';
-import { config, paidCheckout, paymentsMock, stripeTestKeyOnProduction } from '../config.js';
+import { config, paidCheckout, stripeAccountName, paymentsMock, stripeTestKeyOnProduction } from '../config.js';
 import { db, schema } from '../db/client.js';
 import type { Order, OrderItem, User } from '../db/schema.js';
 import { HttpError, badRequest, comingSoon } from '../lib/errors.js';
@@ -479,8 +479,8 @@ export async function handleStripeEvent(event: Stripe.Event) {
 }
 
 /**
- * GL4: which Stripe account the keys belong to. Payments must go to the one account named exactly after the project
- * (APP_NAME) inside the boss's Stripe Organisation. Stripe's API shows the account's name, id and mode, not the
+ * GL4: which Stripe account the keys belong to. Payments must go to the one account named exactly
+ * STRIPE_ACCOUNT_NAME (empty = APP_NAME, e.g. "FlatMeta"; a shared account such as "Mewebe.com Sites" is set there) inside the boss's Stripe Organisation. Stripe's API shows the account's name, id and mode, not the
  * Organisation, so membership is confirmed in the dashboard (docs/golive/MANUAL-STEPS.md → Payments).
  */
 export interface StripeAccountInfo { id: string; name: string | null; country: string | null; chargesEnabled: boolean; livemode: boolean; nameMatches: boolean }
@@ -489,6 +489,6 @@ export async function stripeAccountInfo(): Promise<StripeAccountInfo | null> {
   const s = await stripe();
   const a = await s.accounts.retrieveCurrent();
   const name = a.settings?.dashboard?.display_name || a.business_profile?.name || null;
-  return { id: a.id, name, country: a.country ?? null, chargesEnabled: !!a.charges_enabled, livemode: config.STRIPE_SECRET_KEY.includes('_live_'), nameMatches: name === config.APP_NAME };
+  return { id: a.id, name, country: a.country ?? null, chargesEnabled: !!a.charges_enabled, livemode: config.STRIPE_SECRET_KEY.includes('_live_'), nameMatches: name === stripeAccountName() };
 }
 

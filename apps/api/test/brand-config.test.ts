@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyBrandDefaults, publicSiteUrl, senderDomainProblem } from '../src/config.js';
+import { applyBrandDefaults, publicSiteUrl, senderDomainProblem, stripeAccountName } from '../src/config.js';
 
 /** GL1: every address follows the brand and the production domain, so a domain switch is a .env change. */
 describe('brand and domain from config', () => {
@@ -31,5 +31,9 @@ describe('brand and domain from config', () => {
     expect(senderDomainProblem({ APP_ENV: 'production', PRODUCTION_DOMAIN: 'flatmeta.io', MAIL_FROM: 'FlatMeta <noreply@flatmeta.io>' })).toBeNull();
     expect(senderDomainProblem({ APP_ENV: 'production', PRODUCTION_DOMAIN: 'flatmeta.io', MAIL_FROM: 'noreply@mail.flatmeta.io' })).toBeNull();
     expect(senderDomainProblem({ APP_ENV: 'staging', PRODUCTION_DOMAIN: 'flatmeta.io', MAIL_FROM: 'x@mail.mewebe.net' })).toBeNull();
+  });
+  it('the expected Stripe account name is STRIPE_ACCOUNT_NAME, else APP_NAME', () => {
+    expect(stripeAccountName({ STRIPE_ACCOUNT_NAME: '', APP_NAME: 'FlatMeta' })).toBe('FlatMeta');
+    expect(stripeAccountName({ STRIPE_ACCOUNT_NAME: 'Mewebe.com Sites', APP_NAME: 'FlatMeta' })).toBe('Mewebe.com Sites');
   });
 });
