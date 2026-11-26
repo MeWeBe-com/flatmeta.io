@@ -20,7 +20,8 @@ export function FoundingOffer({ founding, launchOffer }: { founding?: Founding |
         <Award size={22} className="text-[var(--color-gold)]" aria-hidden="true" />
         <h2 id="founding-h" className="text-2xl font-bold">Become a founding customer</h2>
         <span className="chip chip-gold" data-testid="founding-left">
-          {founding.left} of {founding.total} places left
+          {/* 0008: "50 of 50 places left" read as "nobody has joined"; until the first place is taken, state the limit. */}
+          {founding.taken > 0 ? `${founding.left} of ${founding.total} places left` : `Limited to the first ${founding.total}`}
         </span>
       </div>
       <p className="muted">The first {founding.total} businesses and companies on FlatMeta are our founding customers. A place is taken when a company verifies its page or a business starts a Business or Brand plan.</p>

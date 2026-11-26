@@ -4,6 +4,7 @@ import { CONTACT_EMAIL, FREE_LAND_CELLS, PAID_CHECKOUT } from '@/lib/config';
 import { JsonLd } from '@/lib/seo';
 import { EmailText } from '@/components/email-text';
 import { serverApi } from '@/lib/server-api';
+import { MIN_PEOPLE_PLOTS_SHOWN } from '@/lib/social-proof';
 
 /**
  * GL3c: the trust block for /pricing and /business. Real numbers from the live API (never invented), how it works in
@@ -17,11 +18,12 @@ export async function TrustStats() {
   if (!s) return null;
   const items = [
     { n: s.showcase, label: 'company pages reserved next to real headquarters' },
-    { n: s.plots, label: s.plots === 1 ? 'plot made by people' : 'plots made by people' },
+    // 0008: "1 plot made by people" told buyers nobody is here; the line appears once there are enough to help.
+    { n: s.plots >= MIN_PEOPLE_PLOTS_SHOWN ? s.plots : 0, label: 'plots made by people' },
     { n: s.countries, label: 'countries on the map' },
   ].filter((i) => i.n > 0);
   return (
-    <section aria-label="FlatMeta in numbers" className="grid sm:grid-cols-3 gap-3" data-testid="trust-stats">
+    <section aria-label="FlatMeta in numbers" className={`grid gap-3 ${items.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`} data-testid="trust-stats">
       {items.map((i) => (
         <div key={i.label} className="surface p-5 text-center">
           <div className="font-display text-3xl font-bold">{i.n.toLocaleString('en')}</div>

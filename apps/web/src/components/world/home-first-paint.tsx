@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { t } from '@/lib/i18n';
+import { MIN_EXPLORERS_SHOWN } from '@/lib/social-proof';
 
 type Stats = { plots: number; showcase: number; countries: number; explorers: number } | null;
 
@@ -30,7 +31,8 @@ export function HomeFirstPaint({ stats, behind = false }: { stats: Stats; behind
             <p className="muted mt-3 text-base sm:text-lg">Explore glowing plots around the globe, meet people nearby, and claim your own land. Your first plot is free.</p>
             {stats && (
               <p className="mt-4 text-sm muted">
-                {n(stats.plots + stats.showcase)} plots · {stats.countries} countries · {n(stats.explorers)} explorers
+                {n(stats.plots + stats.showcase)} plots · {stats.countries} countries
+                {stats.explorers >= MIN_EXPLORERS_SHOWN && <> · {n(stats.explorers)} explorers</>}
               </p>
             )}
             {!behind && (

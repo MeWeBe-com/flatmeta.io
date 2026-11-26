@@ -37,7 +37,7 @@ export default function DemoPage() {
           <p className="muted text-lg">Below is a <strong>sample</strong> page for a made-up café, built with the same parts as every real page. Yours takes a few minutes, and your first land is free.</p>
         </header>
 
-        <section aria-labelledby="sample-h" className="grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-6 items-start" data-testid="demo-sample">
+        <section aria-labelledby="sample-h" className="grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-6 items-start [&>*]:min-w-0" data-testid="demo-sample">
           <article className="surface overflow-hidden">
             <div className="relative aspect-[16/7] bg-gradient-to-br from-[#2de2c4]/40 via-[#7a5cff]/30 to-[#ff6b6b]/30 grid place-items-center">
               <span className="absolute left-3 top-3 chip chip-gold">Sample page</span>

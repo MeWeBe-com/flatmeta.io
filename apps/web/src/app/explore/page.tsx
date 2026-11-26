@@ -41,6 +41,11 @@ export default async function ExplorePage({ searchParams }: Props) {
         <div>
           <h1 className="text-4xl md:text-5xl font-bold">Explore the <span className="text-gradient">living map</span></h1>
           <p className="muted mt-2 max-w-2xl">Plots made by explorers, creators, local businesses and showcase brands. Like the ones you love, wave at neighbours and sign guestbooks to earn XP.</p>
+          {/* 0008: the walk found no way to claim from /explore; one clear action, the same as the home page. */}
+          <div className="mt-4 flex flex-wrap gap-2" data-testid="explore-cta">
+            <Link href="/?claim" className="btn-primary min-h-11">Claim your free plot</Link>
+            <Link href="/" className="btn-ghost min-h-11">Open the live map</Link>
+          </div>
         </div>
         <Suspense>
           <ExploreClient initial={plots?.plots ?? []} countries={countries?.countries ?? []} page={page} />

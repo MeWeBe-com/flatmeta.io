@@ -18,6 +18,9 @@ export function BrandsDirectory({ data, country, q, page }: { data: BrandsRes; c
         <p className="muted max-w-2xl">
           Land is reserved for these companies next to their real headquarters on the world map. None of them is affiliated with FlatMeta: each plot is waiting for its company to claim it. Work at one? Open its plot and claim it with your work email or a DNS record. Logos are shown only to identify each company for claiming; trademarks belong to their owners.
         </p>
+        <p className="text-sm" data-testid="brands-individual-cta">
+          Not a company? <Link href="/?claim" className="underline font-semibold">Claim your own free plot</Link> anywhere on the map.
+        </p>
         <form action={base} className="flex gap-2 max-w-md" role="search">
           <input className="input" name="q" defaultValue={q} placeholder="Search companies" aria-label="Search companies" />
           <button className="btn-primary">Search</button>
