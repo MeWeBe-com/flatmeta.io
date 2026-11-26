@@ -178,12 +178,17 @@ export function PlotCard({ plot, compactView = false, priority = false }: { plot
         <h3 className="font-semibold leading-snug line-clamp-1">{plot.title}</h3>
         {!compactView && plot.tagline && <p className="muted text-sm line-clamp-2">{plot.tagline}</p>}
         <div className="mt-auto pt-2 flex items-center gap-3 text-xs muted">
-          <span className="inline-flex items-center gap-1">
-            <Heart size={13} /> {compact(plot.likesCount)}
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <Eye size={13} /> {compact(plot.visitsCount)}
-          </span>
+          {/* A row of "0 0" on every new card read as "nobody is here" (/explore, 26 Nov): a counter shows from 1. */}
+          {plot.likesCount > 0 && (
+            <span className="inline-flex items-center gap-1" aria-label={`${plot.likesCount} likes`}>
+              <Heart size={13} aria-hidden="true" /> {compact(plot.likesCount)}
+            </span>
+          )}
+          {plot.visitsCount > 0 && (
+            <span className="inline-flex items-center gap-1" aria-label={`${plot.visitsCount} visits`}>
+              <Eye size={13} aria-hidden="true" /> {compact(plot.visitsCount)}
+            </span>
+          )}
           <span className="ml-auto truncate">{plot.owner?.displayName ?? plot.showcase?.city ?? ''}</span>
         </div>
       </div>

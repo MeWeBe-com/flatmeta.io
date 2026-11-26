@@ -61,3 +61,11 @@ test('a plot drawn before signing in reopens after a reload', async ({ page }) =
   await panel.getByRole('button', { name: 'Cancel' }).click();
   expect(await page.evaluate(() => localStorage.getItem('fm-claim-draft'))).toBeNull();
 });
+
+test('/explore: a claim button, and no plot card shows an empty "0" counter', async ({ page }) => {
+  // 0008 + 26 Nov: every new card read "0 0" (likes, visits); a counter shows from 1.
+  await page.goto('/explore');
+  await expect(page.getByTestId('explore-cta').getByRole('link', { name: 'Claim your free plot' })).toHaveAttribute('href', '/?claim');
+  await expect(page.locator('[aria-label$=" likes"], [aria-label$=" visits"]').filter({ hasText: /^\s*0\s*$/ })).toHaveCount(0);
+  await expect(page.locator('[aria-label="0 likes"], [aria-label="0 visits"]')).toHaveCount(0);
+});
