@@ -69,3 +69,15 @@ test('/explore: a claim button, and no plot card shows an empty "0" counter', as
   await expect(page.locator('[aria-label$=" likes"], [aria-label$=" visits"]').filter({ hasText: /^\s*0\s*$/ })).toHaveCount(0);
   await expect(page.locator('[aria-label="0 likes"], [aria-label="0 visits"]')).toHaveCount(0);
 });
+
+test('phones: a new guest sees the offer card with Claim and Sign in; it goes once they try a claim', async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 1280) >= 640, 'the card is for screens below 640 px');
+  await page.goto('/');
+  await page.keyboard.press('Shift'); // the map starts on the first interaction (QA4)
+  const card = page.getByTestId('phone-offer');
+  await expect(card).toBeVisible({ timeout: 30_000 });
+  await expect(card.getByRole('button', { name: 'Sign in' })).toBeVisible();
+  await card.getByRole('button', { name: 'Claim free land' }).click();
+  await expect(page.getByRole('dialog', { name: 'Claim land' })).toBeVisible();
+  await expect(card).toHaveCount(0);
+});

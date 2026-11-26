@@ -386,6 +386,9 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
     if (a.plotId) setOpenPlot(a.plotId);
   };
 
+  // The location prompt is on screen only after the tour or the first claim attempt (C2). askGeo alone turns true for
+  // every new visitor at once, and hiding the status chips on it kept the phone offer card from ever showing.
+  const geoPromptShown = askGeo && !claimMode && (tour.seen || claimTried) && !tour.open;
   const showPhoneCard = !sessionLoading && !me.user && mapReady && !claimMode && !claimTried && !openPlot && !mobilePanel && !phoneCardClosed && !tour.open;
 
   return (
@@ -460,7 +463,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
       )}
 
       {/* Start where you are? (asked once, in the app, before the browser's own prompt) */}
-      {askGeo && !claimMode && (tour.seen || claimTried) && !tour.open && (
+      {geoPromptShown && (
         <div className="absolute z-30 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 top-[64px] sm:top-[156px] sm:w-[22rem] glass rounded-2xl p-3 animate-pop" role="dialog" aria-label="Start where you are?">
           <div className="flex items-start gap-3">
             <span className="size-9 shrink-0 rounded-xl grid place-items-center bg-[rgb(45_226_196/.12)] text-[var(--color-teal)]"><MapPin size={18} /></span>
@@ -476,7 +479,7 @@ export function WorldExperience({ stats }: { stats: { plots: number; showcase: n
         </div>
       )}
       {/* Status chips under the search bar, stacked so they never overlap. */}
-      {!askGeo && !claimMode && (showPhoneCard || spawn?.approximate || nearestNote) && (
+      {!geoPromptShown && !claimMode && (showPhoneCard || spawn?.approximate || nearestNote) && (
         <div className="absolute z-20 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 top-[64px] sm:top-[156px] flex flex-col items-start sm:items-center gap-2 pointer-events-none">
           {/* C2: phones had no headline, no offer and no visible Sign in once the map drew (the desktop welcome card
               is hidden below 640 px). A small card says it, above the chips, until the visitor tries a claim or closes it. */}

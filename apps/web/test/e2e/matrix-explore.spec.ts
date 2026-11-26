@@ -19,6 +19,7 @@ test.describe('explore filters', () => {
       const cats = page.getByRole('navigation', { name: 'Categories' });
       const tabs = page.getByRole('navigation', { name: 'Sort' });
       const chips = cats.getByRole('button');
+      await expect(chips.first()).toBeVisible({ timeout: 15_000 }); // the strip renders inside Suspense: wait for it, count() does not
       expect(await chips.count()).toBeGreaterThan(5);
       for (const strip of [cats, tabs]) {
         const box = (await strip.boundingBox())!;
