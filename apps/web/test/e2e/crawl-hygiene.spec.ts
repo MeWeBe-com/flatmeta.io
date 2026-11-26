@@ -60,7 +60,9 @@ test('the bare domain sends every path to www with a 301, path and query kept', 
   for (const path of ['/', '/pricing?ref=abc', '/p/flatmeta-hq', '/sitemap.xml', '/robots.txt', '/insights', '/insights/2026-11-12-local-shops-on-a-world-map.html']) {
     const res = await request.get(path, { headers: { host: 'flatmeta.io' }, maxRedirects: 0 });
     expect(res.status(), path).toBe(301);
-    expect(res.headers().location, path).toBe(path === '/' ? 'https://www.flatmeta.io' : `https://www.flatmeta.io${path}`);
+    // Compared as URLs: https://www.flatmeta.io and https://www.flatmeta.io/ are the same address (an empty http path
+    // is "/"), and Next.js writes the slash since the 25 Nov rule that keeps /.well-known/mcp-registry-auth on the bare domain.
+    expect(new URL(res.headers().location!).href, path).toBe(`https://www.flatmeta.io${path}`);
   }
   // www itself (and any other host) is served, not redirected.
   expect((await request.get('/pricing', { maxRedirects: 0 })).status()).toBe(200);
